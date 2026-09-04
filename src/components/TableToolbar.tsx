@@ -53,7 +53,7 @@ export function TableToolbar() {
     }
   });
 
-  if (!inTable || !position) return null;
+  if (!inTable) return null;
 
   return (
     <div
@@ -61,7 +61,13 @@ export function TableToolbar() {
       className="da-table-toolbar"
       role="toolbar"
       aria-label="Table"
-      style={{ top: position.top, left: position.left }}
+      // Rendered before it is measured, so the ref exists for the effect to
+      // read; kept invisible until a position is known.
+      style={{
+        top: position?.top ?? 0,
+        left: position?.left ?? 0,
+        visibility: position ? 'visible' : 'hidden',
+      }}
       onMouseDown={(event) => event.preventDefault()}
     >
       <button

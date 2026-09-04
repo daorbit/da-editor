@@ -55,7 +55,7 @@ export function LinkToolbar() {
     }
   });
 
-  if (!entry || !position) return null;
+  if (!entry) return null;
 
   const [node, path] = entry;
   if (!SlateElement.isElement(node)) return null;
@@ -92,7 +92,12 @@ export function LinkToolbar() {
       className="da-link-toolbar"
       role="toolbar"
       aria-label="Link"
-      style={{ top: position.top, left: position.left }}
+      // Rendered before measuring so the ref exists; hidden until positioned.
+      style={{
+        top: position?.top ?? 0,
+        left: position?.left ?? 0,
+        visibility: position ? 'visible' : 'hidden',
+      }}
       onMouseDown={(event) => event.preventDefault()}
     >
       {editing ? (

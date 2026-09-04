@@ -40,17 +40,16 @@ export function FloatingToolbar({ onAskAi, onLink, onComment }: FloatingToolbarP
 
   const { selection } = editor;
 
+  // Only show over a real, non-empty, focused selection.
+  const shouldShow =
+    Boolean(selection) &&
+    ReactEditor.isFocused(editor) &&
+    !Range.isCollapsed(selection!) &&
+    Editor.string(editor, selection!) !== '';
+
   useEffect(() => {
     const el = ref.current;
-    if (!el) return;
-
-    // Only show over a real, non-empty, focused selection.
-    if (
-      !selection ||
-      !ReactEditor.isFocused(editor) ||
-      Range.isCollapsed(selection) ||
-      Editor.string(editor, selection) === ''
-    ) {
+    if (!el || !shouldShow) {
       setPosition(null);
       return;
     }
@@ -74,7 +73,7 @@ export function FloatingToolbar({ onAskAi, onLink, onComment }: FloatingToolbarP
     });
   });
 
-  if (!position) return null;
+  if (!shouldShow) return null;
 
   return (
     <div
@@ -82,7 +81,12 @@ export function FloatingToolbar({ onAskAi, onLink, onComment }: FloatingToolbarP
       className="da-tb da-tb--floating"
       role="toolbar"
       aria-label="Selection toolbar"
-      style={{ top: position.top, left: position.left }}
+      // Rendered before measuring so the ref exists; hidden until positioned.
+      style={{
+        top: position?.top ?? 0,
+        left: position?.left ?? 0,
+        visibility: position ? 'visible' : 'hidden',
+      }}
       onMouseDown={(event) => event.preventDefault()}
     >
       {onAskAi && (
