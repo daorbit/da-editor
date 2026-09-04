@@ -20,6 +20,7 @@ export type { EmojiPickerProps } from './components/EmojiPicker';
 export { CodeBlock } from './components/CodeBlock';
 export { TableToolbar } from './components/TableToolbar';
 export { MediaToolbar } from './components/MediaToolbar';
+export { LinkToolbar } from './components/LinkToolbar';
 export { ColorPicker } from './components/ColorPicker';
 export type { ColorPickerProps } from './components/ColorPicker';
 export { decorateCode, LANGUAGES } from './core/highlight';
