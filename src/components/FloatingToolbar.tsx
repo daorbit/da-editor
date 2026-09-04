@@ -18,7 +18,7 @@ import {
   setMark,
   toggleMark,
 } from '../core/transforms';
-import { MARK, type DaEditor } from '../core/types';
+import { ELEMENT, MARK, type DaEditor } from '../core/types';
 
 export interface FloatingToolbarProps {
   onAskAi?: () => void;
@@ -36,7 +36,10 @@ export function FloatingToolbar({ onAskAi, onLink, onComment }: FloatingToolbarP
   const ref = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<Position | null>(null);
   const blockType = getBlockType(editor);
-  const activeBlock = BLOCK_SPECS.find((spec) => spec.type === blockType);
+  // Falls back to the paragraph spec so the button always has an icon.
+  const activeBlock =
+    BLOCK_SPECS.find((spec) => spec.type === blockType) ??
+    BLOCK_SPECS.find((spec) => spec.type === ELEMENT.paragraph);
 
   const { selection } = editor;
 

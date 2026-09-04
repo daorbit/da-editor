@@ -121,7 +121,10 @@ export function FixedToolbar({
   const listStyle = getListStyle(editor);
   const inTable = isInTable(editor);
 
-  const activeBlock = BLOCK_SPECS.find((spec) => spec.type === blockType);
+  // Falls back to the paragraph spec so the button always has an icon.
+  const activeBlock =
+    BLOCK_SPECS.find((spec) => spec.type === blockType) ??
+    BLOCK_SPECS.find((spec) => spec.type === ELEMENT.paragraph);
   const activeAlign = ALIGN_SPECS.find((spec) => spec.align === align) ?? ALIGN_SPECS[0];
   const canUndo = editor.history.undos.length > 0;
   const canRedo = editor.history.redos.length > 0;
