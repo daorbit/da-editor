@@ -21,6 +21,8 @@
 
   display: flex;
   flex-direction: column;
+  /* Lets the editor shrink inside a flex parent so its content area scrolls. */
+  min-height: 0;
   border: 1px solid var(--da-border);
   border-radius: var(--da-radius);
   background: var(--da-bg);
@@ -340,11 +342,14 @@
 
 /* ------------------------------------------------------------ content -- */
 
-/* Scrolls independently of the toolbar, so the scrollbar starts below it. */
+/* Scrolls independently of the toolbar, so the scrollbar starts below it.
+   `min-height: 0` is required or the flex item refuses to shrink and the
+   content overflows the editor instead of scrolling inside it. */
 .da-editor__scroll {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .da-editor__container {
@@ -358,25 +363,12 @@
   min-height: inherit;
 }
 
-/* Slate's own placeholder repeats on every empty block, so it is suppressed. */
+/* Slate renders this once, on the first text node of an empty document. */
 .da-editor__content [data-slate-placeholder] {
-  display: none !important;
-}
-
-/* Shown once, on the first block, only while the document is empty. */
-.da-editor__content[data-placeholder] > *:first-child {
-  position: relative;
-}
-
-.da-editor__content[data-placeholder] > *:first-child::before {
-  content: var(--da-placeholder, '');
-  position: absolute;
-  left: 0;
-  top: 0;
   color: var(--da-faint);
+  opacity: 1 !important;
   pointer-events: none;
   user-select: none;
-  white-space: nowrap;
 }
 
 .da-editor--readonly .da-editor__container {
@@ -1590,6 +1582,308 @@
   height: 100%;
   color: var(--da-faint);
   font-size: 13px;
+}
+
+/* ----------------------------------------------------------- code block -- */
+
+.da-code-wrap {
+  position: relative;
+  margin: 10px 0;
+  border: 1px solid var(--da-border);
+  border-radius: var(--da-radius-sm);
+  background: var(--da-surface);
+  overflow: visible;
+}
+
+.da-code-wrap--selected {
+  border-color: var(--da-accent);
+}
+
+.da-code__bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--da-border);
+  user-select: none;
+}
+
+.da-code__lang {
+  position: relative;
+}
+
+.da-code__lang-btn {
+  padding: 4px 8px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--da-muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.da-code__lang-btn:hover {
+  background: var(--da-surface-hover);
+  color: var(--da-fg);
+}
+
+.da-code__copy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--da-muted);
+  cursor: pointer;
+}
+
+.da-code__copy:hover {
+  background: var(--da-surface-hover);
+  color: var(--da-fg);
+}
+
+.da-code__menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 50;
+  width: 210px;
+  padding: 6px;
+  border: 1px solid var(--da-border);
+  border-radius: var(--da-radius-sm);
+  background: var(--da-bg);
+  box-shadow: var(--da-shadow);
+}
+
+.da-code__search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 30px;
+  margin-bottom: 4px;
+}
+
+.da-code__search-icon {
+  position: absolute;
+  left: 9px;
+  color: var(--da-faint);
+  pointer-events: none;
+}
+
+.da-code__search {
+  width: 100%;
+  height: 100%;
+  padding: 0 10px 0 28px;
+  border: 1px solid var(--da-border);
+  border-radius: var(--da-radius-sm);
+  background: var(--da-surface);
+  color: var(--da-fg);
+  font: inherit;
+  font-size: 12.5px;
+  outline: none;
+}
+
+.da-code__search:focus {
+  border-color: var(--da-accent);
+}
+
+.da-code__options {
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.da-code__option {
+  display: block;
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--da-fg);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.da-code__option:hover {
+  background: var(--da-surface-hover);
+}
+
+.da-code__option--active {
+  background: var(--da-accent-soft);
+  color: var(--da-accent);
+}
+
+.da-code__empty {
+  padding: 10px 8px;
+  color: var(--da-faint);
+  font-size: 12.5px;
+  text-align: center;
+}
+
+.da-code-wrap .da-code-block {
+  margin: 0;
+  border: none;
+  border-radius: 0 0 var(--da-radius-sm) var(--da-radius-sm);
+  background: transparent;
+}
+
+/* --------------------------------------------------------- syntax tokens -- */
+
+.da-token--comment,
+.da-token--prolog,
+.da-token--doctype,
+.da-token--cdata {
+  color: #6a737d;
+  font-style: italic;
+}
+
+.da-token--punctuation {
+  color: #6b7280;
+}
+
+.da-token--property,
+.da-token--tag,
+.da-token--boolean,
+.da-token--number,
+.da-token--constant,
+.da-token--symbol,
+.da-token--deleted {
+  color: #d73a49;
+}
+
+.da-token--selector,
+.da-token--attr-name,
+.da-token--string,
+.da-token--char,
+.da-token--builtin,
+.da-token--inserted {
+  color: #22863a;
+}
+
+.da-token--operator,
+.da-token--entity,
+.da-token--url,
+.da-token--variable {
+  color: #005cc5;
+}
+
+.da-token--atrule,
+.da-token--attr-value,
+.da-token--function,
+.da-token--class-name {
+  color: #6f42c1;
+}
+
+.da-token--keyword {
+  color: #d73a49;
+  font-weight: 500;
+}
+
+.da-token--regex,
+.da-token--important {
+  color: #e36209;
+}
+
+.da-editor[data-theme='dark'] .da-token--comment,
+.da-editor[data-theme='dark'] .da-token--prolog,
+.da-editor[data-theme='dark'] .da-token--doctype,
+.da-editor[data-theme='dark'] .da-token--cdata {
+  color: #8b949e;
+}
+
+.da-editor[data-theme='dark'] .da-token--punctuation {
+  color: #9aa1ad;
+}
+
+.da-editor[data-theme='dark'] .da-token--property,
+.da-editor[data-theme='dark'] .da-token--tag,
+.da-editor[data-theme='dark'] .da-token--boolean,
+.da-editor[data-theme='dark'] .da-token--number,
+.da-editor[data-theme='dark'] .da-token--constant,
+.da-editor[data-theme='dark'] .da-token--symbol,
+.da-editor[data-theme='dark'] .da-token--deleted,
+.da-editor[data-theme='dark'] .da-token--keyword {
+  color: #ff7b72;
+}
+
+.da-editor[data-theme='dark'] .da-token--selector,
+.da-editor[data-theme='dark'] .da-token--attr-name,
+.da-editor[data-theme='dark'] .da-token--string,
+.da-editor[data-theme='dark'] .da-token--char,
+.da-editor[data-theme='dark'] .da-token--builtin,
+.da-editor[data-theme='dark'] .da-token--inserted {
+  color: #a5d6ff;
+}
+
+.da-editor[data-theme='dark'] .da-token--operator,
+.da-editor[data-theme='dark'] .da-token--entity,
+.da-editor[data-theme='dark'] .da-token--url,
+.da-editor[data-theme='dark'] .da-token--variable {
+  color: #79c0ff;
+}
+
+.da-editor[data-theme='dark'] .da-token--atrule,
+.da-editor[data-theme='dark'] .da-token--attr-value,
+.da-editor[data-theme='dark'] .da-token--function,
+.da-editor[data-theme='dark'] .da-token--class-name {
+  color: #d2a8ff;
+}
+
+.da-editor[data-theme='dark'] .da-token--regex,
+.da-editor[data-theme='dark'] .da-token--important {
+  color: #ffa657;
+}
+
+/* -------------------------------------------------------- media toolbar -- */
+
+.da-media-toolbar {
+  position: absolute;
+  z-index: 35;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid var(--da-border);
+  border-radius: var(--da-radius-sm);
+  background: var(--da-bg);
+  box-shadow: var(--da-shadow);
+}
+
+.da-media-toolbar__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--da-fg);
+  font: inherit;
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.da-media-toolbar__btn:hover {
+  background: var(--da-surface-hover);
+}
+
+.da-media-toolbar__btn--icon {
+  width: 28px;
+  padding: 0;
+  color: var(--da-muted);
+}
+
+.da-media-toolbar__btn--icon:hover {
+  color: #dc2626;
 }
 
 /* -------------------------------------------------------- table toolbar -- */

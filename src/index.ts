@@ -17,6 +17,24 @@ export { MediaDialog } from './components/MediaDialog';
 export type { MediaDialogProps } from './components/MediaDialog';
 export { EmojiPicker } from './components/EmojiPicker';
 export type { EmojiPickerProps } from './components/EmojiPicker';
+export { CodeBlock } from './components/CodeBlock';
+export { TableToolbar } from './components/TableToolbar';
+export { MediaToolbar } from './components/MediaToolbar';
+export { ColorPicker } from './components/ColorPicker';
+export type { ColorPickerProps } from './components/ColorPicker';
+export { decorateCode, LANGUAGES } from './core/highlight';
+export type { LanguageOption } from './core/highlight';
+export {
+  exportHtml,
+  exportMarkdown,
+  importWordFile,
+  parseMarkdown,
+  parseWordHtml,
+  parseHtmlFile,
+  pickTextFile,
+  readTextFile,
+  downloadText,
+} from './core/io';
 export { ElementRenderer } from './components/ElementRenderer';
 export { LeafRenderer } from './components/LeafRenderer';
 export {

@@ -7,6 +7,7 @@ import {
   type RenderElementProps,
 } from 'slate-react';
 import { ELEMENT } from '../core/types';
+import { CodeBlock } from './CodeBlock';
 
 function blockStyle(element: RenderElementProps['element']): CSSProperties {
   return {
@@ -40,11 +41,7 @@ export function ElementRenderer(props: RenderElementProps) {
         </blockquote>
       );
     case ELEMENT.codeBlock:
-      return (
-        <pre {...attributes} style={style} className="da-code-block" spellCheck={false}>
-          <code>{children}</code>
-        </pre>
-      );
+      return <CodeBlock {...props} />;
     case ELEMENT.bulletedList:
       return (
         <ul

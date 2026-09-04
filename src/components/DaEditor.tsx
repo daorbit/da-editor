@@ -53,6 +53,9 @@ import { LinkPopover } from './LinkPopover';
 import { MentionCombobox } from './MentionCombobox';
 import { MediaDialog } from './MediaDialog';
 import { TableToolbar } from './TableToolbar';
+import { MediaToolbar } from './MediaToolbar';
+import { LinkToolbar } from './LinkToolbar';
+import { decorateCode } from '../core/highlight';
 import {
   exportHtml,
   exportMarkdown,
@@ -395,24 +398,21 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
 
         <div
           className="da-editor__scroll"
-          style={{ minHeight, maxHeight }}
+          // A `minHeight` of "0" lets the editor fill a flex parent instead.
+          style={{ minHeight: minHeight === '0' ? undefined : minHeight, maxHeight }}
         >
           <div className="da-editor__container" style={{ maxWidth }}>
             <Editable
               className="da-editor__content"
               readOnly={locked}
               spellCheck={spellCheck}
-              // Slate would repeat this on every empty block, so it is rendered
-              // once on the first block instead, via `data-placeholder`.
+              // Only passed while the document is empty, so it cannot appear
+              // against a block that merely happens to be blank.
+              placeholder={showPlaceholder ? placeholder : undefined}
               renderElement={renderElement}
               renderLeaf={renderLeaf}
+              decorate={decorateCode}
               onKeyDown={handleKeyDown}
-              data-placeholder={showPlaceholder ? '' : undefined}
-              style={
-                showPlaceholder
-                  ? ({ '--da-placeholder': JSON.stringify(placeholder) } as CSSProperties)
-                  : undefined
-              }
             />
 
             {floatingToolbar && !locked && (
@@ -432,6 +432,8 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
               <MentionCombobox mentionables={mentionables} />
             ) : null}
             {!locked && <TableToolbar />}
+            {!locked && <MediaToolbar />}
+            {!locked && !linkOpen && <LinkToolbar />}
             {!locked && (
               <LinkPopover open={linkOpen} onClose={() => setLinkOpen(false)} />
             )}

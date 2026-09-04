@@ -12,6 +12,15 @@ export function LeafRenderer({ attributes, children, leaf }: RenderLeafProps) {
   if (leaf.subscript) content = <sub>{content}</sub>;
   if (leaf.superscript) content = <sup>{content}</sup>;
 
+  // Syntax highlighting arrives as `prism-<token>` keys from `decorateCode`.
+  const tokenClasses = Object.keys(leaf)
+    .filter((key) => key.startsWith('prism-'))
+    .map((key) => `da-token--${key.slice(6)}`);
+
+  const className = [leaf.comment ? 'da-commented' : '', ...tokenClasses]
+    .filter(Boolean)
+    .join(' ');
+
   const style = {
     color: leaf.color,
     backgroundColor: leaf.highlight ?? leaf.backgroundColor,
@@ -23,7 +32,7 @@ export function LeafRenderer({ attributes, children, leaf }: RenderLeafProps) {
     <span
       {...attributes}
       style={style}
-      className={leaf.comment ? 'da-commented' : undefined}
+      className={className || undefined}
       data-comment={leaf.comment}
     >
       {content}
