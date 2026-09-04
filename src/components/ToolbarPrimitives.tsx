@@ -5,7 +5,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { ChevronDownIcon } from '../icons';
+import { CheckIcon, ChevronDownIcon, ChevronRightIcon } from '../icons';
 
 export interface ToolbarButtonProps {
   icon?: ReactNode;
@@ -56,10 +56,25 @@ export interface DropdownProps {
   /** Text shown next to the icon, for value-bearing dropdowns. */
   value?: string;
   disabled?: boolean;
+  /** Widens the panel for pickers rather than plain menus. */
+  wide?: boolean;
+  /**
+   * Makes this a split button: clicking the icon runs this action, while the
+   * caret still opens the menu.
+   */
+  onIconClick?: () => void;
   children: (close: () => void) => ReactNode;
 }
 
-export function ToolbarDropdown({ label, icon, value, disabled, children }: DropdownProps) {
+export function ToolbarDropdown({
+  label,
+  icon,
+  value,
+  disabled,
+  wide,
+  onIconClick,
+  children,
+}: DropdownProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
@@ -83,25 +98,67 @@ export function ToolbarDropdown({ label, icon, value, disabled, children }: Drop
   }, [open]);
 
   return (
-    <div className="da-tb__dropdown" ref={rootRef}>
-      <button
-        type="button"
-        className={`da-tb__btn da-tb__btn--dropdown${open ? ' da-tb__btn--active' : ''}`}
-        title={label}
-        aria-label={label}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-controls={open ? menuId : undefined}
-        disabled={disabled}
-        onMouseDown={(event) => event.preventDefault()}
-        onClick={() => setOpen((v) => !v)}
-      >
-        {icon}
-        {value && <span className="da-tb__value">{value}</span>}
-        <ChevronDownIcon size={12} className="da-tb__caret" />
-      </button>
+    <div className={`da-tb__dropdown${onIconClick ? ' da-tb__dropdown--split' : ''}`} ref={rootRef}>
+      {onIconClick ? (
+        <>
+          <button
+            type="button"
+            className="da-tb__btn da-tb__btn--split-main"
+            title={label}
+            aria-label={label}
+            disabled={disabled}
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={onIconClick}
+          >
+            {icon}
+          </button>
+          <button
+            type="button"
+            className={`da-tb__btn da-tb__btn--split-caret${open ? ' da-tb__btn--active' : ''}`}
+            title={`${label} options`}
+            aria-label={`${label} options`}
+            aria-haspopup="menu"
+            aria-expanded={open}
+            aria-controls={open ? menuId : undefined}
+            disabled={disabled}
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => setOpen((v) => !v)}
+          >
+            <ChevronDownIcon size={12} className="da-tb__caret" />
+          </button>
+        </>
+      ) : (
+        <button
+          type="button"
+          className={`da-tb__btn da-tb__btn--dropdown${open ? ' da-tb__btn--active' : ''}`}
+          title={label}
+          aria-label={label}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          aria-controls={open ? menuId : undefined}
+          disabled={disabled}
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => setOpen((v) => !v)}
+        >
+          {/* Both slots always render, so a changing label or icon cannot
+              resize the button and reflow the toolbar. */}
+          {value !== undefined ? (
+            <>
+              {icon && <span className="da-tb__icon">{icon}</span>}
+              <span className="da-tb__value">{value}</span>
+            </>
+          ) : (
+            icon
+          )}
+          <ChevronDownIcon size={12} className="da-tb__caret" />
+        </button>
+      )}
       {open && (
-        <div className="da-tb__menu" id={menuId} role="menu">
+        <div
+          className={`da-tb__menu${wide ? ' da-tb__menu--wide' : ''}`}
+          id={menuId}
+          role="menu"
+        >
           {children(() => setOpen(false))}
         </div>
       )}
@@ -114,21 +171,72 @@ export interface MenuItemProps {
   label: string;
   hint?: string;
   active?: boolean;
+  disabled?: boolean;
   onClick: () => void;
 }
 
-export function MenuItem({ icon, label, hint, active, onClick }: MenuItemProps) {
+export function MenuItem({ icon, label, hint, active, disabled, onClick }: MenuItemProps) {
   return (
     <button
       type="button"
       role="menuitem"
       className={`da-tb__item${active ? ' da-tb__item--active' : ''}`}
+      disabled={disabled}
       onMouseDown={(event) => event.preventDefault()}
       onClick={onClick}
     >
       {icon && <span className="da-tb__item-icon">{icon}</span>}
       <span className="da-tb__item-label">{label}</span>
+      {active && !hint && <CheckIcon size={13} className="da-tb__item-check" />}
       {hint && <span className="da-tb__item-hint">{hint}</span>}
     </button>
   );
+}
+
+export interface SubMenuProps {
+  icon?: ReactNode;
+  label: string;
+  disabled?: boolean;
+  children: ReactNode;
+}
+
+/** A menu row that opens a nested panel beside it on hover or focus. */
+export function SubMenu({ icon, label, disabled, children }: SubMenuProps) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div
+      className="da-tb__submenu"
+      onMouseEnter={() => !disabled && setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+    >
+      <button
+        type="button"
+        role="menuitem"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        className="da-tb__item"
+        disabled={disabled}
+        onMouseDown={(event) => event.preventDefault()}
+        onClick={() => setOpen((v) => !v)}
+      >
+        {icon && <span className="da-tb__item-icon">{icon}</span>}
+        <span className="da-tb__item-label">{label}</span>
+        <ChevronRightIcon size={13} className="da-tb__item-arrow" />
+      </button>
+      {open && !disabled && (
+        <div className="da-tb__menu da-tb__menu--sub" role="menu">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function MenuLabel({ children }: { children: ReactNode }) {
+  return <div className="da-tb__menu-label">{children}</div>;
+}
+
+export function MenuSeparator() {
+  return <div className="da-tb__menu-sep" role="separator" />;
 }

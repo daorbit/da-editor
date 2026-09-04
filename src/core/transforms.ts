@@ -211,6 +211,59 @@ export function replaceBlock(editor: DaEditor, type: ElementType): void {
   Transforms.setNodes(editor, { type });
 }
 
+/* ---------------------------------------------------------- list styles -- */
+
+export const BULLET_STYLES = [
+  { value: 'disc', label: 'Default', glyph: '●' },
+  { value: 'circle', label: 'Circle', glyph: '○' },
+  { value: 'square', label: 'Square', glyph: '■' },
+] as const;
+
+export const NUMBER_STYLES = [
+  { value: 'decimal', label: 'Decimal (1, 2, 3)' },
+  { value: 'lower-alpha', label: 'Lower Alpha (a, b, c)' },
+  { value: 'upper-alpha', label: 'Upper Alpha (A, B, C)' },
+  { value: 'lower-roman', label: 'Lower Roman (i, ii, iii)' },
+  { value: 'upper-roman', label: 'Upper Roman (I, II, III)' },
+] as const;
+
+/** Applies a marker style to the list wrapping the selection. */
+export function setListStyle(editor: DaEditor, listStyle: string): void {
+  Transforms.setNodes(
+    editor,
+    { listStyle } as Partial<SlateElement>,
+    {
+      match: (n) =>
+        !Editor.isEditor(n) && SlateElement.isElement(n) && LIST_TYPES.includes(n.type),
+    },
+  );
+}
+
+export function getListStyle(editor: DaEditor): string | null {
+  const [match] = Array.from(
+    Editor.nodes(editor, {
+      match: (n) =>
+        !Editor.isEditor(n) && SlateElement.isElement(n) && LIST_TYPES.includes(n.type),
+    }),
+  );
+  const node = match?.[0];
+  return SlateElement.isElement(node) && node.listStyle ? node.listStyle : null;
+}
+
+/* -------------------------------------------------------------- columns -- */
+
+/** Inserts a row of equal-width columns, each holding an empty paragraph. */
+export function insertColumns(editor: DaEditor, count = 3): void {
+  Transforms.insertNodes(editor, {
+    type: ELEMENT.columns,
+    children: Array.from({ length: count }, () => ({
+      type: ELEMENT.column,
+      children: [{ type: ELEMENT.paragraph, children: [{ text: '' }] }],
+    })),
+  } as SlateElement);
+  Transforms.insertNodes(editor, { type: ELEMENT.paragraph, children: [{ text: '' }] });
+}
+
 /* ----------------------------------------------------------- typography -- */
 
 export const FONT_SIZES = [12, 14, 16, 18, 20, 24, 30, 36, 48, 60, 72];

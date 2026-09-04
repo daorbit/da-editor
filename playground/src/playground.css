@@ -30,6 +30,33 @@
   box-sizing: border-box;
 }
 
+/* Thin overlay scrollbars everywhere, matching the editor's. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(128, 138, 155, 0.5) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background-clip: padding-box;
+  background-color: rgba(128, 138, 155, 0.5);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(128, 138, 155, 0.8);
+}
+
 html,
 body,
 #root {

@@ -46,13 +46,35 @@ export function ElementRenderer(props: RenderElementProps) {
         </pre>
       );
     case ELEMENT.bulletedList:
-      return <ul {...attributes} style={style} className="da-ul">{children}</ul>;
+      return (
+        <ul
+          {...attributes}
+          style={{ ...style, listStyleType: element.listStyle }}
+          className="da-ul"
+        >
+          {children}
+        </ul>
+      );
     case ELEMENT.numberedList:
-      return <ol {...attributes} style={style} className="da-ol">{children}</ol>;
+      return (
+        <ol
+          {...attributes}
+          style={{ ...style, listStyleType: element.listStyle }}
+          className="da-ol"
+        >
+          {children}
+        </ol>
+      );
     case ELEMENT.listItem:
       return <li {...attributes} style={style} className="da-li">{children}</li>;
     case ELEMENT.todoListItem:
       return <TodoItem {...props} />;
+    case ELEMENT.toggleList:
+      return <ToggleItem {...props} />;
+    case ELEMENT.columns:
+      return <div {...attributes} className="da-columns">{children}</div>;
+    case ELEMENT.column:
+      return <div {...attributes} className="da-column">{children}</div>;
     case ELEMENT.divider:
       return <Divider {...props} />;
     case ELEMENT.callout:
@@ -105,6 +127,33 @@ function TodoItem({ attributes, children, element }: RenderElementProps) {
         />
       </span>
       <span className="da-todo__text">{children}</span>
+    </div>
+  );
+}
+
+function ToggleItem({ attributes, children, element }: RenderElementProps) {
+  const editor = useSlateStatic();
+  const open = 'open' in element ? element.open !== false : true;
+
+  return (
+    <div {...attributes} className="da-toggle" style={blockStyle(element)}>
+      <button
+        type="button"
+        contentEditable={false}
+        className={`da-toggle__caret${open ? ' da-toggle__caret--open' : ''}`}
+        aria-expanded={open}
+        aria-label={open ? 'Collapse' : 'Expand'}
+        onMouseDown={(event) => event.preventDefault()}
+        onClick={() => {
+          const path = ReactEditor.findPath(editor, element);
+          Transforms.setNodes(editor, { open: !open }, { at: path });
+        }}
+      >
+        ▶
+      </button>
+      <div className={`da-toggle__body${open ? '' : ' da-toggle__body--closed'}`}>
+        {children}
+      </div>
     </div>
   );
 }

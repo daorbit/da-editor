@@ -52,6 +52,15 @@ import { SlashMenu } from './SlashMenu';
 import { LinkPopover } from './LinkPopover';
 import { MentionCombobox } from './MentionCombobox';
 import { MediaDialog } from './MediaDialog';
+import { TableToolbar } from './TableToolbar';
+import {
+  exportHtml,
+  exportMarkdown,
+  parseHtmlFile,
+  parseMarkdown,
+  parseWordHtml,
+  readTextFile,
+} from '../core/io';
 
 const MARK_HOTKEYS: Record<string, keyof typeof MARK> = {
   'mod+b': 'bold',
@@ -93,7 +102,7 @@ export interface DaEditorProps {
   onChange?: (value: EditorValue) => void;
   placeholder?: string;
   readOnly?: boolean;
-  /** `'system'` follows the OS setting. */
+  /** Defaults to `'light'`; pass `'system'` to follow the OS setting. */
   theme?: Theme;
   /** Show the toolbar pinned above the content. */
   fixedToolbar?: boolean;
@@ -132,7 +141,7 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
     onChange,
     placeholder = "Write something, or press '/' for commands…",
     readOnly = false,
-    theme = 'system',
+    theme = 'light',
     fixedToolbar = true,
     floatingToolbar = true,
     slashMenu = true,
@@ -170,6 +179,8 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
   const [value, setValue] = useState<EditorValue>(initialValue);
   const [linkOpen, setLinkOpen] = useState(false);
   const [mediaKind, setMediaKind] = useState<MediaKind | null>(null);
+  // Bumped to remount <Slate> when the document is replaced wholesale.
+  const [slateKey, setSlateKey] = useState(0);
   const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>(
     theme === 'dark' ? 'dark' : 'light',
   );
@@ -201,6 +212,51 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
     (props: Parameters<typeof LeafRenderer>[0]) => <LeafRenderer {...props} />,
     [],
   );
+
+  /**
+   * Swaps the whole document. `<Slate>` reads `initialValue` only on mount, so
+   * the tree is rebuilt and the subtree remounted via `slateKey`.
+   */
+  const replaceAll = (next: EditorValue) => {
+    Editor.withoutNormalizing(editor, () => {
+      Transforms.deselect(editor);
+      for (let i = editor.children.length - 1; i >= 0; i--) {
+        Transforms.removeNodes(editor, { at: [i] });
+      }
+      Transforms.insertNodes(editor, next, { at: [0] });
+    });
+    // History from the previous document no longer applies.
+    editor.history = { undos: [], redos: [] };
+    setValue(editor.children as EditorValue);
+    setSlateKey((key) => key + 1);
+    onChange?.(editor.children as EditorValue);
+  };
+
+  const handleImport = async (format: 'html' | 'markdown' | 'word') => {
+    const accept =
+      format === 'markdown'
+        ? '.md,.markdown,.txt,text/markdown,text/plain'
+        : format === 'word'
+          ? '.htm,.html,.doc,.docx'
+          : '.html,.htm,text/html';
+    const file = await readTextFile(accept);
+    if (!file) return;
+
+    const parsed =
+      format === 'markdown'
+        ? parseMarkdown(file.text)
+        : format === 'word'
+          ? parseWordHtml(file.text)
+          : parseHtmlFile(file.text);
+
+    replaceAll(parsed);
+  };
+
+  const handleExport = (format: 'html' | 'markdown') => {
+    const current = editor.children as EditorValue;
+    if (format === 'markdown') exportMarkdown(current);
+    else exportHtml(current);
+  };
 
   const handleChange = (next: Descendant[]) => {
     setValue(next);
@@ -294,43 +350,17 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
     (): DaEditorHandle => ({
       editor,
       getValue: () => editor.children as EditorValue,
-      setValue: (next) => {
-        Editor.withoutNormalizing(editor, () => {
-          Transforms.deselect(editor);
-          for (let i = editor.children.length - 1; i >= 0; i--) {
-            Transforms.removeNodes(editor, { at: [i] });
-          }
-          Transforms.insertNodes(editor, next, { at: [0] });
-        });
-        setValue(editor.children as EditorValue);
-      },
+      setValue: (next) => replaceAll(next),
       getHTML: () => serializeHtml(editor.children as EditorValue),
       getMarkdown: () => serializeMarkdown(editor.children as EditorValue),
       getText: () => Editor.string(editor, []),
-      setHTML: (html) => {
-        const next = deserializeHtml(html);
-        Editor.withoutNormalizing(editor, () => {
-          Transforms.deselect(editor);
-          for (let i = editor.children.length - 1; i >= 0; i--) {
-            Transforms.removeNodes(editor, { at: [i] });
-          }
-          Transforms.insertNodes(editor, next, { at: [0] });
-        });
-        setValue(editor.children as EditorValue);
-      },
+      setHTML: (html) => replaceAll(deserializeHtml(html)),
       focus: () => ReactEditor.focus(editor),
-      clear: () => {
-        Editor.withoutNormalizing(editor, () => {
-          Transforms.deselect(editor);
-          for (let i = editor.children.length - 1; i >= 0; i--) {
-            Transforms.removeNodes(editor, { at: [i] });
-          }
-          Transforms.insertNodes(editor, emptyValue(), { at: [0] });
-        });
-        setValue(editor.children as EditorValue);
-      },
+      clear: () => replaceAll(emptyValue()),
     }),
-    [editor],
+    // `replaceAll` closes over `onChange`, which the caller may redefine.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [editor, onChange],
   );
 
   const showPlaceholder = isEditorEmpty(editor);
@@ -344,13 +374,15 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
       data-mode={mode}
       style={style}
     >
-      <Slate editor={editor} initialValue={value} onChange={handleChange}>
+      <Slate key={slateKey} editor={editor} initialValue={value} onChange={handleChange}>
         {fixedToolbar && !readOnly && (
           <FixedToolbar
             onAskAi={onAskAi}
             onLink={() => setLinkOpen(true)}
             onComment={onComment}
             onMedia={(kind) => setMediaKind(kind)}
+            onImport={handleImport}
+            onExport={handleExport}
             mode={mode}
             onModeChange={onModeChange}
             onToggleTheme={onToggleTheme}
@@ -389,6 +421,7 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
             {mentionables?.length && !locked ? (
               <MentionCombobox mentionables={mentionables} />
             ) : null}
+            {!locked && <TableToolbar />}
             {!locked && (
               <LinkPopover open={linkOpen} onClose={() => setLinkOpen(false)} />
             )}

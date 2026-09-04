@@ -2,7 +2,6 @@ import { useRef, useState } from 'react';
 import {
   DaEditor,
   type DaEditorHandle,
-  type EditorMode,
   type EditorValue,
   type Mentionable,
   type Theme,
@@ -96,16 +95,13 @@ const INITIAL: EditorValue = [
 
 export function Playground() {
   const ref = useRef<DaEditorHandle>(null);
-  const [theme, setTheme] = useState<Theme>('system');
-  const [mode, setMode] = useState<EditorMode>('editing');
+  const [theme, setTheme] = useState<Theme>('light');
 
   return (
     <div className="pg-editor-page">
       <DaEditor
         ref={ref}
         theme={theme}
-        mode={mode}
-        onModeChange={setMode}
         onToggleTheme={() =>
           setTheme((current) => (current === 'dark' ? 'light' : 'dark'))
         }

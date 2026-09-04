@@ -16,8 +16,11 @@ export const ELEMENT = {
   numberedList: 'ol',
   listItem: 'li',
   todoListItem: 'todo_li',
+  toggleList: 'toggle',
   divider: 'hr',
   callout: 'callout',
+  columns: 'columns',
+  column: 'column',
   image: 'img',
   video: 'video',
   audio: 'audio',
@@ -29,6 +32,11 @@ export const ELEMENT = {
   tableHeaderCell: 'th',
   link: 'a',
   mention: 'mention',
+  tableOfContents: 'toc',
+  equation: 'equation',
+  inlineEquation: 'inline_equation',
+  date: 'date',
+  footnote: 'footnote',
 } as const;
 
 export type ElementType = (typeof ELEMENT)[keyof typeof ELEMENT];
@@ -57,11 +65,26 @@ export type Align = 'left' | 'center' | 'right' | 'justify';
 /** Editing mode, mirroring a document editor's Editing / Suggesting / Viewing. */
 export type EditorMode = 'editing' | 'suggesting' | 'viewing';
 
+/** Marker style for a bulleted list. */
+export type BulletStyle = 'disc' | 'circle' | 'square';
+
+/** Numbering style for an ordered list. */
+export type NumberStyle =
+  | 'decimal'
+  | 'lower-alpha'
+  | 'upper-alpha'
+  | 'lower-roman'
+  | 'upper-roman';
+
 export interface BaseElement {
   type: ElementType;
   align?: Align;
   indent?: number;
   lineHeight?: number;
+  /** List marker style, on `ul` and `ol` elements: a `BulletStyle` or `NumberStyle`. */
+  listStyle?: string;
+  /** Expanded state of a toggle-list block. */
+  open?: boolean;
   children: Descendant[];
 }
 

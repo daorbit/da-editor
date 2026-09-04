@@ -378,6 +378,133 @@ export const ChevronDownIcon = (p: IconProps) => (
   </Icon>
 );
 
+export const ChevronRightIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <polyline points="9 18 15 12 9 6" />
+  </Icon>
+);
+
+export const H4Icon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M4 12h8M4 18V6M12 18V6" />
+    <path d="M20 15V8l-3.5 5H21" />
+  </Icon>
+);
+
+export const H5Icon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M4 12h8M4 18V6M12 18V6" />
+    <path d="M21 8h-3.5l-.5 3.5a2.2 2.2 0 1 1-.5 3.5" />
+  </Icon>
+);
+
+export const H6Icon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M4 12h8M4 18V6M12 18V6" />
+    <circle cx="19" cy="13" r="2.2" />
+    <path d="M21 8.5A2.5 2.5 0 0 0 17 10v3" />
+  </Icon>
+);
+
+export const ImportIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M12 3v12" />
+    <polyline points="8 11 12 15 16 11" />
+    <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
+  </Icon>
+);
+
+export const ExportIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M12 15V3" />
+    <polyline points="8 7 12 3 16 7" />
+    <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
+  </Icon>
+);
+
+export const ColumnsThreeIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <rect x="3" y="4" width="4.5" height="16" rx="1" />
+    <rect x="9.75" y="4" width="4.5" height="16" rx="1" />
+    <rect x="16.5" y="4" width="4.5" height="16" rx="1" />
+  </Icon>
+);
+
+export const CellIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <rect x="3" y="3" width="18" height="18" rx="2" />
+    <rect x="3" y="3" width="9" height="9" fill="currentColor" stroke="none" opacity="0.25" />
+    <path d="M3 12h18M12 3v18" />
+  </Icon>
+);
+
+export const RowIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <rect x="3" y="3" width="18" height="18" rx="2" />
+    <path d="M3 9h18M3 15h18" />
+  </Icon>
+);
+
+export const ColumnIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <rect x="3" y="3" width="18" height="18" rx="2" />
+    <path d="M9 3v18M15 3v18" />
+  </Icon>
+);
+
+export const ArrowUpIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <line x1="12" y1="19" x2="12" y2="5" />
+    <polyline points="5 12 12 5 19 12" />
+  </Icon>
+);
+
+export const ArrowDownIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <line x1="12" y1="5" x2="12" y2="19" />
+    <polyline points="19 12 12 19 5 12" />
+  </Icon>
+);
+
+export const ArrowLeftIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <line x1="19" y1="12" x2="5" y2="12" />
+    <polyline points="12 19 5 12 12 5" />
+  </Icon>
+);
+
+export const ArrowRightIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <line x1="5" y1="12" x2="19" y2="12" />
+    <polyline points="12 5 19 12 12 19" />
+  </Icon>
+);
+
+export const CloseIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <line x1="18" y1="6" x2="6" y2="18" />
+    <line x1="6" y1="6" x2="18" y2="18" />
+  </Icon>
+);
+
+export const PaintBucketIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="m19 11-8-8-8.6 8.6a2 2 0 0 0 0 2.8l5.2 5.2a2 2 0 0 0 2.8 0z" />
+    <path d="m5 2 5 5" />
+    <path d="M2 13h15" />
+    <path d="M22 20a2 2 0 1 1-4 0c0-1.6 2-3.5 2-3.5s2 1.9 2 3.5Z" />
+  </Icon>
+);
+
+export const LetterCaseIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M4 18 9 6l5 12" />
+    <path d="M5.5 14h7" />
+    <path d="M18 18v-6a2.5 2.5 0 0 0-4.4-1.6" />
+    <path d="M21 12v6" />
+  </Icon>
+);
+
 export const CheckIcon = (p: IconProps) => (
   <Icon {...p}>
     <polyline points="20 6 9 17 4 12" />
