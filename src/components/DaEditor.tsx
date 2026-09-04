@@ -121,9 +121,8 @@ export interface DaEditorProps {
   onUpload?: UploadHandler;
   /** Renders a light/dark toggle in the toolbar and fires on click. */
   onToggleTheme?: () => void;
-  /** Editing / suggesting / viewing switcher; omit to hide it. */
+  /** `'viewing'` locks the document, like `readOnly`. */
   mode?: EditorMode;
-  onModeChange?: (mode: EditorMode) => void;
   className?: string;
   style?: CSSProperties;
   minHeight?: string;
@@ -152,7 +151,6 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
     onUpload,
     onToggleTheme,
     mode = 'editing',
-    onModeChange,
     className,
     style,
     minHeight = '320px',
@@ -390,8 +388,6 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
             onMedia={(kind) => setMediaKind(kind)}
             onImport={handleImport}
             onExport={handleExport}
-            mode={mode}
-            onModeChange={onModeChange}
             onToggleTheme={onToggleTheme}
             isDark={resolvedTheme === 'dark'}
           />
@@ -399,17 +395,24 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
 
         <div
           className="da-editor__scroll"
-          style={{ minHeight, maxHeight, overflowY: maxHeight ? 'auto' : undefined }}
+          style={{ minHeight, maxHeight }}
         >
           <div className="da-editor__container" style={{ maxWidth }}>
             <Editable
               className="da-editor__content"
               readOnly={locked}
               spellCheck={spellCheck}
-              placeholder={showPlaceholder ? placeholder : undefined}
+              // Slate would repeat this on every empty block, so it is rendered
+              // once on the first block instead, via `data-placeholder`.
               renderElement={renderElement}
               renderLeaf={renderLeaf}
               onKeyDown={handleKeyDown}
+              data-placeholder={showPlaceholder ? '' : undefined}
+              style={
+                showPlaceholder
+                  ? ({ '--da-placeholder': JSON.stringify(placeholder) } as CSSProperties)
+                  : undefined
+              }
             />
 
             {floatingToolbar && !locked && (

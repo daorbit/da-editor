@@ -11,8 +11,19 @@ const VOID_TYPES: ElementType[] = [
   ELEMENT.file,
   ELEMENT.embed,
   ELEMENT.mention,
+  ELEMENT.tableOfContents,
+  ELEMENT.equation,
+  ELEMENT.inlineEquation,
+  ELEMENT.date,
+  ELEMENT.footnote,
 ];
-const INLINE_TYPES: ElementType[] = [ELEMENT.link, ELEMENT.mention];
+const INLINE_TYPES: ElementType[] = [
+  ELEMENT.link,
+  ELEMENT.mention,
+  ELEMENT.inlineEquation,
+  ELEMENT.date,
+  ELEMENT.footnote,
+];
 
 /** Blocks that reset to a paragraph when Backspace is pressed at their start. */
 const RESET_ON_BACKSPACE: ElementType[] = [

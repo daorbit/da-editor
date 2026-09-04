@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import { Transforms } from 'slate';
+import { Element as SlateElement, Node, Transforms } from 'slate';
 import {
   ReactEditor,
   useSelected,
@@ -97,6 +97,16 @@ export function ElementRenderer(props: RenderElementProps) {
       return <td {...attributes} style={style} className="da-td">{children}</td>;
     case ELEMENT.tableHeaderCell:
       return <th {...attributes} style={style} className="da-th">{children}</th>;
+    case ELEMENT.tableOfContents:
+      return <TableOfContents {...props} />;
+    case ELEMENT.equation:
+      return <Equation {...props} />;
+    case ELEMENT.inlineEquation:
+      return <InlineEquation {...props} />;
+    case ELEMENT.date:
+      return <DateChip {...props} />;
+    case ELEMENT.footnote:
+      return <Footnote {...props} />;
     case ELEMENT.link:
       return <Link {...props} />;
     case ELEMENT.mention:
@@ -329,6 +339,155 @@ function Link({ attributes, children, element }: RenderElementProps) {
     >
       {children}
     </a>
+  );
+}
+
+function TableOfContents({ attributes, children }: RenderElementProps) {
+  const editor = useSlateStatic();
+  const selected = useSelected();
+
+  // Built from the document's headings each render, so it never goes stale.
+  const headings = editor.children.flatMap((node) =>
+    SlateElement.isElement(node) && HEADING_LEVELS[node.type]
+      ? [{ level: HEADING_LEVELS[node.type], text: Node.string(node) }]
+      : [],
+  );
+
+  return (
+    <div {...attributes} className="da-media-wrap">
+      <div contentEditable={false}>
+        <nav className={`da-toc${selected ? ' da-media--selected' : ''}`}>
+          <div className="da-toc__title">Table of contents</div>
+          {headings.length === 0 ? (
+            <p className="da-toc__empty">Add a heading to build this list.</p>
+          ) : (
+            headings.map((heading, index) => (
+              // eslint-disable-next-line react/no-array-index-key
+              <div key={index} className={`da-toc__item da-toc__item--${heading.level}`}>
+                {heading.text || 'Untitled'}
+              </div>
+            ))
+          )}
+        </nav>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+const HEADING_LEVELS: Partial<Record<string, number>> = {
+  [ELEMENT.h1]: 1,
+  [ELEMENT.h2]: 2,
+  [ELEMENT.h3]: 3,
+  [ELEMENT.h4]: 4,
+  [ELEMENT.h5]: 5,
+  [ELEMENT.h6]: 6,
+};
+
+function Equation({ attributes, children, element }: RenderElementProps) {
+  const editor = useSlateStatic();
+  const selected = useSelected();
+  const formula = 'formula' in element && element.formula ? element.formula : '';
+
+  const edit = () => {
+    const next = window.prompt('Equation (LaTeX)', formula);
+    if (next === null) return;
+    Transforms.setNodes(editor, { formula: next }, { at: ReactEditor.findPath(editor, element) });
+  };
+
+  return (
+    <div {...attributes} className="da-media-wrap">
+      <div contentEditable={false}>
+        <div
+          className={`da-equation${selected ? ' da-media--selected' : ''}`}
+          role="button"
+          tabIndex={0}
+          onClick={edit}
+          onKeyDown={(event) => event.key === 'Enter' && edit()}
+        >
+          {formula || <span className="da-equation__empty">Click to add an equation</span>}
+        </div>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function InlineEquation({ attributes, children, element }: RenderElementProps) {
+  const editor = useSlateStatic();
+  const selected = useSelected();
+  const formula = 'formula' in element && element.formula ? element.formula : '';
+
+  return (
+    <span
+      {...attributes}
+      contentEditable={false}
+      className={`da-inline-equation${selected ? ' da-mention--selected' : ''}`}
+      role="button"
+      tabIndex={0}
+      onClick={() => {
+        const next = window.prompt('Inline equation (LaTeX)', formula);
+        if (next === null) return;
+        Transforms.setNodes(
+          editor,
+          { formula: next },
+          { at: ReactEditor.findPath(editor, element) },
+        );
+      }}
+      onKeyDown={() => undefined}
+    >
+      {formula || 'f(x)'}
+      {children}
+    </span>
+  );
+}
+
+function DateChip({ attributes, children, element }: RenderElementProps) {
+  const selected = useSelected();
+  const iso = 'date' in element && element.date ? element.date : '';
+  const label = iso
+    ? new Date(iso).toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      })
+    : 'Date';
+
+  return (
+    <span
+      {...attributes}
+      contentEditable={false}
+      className={`da-date${selected ? ' da-mention--selected' : ''}`}
+    >
+      {label}
+      {children}
+    </span>
+  );
+}
+
+function Footnote({ attributes, children, element }: RenderElementProps) {
+  const editor = useSlateStatic();
+  const selected = useSelected();
+  const note = 'note' in element && element.note ? element.note : '';
+
+  return (
+    <sup
+      {...attributes}
+      contentEditable={false}
+      className={`da-footnote${selected ? ' da-mention--selected' : ''}`}
+      title={note || 'Click to add a note'}
+      role="button"
+      tabIndex={0}
+      onClick={() => {
+        const next = window.prompt('Footnote', note);
+        if (next === null) return;
+        Transforms.setNodes(editor, { note: next }, { at: ReactEditor.findPath(editor, element) });
+      }}
+      onKeyDown={() => undefined}
+    >
+      *
+      {children}
+    </sup>
   );
 }
 

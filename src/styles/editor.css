@@ -340,9 +340,11 @@
 
 /* ------------------------------------------------------------ content -- */
 
+/* Scrolls independently of the toolbar, so the scrollbar starts below it. */
 .da-editor__scroll {
   flex: 1;
   min-height: 0;
+  overflow-y: auto;
 }
 
 .da-editor__container {
@@ -356,10 +358,25 @@
   min-height: inherit;
 }
 
+/* Slate's own placeholder repeats on every empty block, so it is suppressed. */
 .da-editor__content [data-slate-placeholder] {
+  display: none !important;
+}
+
+/* Shown once, on the first block, only while the document is empty. */
+.da-editor__content[data-placeholder] > *:first-child {
+  position: relative;
+}
+
+.da-editor__content[data-placeholder] > *:first-child::before {
+  content: var(--da-placeholder, '');
+  position: absolute;
+  left: 0;
+  top: 0;
   color: var(--da-faint);
-  opacity: 1 !important;
   pointer-events: none;
+  user-select: none;
+  white-space: nowrap;
 }
 
 .da-editor--readonly .da-editor__container {

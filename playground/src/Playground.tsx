@@ -107,7 +107,7 @@ export function Playground() {
         }
         defaultValue={INITIAL}
         className="pg-editor-fill"
-        minHeight="100%"
+        minHeight="0"
         maxWidth="820px"
         autoFocus
         mentionables={MENTIONABLES}

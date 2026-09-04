@@ -86,13 +86,7 @@ import {
   isInTable,
   toggleHeaderRow,
 } from '../core/tables';
-import {
-  ELEMENT,
-  MARK,
-  type DaEditor,
-  type EditorMode,
-  type MediaKind,
-} from '../core/types';
+import { ELEMENT, MARK, type DaEditor, type MediaKind } from '../core/types';
 
 export interface FixedToolbarProps {
   onAskAi?: () => void;

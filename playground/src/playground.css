@@ -312,30 +312,19 @@ body {
   display: flex;
   flex-direction: column;
   height: 100%;
-}
-
-.pg-editor-body {
-  flex: 1;
   min-height: 0;
-  display: flex;
+  /* The editor owns the scroll, so the page itself never scrolls. */
+  overflow: hidden;
 }
 
-.pg-editor-main {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-}
-
-/* The editor fills the viewport instead of sitting in a card. */
+/* Fills the viewport instead of sitting in a card. `min-height: 0` lets the
+   inner scroll area shrink, which is what makes it scrollable. */
 .pg-editor-fill {
   flex: 1;
+  min-height: 0;
   min-width: 0;
   border: none !important;
   border-radius: 0 !important;
-}
-
-.pg-editor-fill .da-editor__scroll {
-  overflow-y: auto;
 }
 
 .pg-panel {
