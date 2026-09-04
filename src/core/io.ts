@@ -32,27 +32,62 @@ export function exportMarkdown(value: EditorValue, filename = 'document.md'): vo
   downloadText(filename, serializeMarkdown(value), 'text/markdown');
 }
 
-/** Opens a file picker and resolves to the chosen file's text. */
-export function readTextFile(accept: string): Promise<{ name: string; text: string } | null> {
+/** Opens a file picker and resolves to the chosen file. */
+export function pickTextFile(accept: string): Promise<File | null> {
   return new Promise((resolve) => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = accept;
     input.style.display = 'none';
 
-    input.addEventListener('change', async () => {
-      const file = input.files?.[0];
+    input.addEventListener('change', () => {
+      const file = input.files?.[0] ?? null;
       input.remove();
-      if (!file) {
-        resolve(null);
-        return;
-      }
-      resolve({ name: file.name, text: await file.text() });
+      resolve(file);
     });
 
     document.body.append(input);
     input.click();
   });
+}
+
+/** Opens a file picker and resolves to the chosen file's text. */
+export async function readTextFile(
+  accept: string,
+): Promise<{ name: string; text: string } | null> {
+  const file = await pickTextFile(accept);
+  if (!file) return null;
+  return { name: file.name, text: await file.text() };
+}
+
+/**
+ * Converts a Word document to an editor value.
+ *
+ * A `.docx` is a ZIP archive, so it must be unpacked rather than read as text;
+ * `mammoth` does that and emits HTML. Word's "Save as Web Page" `.htm` output
+ * is already HTML and only needs its namespaced markup stripped.
+ */
+export async function importWordFile(file: File): Promise<EditorValue> {
+  const isDocx =
+    file.name.toLowerCase().endsWith('.docx') ||
+    file.type ===
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
+  if (isDocx) {
+    // Loaded on demand so the parser stays out of the initial bundle.
+    const mammoth = await import('mammoth');
+    const arrayBuffer = await file.arrayBuffer();
+    const { value } = await mammoth.convertToHtml({ arrayBuffer });
+    return deserializeHtml(value);
+  }
+
+  if (file.name.toLowerCase().endsWith('.doc')) {
+    throw new Error(
+      'Legacy .doc files are not supported. Save the document as .docx and try again.',
+    );
+  }
+
+  return parseWordHtml(await file.text());
 }
 
 /**

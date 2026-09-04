@@ -35,6 +35,7 @@ import {
   ALIGN_SPECS,
   BLOCK_SPECS,
   EXTRA_MARK_SPECS,
+  INSERT_GROUPS,
   INSERT_SPECS,
   MARK_SPECS,
   MEDIA_SPECS,
@@ -100,8 +101,6 @@ export interface FixedToolbarProps {
   onMedia?: (kind: MediaKind) => void;
   onImport?: (format: 'html' | 'markdown' | 'word') => void;
   onExport?: (format: 'html' | 'markdown') => void;
-  mode?: EditorMode;
-  onModeChange?: (mode: EditorMode) => void;
   onToggleTheme?: () => void;
   isDark?: boolean;
 }
@@ -113,8 +112,6 @@ export function FixedToolbar({
   onMedia,
   onImport,
   onExport,
-  mode = 'editing',
-  onModeChange,
   onToggleTheme,
   isDark,
 }: FixedToolbarProps) {
@@ -230,31 +227,28 @@ export function FixedToolbar({
     inline: (
       <ToolbarDropdown label="Insert" icon={<PlusIcon />}>
         {(close) =>
-          INSERT_SPECS.map((spec) => (
-            <MenuItem
-              key={spec.key}
-              icon={spec.icon}
-              label={spec.label}
-              onClick={() => {
-                spec.run(editor, { onMedia, onAskAi });
-                close();
-              }}
-            />
-          ))
+          INSERT_GROUPS.map((group) => {
+            const items = INSERT_SPECS.filter((spec) => spec.group === group);
+            if (items.length === 0) return null;
+            return (
+              <Fragment key={group}>
+                <MenuLabel>{group}</MenuLabel>
+                {items.map((spec) => (
+                  <MenuItem
+                    key={spec.key}
+                    icon={spec.icon}
+                    label={spec.label}
+                    onClick={() => {
+                      spec.run(editor, { onMedia, onAskAi, onLink });
+                      close();
+                    }}
+                  />
+                ))}
+              </Fragment>
+            );
+          })
         }
       </ToolbarDropdown>
-    ),
-    menu: (
-      <SubMenu icon={<PlusIcon />} label="Insert">
-        {INSERT_SPECS.map((spec) => (
-          <MenuItem
-            key={spec.key}
-            icon={spec.icon}
-            label={spec.label}
-            onClick={() => spec.run(editor, { onMedia, onAskAi })}
-          />
-        ))}
-      </SubMenu>
     ),
   });
 
@@ -789,26 +783,6 @@ export function FixedToolbar({
         />
       )}
 
-      {onModeChange && (
-        <ToolbarDropdown
-          label="Editing mode"
-          value={mode === 'editing' ? 'Editing' : mode === 'suggesting' ? 'Suggesting' : 'Viewing'}
-        >
-          {(close) =>
-            (['editing', 'suggesting', 'viewing'] as const).map((value) => (
-              <MenuItem
-                key={value}
-                label={value.charAt(0).toUpperCase() + value.slice(1)}
-                active={value === mode}
-                onClick={() => {
-                  onModeChange(value);
-                  close();
-                }}
-              />
-            ))
-          }
-        </ToolbarDropdown>
-      )}
       </div>
     </div>
   );

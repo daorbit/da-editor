@@ -54,6 +54,7 @@
   "dependencies": {
     "frimousse": "^0.3.0",
     "is-hotkey": "^0.2.0",
+    "mammoth": "^1.12.2",
     "react-colorful": "^5.8.1",
     "slate": "^0.126.2",
     "slate-dom": "^0.126.0",

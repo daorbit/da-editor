@@ -56,10 +56,10 @@ import { TableToolbar } from './TableToolbar';
 import {
   exportHtml,
   exportMarkdown,
+  importWordFile,
   parseHtmlFile,
   parseMarkdown,
-  parseWordHtml,
-  readTextFile,
+  pickTextFile,
 } from '../core/io';
 
 const MARK_HOTKEYS: Record<string, keyof typeof MARK> = {
@@ -237,19 +237,26 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
       format === 'markdown'
         ? '.md,.markdown,.txt,text/markdown,text/plain'
         : format === 'word'
-          ? '.htm,.html,.doc,.docx'
+          ? '.docx,.htm,.html'
           : '.html,.htm,text/html';
-    const file = await readTextFile(accept);
+
+    const file = await pickTextFile(accept);
     if (!file) return;
 
-    const parsed =
-      format === 'markdown'
-        ? parseMarkdown(file.text)
-        : format === 'word'
-          ? parseWordHtml(file.text)
-          : parseHtmlFile(file.text);
+    try {
+      // Word documents are archives, so they are unpacked rather than read as text.
+      const parsed =
+        format === 'word'
+          ? await importWordFile(file)
+          : format === 'markdown'
+            ? parseMarkdown(await file.text())
+            : parseHtmlFile(await file.text());
 
-    replaceAll(parsed);
+      replaceAll(parsed);
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : 'Could not read that file.';
+      window.alert(`Import failed: ${message}`);
+    }
   };
 
   const handleExport = (format: 'html' | 'markdown') => {

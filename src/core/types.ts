@@ -85,6 +85,12 @@ export interface BaseElement {
   listStyle?: string;
   /** Expanded state of a toggle-list block. */
   open?: boolean;
+  /** LaTeX source, on equation elements. */
+  formula?: string;
+  /** ISO timestamp, on date elements. */
+  date?: string;
+  /** Footnote body text. */
+  note?: string;
   children: Descendant[];
 }
 

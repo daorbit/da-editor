@@ -264,6 +264,54 @@ export function insertColumns(editor: DaEditor, count = 3): void {
   Transforms.insertNodes(editor, { type: ELEMENT.paragraph, children: [{ text: '' }] });
 }
 
+/* ------------------------------------------------------ advanced blocks -- */
+
+/** Inserts a table-of-contents placeholder, rendered from the headings. */
+export function insertTableOfContents(editor: DaEditor): void {
+  Transforms.insertNodes(editor, {
+    type: ELEMENT.tableOfContents,
+    children: [{ text: '' }],
+  } as SlateElement);
+  Transforms.insertNodes(editor, { type: ELEMENT.paragraph, children: [{ text: '' }] });
+}
+
+export function insertEquation(editor: DaEditor, formula = ''): void {
+  Transforms.insertNodes(editor, {
+    type: ELEMENT.equation,
+    formula,
+    children: [{ text: '' }],
+  } as SlateElement);
+  Transforms.insertNodes(editor, { type: ELEMENT.paragraph, children: [{ text: '' }] });
+}
+
+export function insertInlineEquation(editor: DaEditor, formula = ''): void {
+  Transforms.insertNodes(editor, {
+    type: ELEMENT.inlineEquation,
+    formula,
+    children: [{ text: '' }],
+  } as SlateElement);
+  Transforms.move(editor);
+}
+
+export function insertDate(editor: DaEditor, date = new Date()): void {
+  Transforms.insertNodes(editor, {
+    type: ELEMENT.date,
+    date: date.toISOString(),
+    children: [{ text: '' }],
+  } as SlateElement);
+  Transforms.move(editor);
+  Transforms.insertText(editor, ' ');
+}
+
+export function insertFootnote(editor: DaEditor, note = ''): void {
+  Transforms.insertNodes(editor, {
+    type: ELEMENT.footnote,
+    note,
+    children: [{ text: '' }],
+  } as SlateElement);
+  Transforms.move(editor);
+}
+
 /* ----------------------------------------------------------- typography -- */
 
 export const FONT_SIZES = [12, 14, 16, 18, 20, 24, 30, 36, 48, 60, 72];

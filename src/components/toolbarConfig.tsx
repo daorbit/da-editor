@@ -8,6 +8,7 @@ import {
   BulletedListIcon,
   CalloutIcon,
   CodeBlockIcon,
+  CalendarIcon,
   CodeIcon,
   ColumnsThreeIcon,
   DividerIcon,
@@ -37,7 +38,16 @@ import {
   UnderlineIcon,
   VideoIcon,
 } from '../icons';
-import { insertDivider, replaceBlock } from '../core/transforms';
+import {
+  insertColumns,
+  insertDate,
+  insertDivider,
+  insertEquation,
+  insertFootnote,
+  insertInlineEquation,
+  insertTableOfContents,
+  replaceBlock,
+} from '../core/transforms';
 import { insertTable } from '../core/tables';
 import {
   ELEMENT,
