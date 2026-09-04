@@ -10,22 +10,39 @@ import {
   CodeBlockIcon,
   CodeIcon,
   DividerIcon,
+  EquationIcon,
   H1Icon,
   H2Icon,
   H3Icon,
   HighlighterIcon,
+  ImageIcon,
   ItalicIcon,
   KbdIcon,
+  LinkIcon,
+  MentionIcon,
   NumberedListIcon,
   QuoteIcon,
+  SparklesIcon,
   StrikethroughIcon,
   SubscriptIcon,
   SuperscriptIcon,
+  TableIcon,
   TextIcon,
   TodoListIcon,
   UnderlineIcon,
+  VideoIcon,
 } from '../icons';
-import { ELEMENT, MARK, type Align, type ElementType, type MarkType } from '../core/types';
+import { insertDivider, replaceBlock } from '../core/transforms';
+import { insertTable } from '../core/tables';
+import {
+  ELEMENT,
+  MARK,
+  type Align,
+  type DaEditor,
+  type ElementType,
+  type MarkType,
+  type MediaKind,
+} from '../core/types';
 
 export interface MarkSpec {
   mark: MarkType;
@@ -48,9 +65,9 @@ export const MARK_SPECS: MarkSpec[] = [
 ];
 
 export const EXTRA_MARK_SPECS: MarkSpec[] = [
-  { mark: MARK.subscript, label: 'Subscript', icon: <SubscriptIcon /> },
+  { mark: MARK.kbd, label: 'Keyboard input', icon: <KbdIcon /> },
   { mark: MARK.superscript, label: 'Superscript', icon: <SuperscriptIcon /> },
-  { mark: MARK.kbd, label: 'Keyboard key', icon: <KbdIcon /> },
+  { mark: MARK.subscript, label: 'Subscript', icon: <SubscriptIcon /> },
 ];
 
 export interface BlockSpec {
@@ -81,6 +98,75 @@ export const ALIGN_SPECS: Array<{ align: Align; label: string; icon: ReactNode }
   { align: 'justify', label: 'Justify', icon: <AlignJustifyIcon /> },
 ];
 
+export interface MediaSpec {
+  kind: MediaKind;
+  label: string;
+  icon: ReactNode;
+}
+
+export const MEDIA_SPECS: MediaSpec[] = [
+  { kind: 'image', label: 'Image', icon: <ImageIcon /> },
+  { kind: 'video', label: 'Video', icon: <VideoIcon /> },
+  { kind: 'audio', label: 'Audio', icon: <EquationIcon /> },
+  { kind: 'file', label: 'File attachment', icon: <LinkIcon /> },
+  { kind: 'embed', label: 'Embed', icon: <CodeIcon /> },
+];
+
+export interface InsertSpec {
+  key: string;
+  label: string;
+  icon: ReactNode;
+  run: (
+    editor: DaEditor,
+    handlers: { onMedia?: (kind: MediaKind) => void; onAskAi?: () => void },
+  ) => void;
+}
+
+export const INSERT_SPECS: InsertSpec[] = [
+  {
+    key: 'table',
+    label: 'Table',
+    icon: <TableIcon />,
+    run: (editor) => insertTable(editor),
+  },
+  {
+    key: 'image',
+    label: 'Image',
+    icon: <ImageIcon />,
+    run: (_editor, { onMedia }) => onMedia?.('image'),
+  },
+  {
+    key: 'video',
+    label: 'Video',
+    icon: <VideoIcon />,
+    run: (_editor, { onMedia }) => onMedia?.('video'),
+  },
+  {
+    key: 'callout',
+    label: 'Callout',
+    icon: <CalloutIcon />,
+    run: (editor) => replaceBlock(editor, ELEMENT.callout),
+  },
+  {
+    key: 'code',
+    label: 'Code block',
+    icon: <CodeBlockIcon />,
+    run: (editor) => replaceBlock(editor, ELEMENT.codeBlock),
+  },
+  {
+    key: 'divider',
+    label: 'Divider',
+    icon: <DividerIcon />,
+    run: (editor) => insertDivider(editor),
+  },
+  {
+    key: 'ai',
+    label: 'Ask AI',
+    icon: <SparklesIcon />,
+    run: (_editor, { onAskAi }) => onAskAi?.(),
+  },
+];
+
 export const TEXT_COLORS = [
   { label: 'Default', value: '' },
   { label: 'Gray', value: '#6b7280' },
@@ -106,3 +192,4 @@ export const HIGHLIGHT_COLORS = [
 ];
 
 export const HIGHLIGHT_ICON = <HighlighterIcon />;
+export const MENTION_ICON = <MentionIcon />;

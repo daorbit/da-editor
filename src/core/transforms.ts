@@ -8,6 +8,9 @@ const ALIGN_TYPES: ElementType[] = [
   ELEMENT.h1,
   ELEMENT.h2,
   ELEMENT.h3,
+  ELEMENT.h4,
+  ELEMENT.h5,
+  ELEMENT.h6,
   ELEMENT.blockquote,
 ];
 
@@ -206,6 +209,83 @@ export function replaceBlock(editor: DaEditor, type: ElementType): void {
     return;
   }
   Transforms.setNodes(editor, { type });
+}
+
+/* ----------------------------------------------------------- typography -- */
+
+export const FONT_SIZES = [12, 14, 16, 18, 20, 24, 30, 36, 48, 60, 72];
+
+export const FONT_FAMILIES = [
+  { label: 'Default', value: '' },
+  { label: 'Sans serif', value: 'system-ui, sans-serif' },
+  { label: 'Serif', value: 'Georgia, "Times New Roman", serif' },
+  { label: 'Monospace', value: 'ui-monospace, Menlo, monospace' },
+  { label: 'Inter', value: 'Inter, system-ui, sans-serif' },
+];
+
+export const LINE_HEIGHTS = [1, 1.15, 1.5, 1.75, 2];
+
+const DEFAULT_FONT_SIZE = 16;
+
+export function getFontSize(editor: DaEditor): number {
+  const value = Editor.marks(editor)?.fontSize;
+  return typeof value === 'number' ? value : DEFAULT_FONT_SIZE;
+}
+
+export function setFontSize(editor: DaEditor, size: number): void {
+  const clamped = Math.min(144, Math.max(8, Math.round(size)));
+  if (clamped === DEFAULT_FONT_SIZE) {
+    Editor.removeMark(editor, 'fontSize');
+    return;
+  }
+  Editor.addMark(editor, 'fontSize', clamped);
+}
+
+/** Steps the font size to the next or previous value in `FONT_SIZES`. */
+export function stepFontSize(editor: DaEditor, delta: 1 | -1): void {
+  setFontSize(editor, getFontSize(editor) + delta * 2);
+}
+
+export function setLineHeight(editor: DaEditor, lineHeight: number): void {
+  Transforms.setNodes(
+    editor,
+    { lineHeight },
+    {
+      match: (n) =>
+        !Editor.isEditor(n) && SlateElement.isElement(n) && Editor.isBlock(editor, n),
+    },
+  );
+}
+
+export function getLineHeight(editor: DaEditor): number {
+  const { selection } = editor;
+  if (!selection) return 1.65;
+  const [match] = Array.from(
+    Editor.nodes(editor, {
+      match: (n) => !Editor.isEditor(n) && SlateElement.isElement(n),
+      mode: 'lowest',
+    }),
+  );
+  const node = match?.[0];
+  return SlateElement.isElement(node) && node.lineHeight ? node.lineHeight : 1.65;
+}
+
+/* -------------------------------------------------------------- mention -- */
+
+export function insertMention(editor: DaEditor, id: string, name: string): void {
+  Transforms.insertNodes(editor, {
+    type: ELEMENT.mention,
+    id,
+    name,
+    children: [{ text: '' }],
+  });
+  Transforms.move(editor);
+  // A trailing space keeps typing natural after the chip.
+  Transforms.insertText(editor, ' ');
+}
+
+export function insertEmoji(editor: DaEditor, emoji: string): void {
+  Transforms.insertText(editor, emoji);
 }
 
 export function isEditorEmpty(editor: DaEditor): boolean {

@@ -11,6 +11,12 @@ export { SlashMenu } from './components/SlashMenu';
 export type { SlashMenuProps, SlashItem } from './components/SlashMenu';
 export { LinkPopover } from './components/LinkPopover';
 export type { LinkPopoverProps } from './components/LinkPopover';
+export { MentionCombobox } from './components/MentionCombobox';
+export type { MentionComboboxProps } from './components/MentionCombobox';
+export { MediaDialog } from './components/MediaDialog';
+export type { MediaDialogProps } from './components/MediaDialog';
+export { EmojiPicker } from './components/EmojiPicker';
+export type { EmojiPickerProps } from './components/EmojiPicker';
 export { ElementRenderer } from './components/ElementRenderer';
 export { LeafRenderer } from './components/LeafRenderer';
 export {
@@ -31,10 +37,17 @@ export {
   EXTRA_MARK_SPECS,
   BLOCK_SPECS,
   ALIGN_SPECS,
+  MEDIA_SPECS,
+  INSERT_SPECS,
   TEXT_COLORS,
   HIGHLIGHT_COLORS,
 } from './components/toolbarConfig';
-export type { MarkSpec, BlockSpec } from './components/toolbarConfig';
+export type {
+  MarkSpec,
+  BlockSpec,
+  MediaSpec,
+  InsertSpec,
+} from './components/toolbarConfig';
 
 /* Core */
 export { withDaEditor } from './core/withDaEditor';
@@ -56,8 +69,41 @@ export {
   isLinkActive,
   insertDivider,
   insertImage,
+  insertMention,
+  insertEmoji,
   isEditorEmpty,
+  getFontSize,
+  setFontSize,
+  stepFontSize,
+  getLineHeight,
+  setLineHeight,
+  FONT_SIZES,
+  FONT_FAMILIES,
+  LINE_HEIGHTS,
 } from './core/transforms';
+export {
+  insertTable,
+  insertRow,
+  insertColumn,
+  deleteRow,
+  deleteColumn,
+  deleteTable,
+  toggleHeaderRow,
+  moveToCell,
+  setColumnWidth,
+  isInTable,
+  isCellSelection,
+} from './core/tables';
+export {
+  insertMedia,
+  pickFile,
+  resolveFileUrl,
+  toEmbedUrl,
+  isEmbeddable,
+  ACCEPT_FOR_KIND,
+} from './core/media';
+export { EMOJI_GROUPS, searchEmojis } from './core/emoji';
+export type { EmojiEntry, EmojiGroup } from './core/emoji';
 export { autoformatBlock, autoformatMark, autoformatText } from './core/autoformat';
 export {
   serializeHtml,
@@ -73,6 +119,10 @@ export type {
   MarkType,
   Align,
   Theme,
+  EditorMode,
+  Mentionable,
+  MediaKind,
+  UploadHandler,
   CustomElement,
   CustomText,
 } from './core/types';

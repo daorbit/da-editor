@@ -18,7 +18,7 @@ function App() {
   const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
 
   return route === '/playground' ? (
-    <Playground navigate={navigate} theme={theme} onToggleTheme={toggleTheme} />
+    <Playground />
   ) : (
     <Home navigate={navigate} onToggleTheme={toggleTheme} dark={theme === 'dark'} />
   );

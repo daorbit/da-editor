@@ -1,13 +1,20 @@
 import { useRef, useState } from 'react';
 import {
   DaEditor,
-  MoonIcon,
-  SunIcon,
   type DaEditorHandle,
+  type EditorMode,
   type EditorValue,
+  type Mentionable,
   type Theme,
 } from '../../src';
-import type { Route } from './router';
+
+const MENTIONABLES: Mentionable[] = [
+  { id: '1', name: 'Alice Chen', detail: 'alice@example.com' },
+  { id: '2', name: 'Bob Martin', detail: 'bob@example.com' },
+  { id: '3', name: 'Priya Sharma', detail: 'priya@example.com' },
+  { id: '4', name: 'Diego Alvarez', detail: 'diego@example.com' },
+  { id: '5', name: 'Yuki Tanaka', detail: 'yuki@example.com' },
+];
 
 const INITIAL: EditorValue = [
   { type: 'h1', children: [{ text: 'Welcome to the playground' }] },
@@ -18,7 +25,9 @@ const INITIAL: EditorValue = [
       { text: 'Slate', bold: true },
       { text: '. Press ' },
       { text: '/', code: true },
-      { text: ' for the block menu, or select text for the floating toolbar.' },
+      { text: ' for the block menu, ' },
+      { text: '@', code: true },
+      { text: ' to mention someone, or select text for the floating toolbar.' },
     ],
   },
   { type: 'h2', children: [{ text: 'Markdown shortcuts' }] },
@@ -41,7 +50,7 @@ const INITIAL: EditorValue = [
     children: [
       { type: 'li', children: [{ text: 'Bulleted and numbered lists' }] },
       { type: 'li', children: [{ text: 'To-do items with checkboxes' }] },
-      { type: 'li', children: [{ text: 'Callouts, code blocks and dividers' }] },
+      { type: 'li', children: [{ text: 'Tables, media, mentions and emoji' }] },
     ],
   },
   { type: 'todo_li', checked: true, children: [{ text: 'Ship dark mode' }] },
@@ -51,97 +60,64 @@ const INITIAL: EditorValue = [
     variant: 'info',
     children: [{ text: 'Callouts support info, warning, success and danger variants.' }],
   },
+  { type: 'h2', children: [{ text: 'Tables' }] },
+  {
+    type: 'table',
+    columnWidths: [200, 160, 160],
+    children: [
+      {
+        type: 'tr',
+        children: [
+          { type: 'th', children: [{ type: 'p', children: [{ text: 'Feature' }] }] },
+          { type: 'th', children: [{ type: 'p', children: [{ text: 'Status' }] }] },
+          { type: 'th', children: [{ type: 'p', children: [{ text: 'Owner' }] }] },
+        ],
+      },
+      {
+        type: 'tr',
+        children: [
+          { type: 'td', children: [{ type: 'p', children: [{ text: 'Tables' }] }] },
+          { type: 'td', children: [{ type: 'p', children: [{ text: '✅ Done' }] }] },
+          { type: 'td', children: [{ type: 'p', children: [{ text: 'Alice' }] }] },
+        ],
+      },
+      {
+        type: 'tr',
+        children: [
+          { type: 'td', children: [{ type: 'p', children: [{ text: 'AI streaming' }] }] },
+          { type: 'td', children: [{ type: 'p', children: [{ text: '🚧 Planned' }] }] },
+          { type: 'td', children: [{ type: 'p', children: [{ text: 'Bob' }] }] },
+        ],
+      },
+    ],
+  },
   { type: 'p', children: [{ text: '' }] },
 ];
 
-type Tab = 'html' | 'markdown' | 'json';
-
-export interface PlaygroundProps {
-  navigate: (route: Route) => void;
-  theme: Theme;
-  onToggleTheme: () => void;
-}
-
-export function Playground({ navigate, theme, onToggleTheme }: PlaygroundProps) {
+export function Playground() {
   const ref = useRef<DaEditorHandle>(null);
-  const [tab, setTab] = useState<Tab>('html');
-  const [output, setOutput] = useState('');
-  const [panelOpen, setPanelOpen] = useState(false);
-
-  const dark = theme === 'dark';
-
-  const serialize = (next: Tab) => {
-    const handle = ref.current;
-    if (!handle) return;
-    setTab(next);
-    setOutput(
-      next === 'html'
-        ? handle.getHTML()
-        : next === 'markdown'
-          ? handle.getMarkdown()
-          : JSON.stringify(handle.getValue(), null, 2),
-    );
-  };
+  const [theme, setTheme] = useState<Theme>('system');
+  const [mode, setMode] = useState<EditorMode>('editing');
 
   return (
     <div className="pg-editor-page">
-      <header className="pg-nav pg-nav--bar">
-        <button type="button" className="pg-link" onClick={() => navigate('/')}>
-          ← @da/editor
-        </button>
-        <div className="pg-nav__actions">
-          <button
-            type="button"
-            className="pg-btn pg-btn--ghost"
-            onClick={() => {
-              setPanelOpen((open) => !open);
-              if (!panelOpen) serialize(tab);
-            }}
-          >
-            {panelOpen ? 'Hide output' : 'Show output'}
-          </button>
-          <button type="button" className="pg-btn pg-btn--ghost" onClick={onToggleTheme}>
-            {dark ? <SunIcon size={15} /> : <MoonIcon size={15} />}
-            {dark ? 'Light' : 'Dark'}
-          </button>
-        </div>
-      </header>
-
-      <div className={`pg-editor-body${panelOpen ? ' pg-editor-body--split' : ''}`}>
-        <div className="pg-editor-main">
-          <DaEditor
-            ref={ref}
-            theme={theme}
-            defaultValue={INITIAL}
-            className="pg-editor-fill"
-            minHeight="100%"
-            maxWidth="760px"
-            autoFocus
-            onAskAi={() => window.alert('Ask AI — wire this to your own endpoint.')}
-            onChange={() => panelOpen && serialize(tab)}
-          />
-        </div>
-
-        {panelOpen && (
-          <aside className="pg-panel">
-            <div className="pg-panel__tabs">
-              {(['html', 'markdown', 'json'] as const).map((key) => (
-                <button
-                  key={key}
-                  type="button"
-                  className={`pg-tab${tab === key ? ' pg-tab--active' : ''}`}
-                  onClick={() => serialize(key)}
-                >
-                  {key}
-                </button>
-              ))}
-            </div>
-            <pre className="pg-panel__output">
-              <code>{output}</code>
-            </pre>
-          </aside>
-        )}
-      </div>
+      <DaEditor
+        ref={ref}
+        theme={theme}
+        mode={mode}
+        onModeChange={setMode}
+        onToggleTheme={() =>
+          setTheme((current) => (current === 'dark' ? 'light' : 'dark'))
+        }
+        defaultValue={INITIAL}
+        className="pg-editor-fill"
+        minHeight="100%"
+        maxWidth="820px"
+        autoFocus
+        mentionables={MENTIONABLES}
+        onAskAi={() => window.alert('Ask AI — wire this to your own endpoint.')}
+        onComment={() => window.alert('Comment — wire this to your own store.')}
+      />
     </div>
   );
 }

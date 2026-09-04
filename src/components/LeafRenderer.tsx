@@ -14,11 +14,18 @@ export function LeafRenderer({ attributes, children, leaf }: RenderLeafProps) {
 
   const style = {
     color: leaf.color,
-    backgroundColor: leaf.highlight,
+    backgroundColor: leaf.highlight ?? leaf.backgroundColor,
+    fontSize: leaf.fontSize ? `${leaf.fontSize}px` : undefined,
+    fontFamily: leaf.fontFamily,
   };
 
   return (
-    <span {...attributes} style={style}>
+    <span
+      {...attributes}
+      style={style}
+      className={leaf.comment ? 'da-commented' : undefined}
+      data-comment={leaf.comment}
+    >
       {content}
     </span>
   );

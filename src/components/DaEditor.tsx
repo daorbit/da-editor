@@ -31,12 +31,18 @@ import {
   serializeHtml,
   serializeMarkdown,
 } from '../core/serialize';
+import { insertMedia } from '../core/media';
+import { moveToCell } from '../core/tables';
 import {
   ELEMENT,
   MARK,
   type DaEditor as DaEditorType,
+  type EditorMode,
   type EditorValue,
+  type Mentionable,
+  type MediaKind,
   type Theme,
+  type UploadHandler,
 } from '../core/types';
 import { ElementRenderer } from './ElementRenderer';
 import { LeafRenderer } from './LeafRenderer';
@@ -44,6 +50,8 @@ import { FixedToolbar } from './FixedToolbar';
 import { FloatingToolbar } from './FloatingToolbar';
 import { SlashMenu } from './SlashMenu';
 import { LinkPopover } from './LinkPopover';
+import { MentionCombobox } from './MentionCombobox';
+import { MediaDialog } from './MediaDialog';
 
 const MARK_HOTKEYS: Record<string, keyof typeof MARK> = {
   'mod+b': 'bold',
@@ -98,6 +106,15 @@ export interface DaEditorProps {
   /** Renders the Ask AI affordances and fires when one is used. */
   onAskAi?: () => void;
   onComment?: () => void;
+  /** Entries offered by the `@` mention combobox. */
+  mentionables?: Mentionable[];
+  /** Uploads a file picked from the device; falls back to a local object URL. */
+  onUpload?: UploadHandler;
+  /** Renders a light/dark toggle in the toolbar and fires on click. */
+  onToggleTheme?: () => void;
+  /** Editing / suggesting / viewing switcher; omit to hide it. */
+  mode?: EditorMode;
+  onModeChange?: (mode: EditorMode) => void;
   className?: string;
   style?: CSSProperties;
   minHeight?: string;
@@ -122,6 +139,11 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
     autoformat = true,
     onAskAi,
     onComment,
+    mentionables,
+    onUpload,
+    onToggleTheme,
+    mode = 'editing',
+    onModeChange,
     className,
     style,
     minHeight = '320px',
@@ -147,6 +169,7 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
 
   const [value, setValue] = useState<EditorValue>(initialValue);
   const [linkOpen, setLinkOpen] = useState(false);
+  const [mediaKind, setMediaKind] = useState<MediaKind | null>(null);
   const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>(
     theme === 'dark' ? 'dark' : 'light',
   );
@@ -221,15 +244,15 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
       return;
     }
 
-    // Tab indents rather than moving focus, matching document editors.
+    // Inside a table Tab walks cells; elsewhere it indents.
     if (isHotkey('tab', event.nativeEvent)) {
       event.preventDefault();
-      indent(editor, 1);
+      if (!moveToCell(editor, 'next')) indent(editor, 1);
       return;
     }
     if (isHotkey('shift+tab', event.nativeEvent)) {
       event.preventDefault();
-      indent(editor, -1);
+      if (!moveToCell(editor, 'previous')) indent(editor, -1);
       return;
     }
 
@@ -311,16 +334,28 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
   );
 
   const showPlaceholder = isEditorEmpty(editor);
+  // Viewing mode is read-only regardless of the `readOnly` prop.
+  const locked = readOnly || mode === 'viewing';
 
   return (
     <div
-      className={`da-editor${readOnly ? ' da-editor--readonly' : ''}${className ? ` ${className}` : ''}`}
+      className={`da-editor${locked ? ' da-editor--readonly' : ''}${className ? ` ${className}` : ''}`}
       data-theme={resolvedTheme}
+      data-mode={mode}
       style={style}
     >
       <Slate editor={editor} initialValue={value} onChange={handleChange}>
         {fixedToolbar && !readOnly && (
-          <FixedToolbar onAskAi={onAskAi} onLink={() => setLinkOpen(true)} />
+          <FixedToolbar
+            onAskAi={onAskAi}
+            onLink={() => setLinkOpen(true)}
+            onComment={onComment}
+            onMedia={(kind) => setMediaKind(kind)}
+            mode={mode}
+            onModeChange={onModeChange}
+            onToggleTheme={onToggleTheme}
+            isDark={resolvedTheme === 'dark'}
+          />
         )}
 
         <div
@@ -330,7 +365,7 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
           <div className="da-editor__container" style={{ maxWidth }}>
             <Editable
               className="da-editor__content"
-              readOnly={readOnly}
+              readOnly={locked}
               spellCheck={spellCheck}
               placeholder={showPlaceholder ? placeholder : undefined}
               renderElement={renderElement}
@@ -338,19 +373,34 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
               onKeyDown={handleKeyDown}
             />
 
-            {floatingToolbar && !readOnly && (
+            {floatingToolbar && !locked && (
               <FloatingToolbar
                 onAskAi={onAskAi}
                 onLink={() => setLinkOpen(true)}
                 onComment={onComment}
               />
             )}
-            {slashMenu && !readOnly && <SlashMenu onAskAi={onAskAi} />}
-            {!readOnly && (
+            {slashMenu && !locked && (
+              <SlashMenu
+                onAskAi={onAskAi}
+                onMedia={(kind) => setMediaKind(kind)}
+              />
+            )}
+            {mentionables?.length && !locked ? (
+              <MentionCombobox mentionables={mentionables} />
+            ) : null}
+            {!locked && (
               <LinkPopover open={linkOpen} onClose={() => setLinkOpen(false)} />
             )}
           </div>
         </div>
+
+        <MediaDialog
+          kind={mediaKind}
+          onUpload={onUpload}
+          onInsert={(kind, url, name) => insertMedia(editor, kind, url, { name })}
+          onClose={() => setMediaKind(null)}
+        />
       </Slate>
     </div>
   );

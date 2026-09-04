@@ -1,9 +1,18 @@
 import { Editor, Element as SlateElement, Point, Range, Transforms } from 'slate';
 import { ELEMENT, type DaEditor, type ElementType } from './types';
 import { LIST_TYPES, wrapLink } from './transforms';
+import { normalizeTable } from './tables';
 
-const VOID_TYPES: ElementType[] = [ELEMENT.divider, ELEMENT.image];
-const INLINE_TYPES: ElementType[] = [ELEMENT.link];
+const VOID_TYPES: ElementType[] = [
+  ELEMENT.divider,
+  ELEMENT.image,
+  ELEMENT.video,
+  ELEMENT.audio,
+  ELEMENT.file,
+  ELEMENT.embed,
+  ELEMENT.mention,
+];
+const INLINE_TYPES: ElementType[] = [ELEMENT.link, ELEMENT.mention];
 
 /** Blocks that reset to a paragraph when Backspace is pressed at their start. */
 const RESET_ON_BACKSPACE: ElementType[] = [
@@ -137,6 +146,8 @@ export function withDaEditor(editor: DaEditor): DaEditor {
 
   editor.normalizeNode = (entry) => {
     const [node, path] = entry;
+
+    if (normalizeTable(editor, entry)) return;
 
     // A list must only contain list items; stray blocks are converted.
     if (SlateElement.isElement(node) && LIST_TYPES.includes(node.type)) {

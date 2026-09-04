@@ -2,9 +2,17 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Editor, Range, Transforms } from 'slate';
 import { ReactEditor, useSlate } from 'slate-react';
 import { BLOCK_SPECS } from './toolbarConfig';
-import { ImageIcon, SparklesIcon } from '../icons';
+import {
+  EmojiIcon,
+  ImageIcon,
+  LinkIcon,
+  SparklesIcon,
+  TableIcon,
+  VideoIcon,
+} from '../icons';
 import { replaceBlock } from '../core/transforms';
-import { ELEMENT, type DaEditor, type ElementType } from '../core/types';
+import { insertTable } from '../core/tables';
+import { ELEMENT, type DaEditor, type ElementType, type MediaKind } from '../core/types';
 
 export interface SlashItem {
   key: string;
@@ -26,9 +34,12 @@ function blockItem(type: ElementType, label: string, group: string, icon: React.
   };
 }
 
-const GROUPS = ['AI', 'Basic blocks', 'Lists', 'Media'] as const;
+const GROUPS = ['AI', 'Basic blocks', 'Lists', 'Advanced', 'Media'] as const;
 
-function buildItems(onAskAi?: () => void): SlashItem[] {
+function buildItems(
+  onAskAi?: () => void,
+  onMedia?: (kind: MediaKind) => void,
+): SlashItem[] {
   const spec = (type: ElementType) => BLOCK_SPECS.find((s) => s.type === type)!;
 
   const items: SlashItem[] = [
@@ -44,18 +55,51 @@ function buildItems(onAskAi?: () => void): SlashItem[] {
     blockItem(ELEMENT.numberedList, 'Numbered list', 'Lists', spec(ELEMENT.numberedList).icon, ['ol', 'number', 'ordered', 'list']),
     blockItem(ELEMENT.todoListItem, 'To-do list', 'Lists', spec(ELEMENT.todoListItem).icon, ['todo', 'task', 'checkbox', 'check']),
     {
-      key: 'image',
-      label: 'Image',
-      group: 'Media',
-      icon: <ImageIcon />,
-      keywords: ['image', 'picture', 'photo', 'img'],
-      run: (editor) => {
-        const url = window.prompt('Image URL');
-        if (!url) return;
-        Transforms.insertNodes(editor, { type: ELEMENT.image, url, children: [{ text: '' }] });
-      },
+      key: 'table',
+      label: 'Table',
+      group: 'Advanced',
+      icon: <TableIcon />,
+      keywords: ['table', 'grid', 'rows', 'columns'],
+      run: (editor) => insertTable(editor),
     },
   ];
+
+  if (onMedia) {
+    items.push(
+      {
+        key: 'image',
+        label: 'Image',
+        group: 'Media',
+        icon: <ImageIcon />,
+        keywords: ['image', 'picture', 'photo', 'img', 'upload'],
+        run: () => onMedia('image'),
+      },
+      {
+        key: 'video',
+        label: 'Video',
+        group: 'Media',
+        icon: <VideoIcon />,
+        keywords: ['video', 'movie', 'youtube', 'mp4'],
+        run: () => onMedia('video'),
+      },
+      {
+        key: 'audio',
+        label: 'Audio',
+        group: 'Media',
+        icon: <EmojiIcon />,
+        keywords: ['audio', 'sound', 'music', 'mp3'],
+        run: () => onMedia('audio'),
+      },
+      {
+        key: 'file',
+        label: 'File attachment',
+        group: 'Media',
+        icon: <LinkIcon />,
+        keywords: ['file', 'attach', 'attachment', 'document'],
+        run: () => onMedia('file'),
+      },
+    );
+  }
 
   if (onAskAi) {
     items.unshift({
@@ -73,13 +117,14 @@ function buildItems(onAskAi?: () => void): SlashItem[] {
 
 export interface SlashMenuProps {
   onAskAi?: () => void;
+  onMedia?: (kind: MediaKind) => void;
 }
 
 /**
  * Combobox triggered by `/` at the start of an empty-ish block. The trigger text
  * lives in the document, so it is deleted before an item runs.
  */
-export function SlashMenu({ onAskAi }: SlashMenuProps) {
+export function SlashMenu({ onAskAi, onMedia }: SlashMenuProps) {
   const editor = useSlate() as DaEditor;
   const ref = useRef<HTMLDivElement>(null);
   const [target, setTarget] = useState<Range | null>(null);
@@ -87,7 +132,7 @@ export function SlashMenu({ onAskAi }: SlashMenuProps) {
   const [index, setIndex] = useState(0);
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
 
-  const allItems = useMemo(() => buildItems(onAskAi), [onAskAi]);
+  const allItems = useMemo(() => buildItems(onAskAi, onMedia), [onAskAi, onMedia]);
 
   const items = useMemo(() => {
     const q = query.trim().toLowerCase();
