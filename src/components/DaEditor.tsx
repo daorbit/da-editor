@@ -1,0 +1,357 @@
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useState,
+  type CSSProperties,
+  type KeyboardEvent,
+} from 'react';
+import { createEditor, Editor, Transforms, type Descendant } from 'slate';
+import { withHistory } from 'slate-history';
+import { Editable, ReactEditor, Slate, withReact } from 'slate-react';
+import isHotkey from 'is-hotkey';
+import { withDaEditor } from '../core/withDaEditor';
+import {
+  autoformatBlock,
+  autoformatMark,
+  autoformatText,
+} from '../core/autoformat';
+import {
+  clearMarks,
+  indent,
+  isEditorEmpty,
+  replaceBlock,
+  toggleMark,
+} from '../core/transforms';
+import {
+  deserializeHtml,
+  emptyValue,
+  serializeHtml,
+  serializeMarkdown,
+} from '../core/serialize';
+import {
+  ELEMENT,
+  MARK,
+  type DaEditor as DaEditorType,
+  type EditorValue,
+  type Theme,
+} from '../core/types';
+import { ElementRenderer } from './ElementRenderer';
+import { LeafRenderer } from './LeafRenderer';
+import { FixedToolbar } from './FixedToolbar';
+import { FloatingToolbar } from './FloatingToolbar';
+import { SlashMenu } from './SlashMenu';
+import { LinkPopover } from './LinkPopover';
+
+const MARK_HOTKEYS: Record<string, keyof typeof MARK> = {
+  'mod+b': 'bold',
+  'mod+i': 'italic',
+  'mod+u': 'underline',
+  'mod+shift+x': 'strikethrough',
+  'mod+e': 'code',
+};
+
+const BLOCK_HOTKEYS: Record<string, (typeof ELEMENT)[keyof typeof ELEMENT]> = {
+  'mod+alt+0': ELEMENT.paragraph,
+  'mod+alt+1': ELEMENT.h1,
+  'mod+alt+2': ELEMENT.h2,
+  'mod+alt+3': ELEMENT.h3,
+  'mod+shift+.': ELEMENT.blockquote,
+  'mod+shift+7': ELEMENT.numberedList,
+  'mod+shift+8': ELEMENT.bulletedList,
+  'mod+shift+9': ELEMENT.todoListItem,
+};
+
+export interface DaEditorHandle {
+  /** The underlying Slate editor. */
+  editor: DaEditorType;
+  getValue: () => EditorValue;
+  setValue: (value: EditorValue) => void;
+  getHTML: () => string;
+  getMarkdown: () => string;
+  getText: () => string;
+  setHTML: (html: string) => void;
+  focus: () => void;
+  clear: () => void;
+}
+
+export interface DaEditorProps {
+  /** Initial document. Use `onChange` to track updates. */
+  defaultValue?: EditorValue;
+  /** Initial document as HTML; ignored when `defaultValue` is set. */
+  defaultHtml?: string;
+  onChange?: (value: EditorValue) => void;
+  placeholder?: string;
+  readOnly?: boolean;
+  /** `'system'` follows the OS setting. */
+  theme?: Theme;
+  /** Show the toolbar pinned above the content. */
+  fixedToolbar?: boolean;
+  /** Show the toolbar over the current selection. */
+  floatingToolbar?: boolean;
+  /** Enable the `/` block menu. */
+  slashMenu?: boolean;
+  /** Enable Markdown input rules while typing. */
+  autoformat?: boolean;
+  /** Renders the Ask AI affordances and fires when one is used. */
+  onAskAi?: () => void;
+  onComment?: () => void;
+  className?: string;
+  style?: CSSProperties;
+  minHeight?: string;
+  maxHeight?: string;
+  /** Constrain the text column, like a document editor. */
+  maxWidth?: string;
+  autoFocus?: boolean;
+  spellCheck?: boolean;
+}
+
+export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEditor(
+  {
+    defaultValue,
+    defaultHtml,
+    onChange,
+    placeholder = "Write something, or press '/' for commands…",
+    readOnly = false,
+    theme = 'system',
+    fixedToolbar = true,
+    floatingToolbar = true,
+    slashMenu = true,
+    autoformat = true,
+    onAskAi,
+    onComment,
+    className,
+    style,
+    minHeight = '320px',
+    maxHeight,
+    maxWidth,
+    autoFocus = false,
+    spellCheck = true,
+  },
+  ref,
+) {
+  const editor = useMemo(
+    () => withDaEditor(withHistory(withReact(createEditor())) as DaEditorType),
+    [],
+  );
+
+  const initialValue = useMemo<EditorValue>(() => {
+    if (defaultValue?.length) return defaultValue;
+    if (defaultHtml) return deserializeHtml(defaultHtml);
+    return emptyValue();
+    // Only read on mount; later updates go through the ref handle.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const [value, setValue] = useState<EditorValue>(initialValue);
+  const [linkOpen, setLinkOpen] = useState(false);
+  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>(
+    theme === 'dark' ? 'dark' : 'light',
+  );
+
+  // `system` tracks the OS preference and follows it as it changes.
+  useEffect(() => {
+    if (theme !== 'system') {
+      setResolvedTheme(theme);
+      return;
+    }
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
+    const apply = () => setResolvedTheme(media.matches ? 'dark' : 'light');
+    apply();
+    media.addEventListener('change', apply);
+    return () => media.removeEventListener('change', apply);
+  }, [theme]);
+
+  useEffect(() => {
+    if (autoFocus) ReactEditor.focus(editor);
+  }, [autoFocus, editor]);
+
+  const renderElement = useCallback(
+    (props: Parameters<typeof ElementRenderer>[0]) => <ElementRenderer {...props} />,
+    [],
+  );
+  const renderLeaf = useCallback(
+    (props: Parameters<typeof LeafRenderer>[0]) => <LeafRenderer {...props} />,
+    [],
+  );
+
+  const handleChange = (next: Descendant[]) => {
+    setValue(next);
+    // Selection-only changes are not content changes.
+    const isContentChange = editor.operations.some((op) => op.type !== 'set_selection');
+    if (isContentChange) onChange?.(next);
+  };
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    for (const [hotkey, mark] of Object.entries(MARK_HOTKEYS)) {
+      if (isHotkey(hotkey, event.nativeEvent)) {
+        event.preventDefault();
+        toggleMark(editor, MARK[mark]);
+        return;
+      }
+    }
+
+    for (const [hotkey, type] of Object.entries(BLOCK_HOTKEYS)) {
+      if (isHotkey(hotkey, event.nativeEvent)) {
+        event.preventDefault();
+        replaceBlock(editor, type);
+        return;
+      }
+    }
+
+    if (isHotkey('mod+k', event.nativeEvent)) {
+      event.preventDefault();
+      setLinkOpen(true);
+      return;
+    }
+
+    if (isHotkey('mod+j', event.nativeEvent) && onAskAi) {
+      event.preventDefault();
+      onAskAi();
+      return;
+    }
+
+    if (isHotkey('mod+\\', event.nativeEvent)) {
+      event.preventDefault();
+      clearMarks(editor);
+      return;
+    }
+
+    // Tab indents rather than moving focus, matching document editors.
+    if (isHotkey('tab', event.nativeEvent)) {
+      event.preventDefault();
+      indent(editor, 1);
+      return;
+    }
+    if (isHotkey('shift+tab', event.nativeEvent)) {
+      event.preventDefault();
+      indent(editor, -1);
+      return;
+    }
+
+    // Mod+Enter escapes a code block, which swallows plain Enter.
+    if (isHotkey('mod+enter', event.nativeEvent)) {
+      event.preventDefault();
+      Transforms.insertNodes(editor, {
+        type: ELEMENT.paragraph,
+        children: [{ text: '' }],
+      });
+      return;
+    }
+
+    if (!autoformat || readOnly) return;
+
+    if (event.key === ' ') {
+      if (autoformatBlock(editor)) {
+        event.preventDefault();
+        return;
+      }
+      if (autoformatText(editor, ' ')) {
+        event.preventDefault();
+        return;
+      }
+    } else if (event.key.length === 1) {
+      if (autoformatMark(editor, event.key)) {
+        event.preventDefault();
+        return;
+      }
+      if (autoformatText(editor, event.key)) {
+        event.preventDefault();
+        return;
+      }
+    }
+  };
+
+  useImperativeHandle(
+    ref,
+    (): DaEditorHandle => ({
+      editor,
+      getValue: () => editor.children as EditorValue,
+      setValue: (next) => {
+        Editor.withoutNormalizing(editor, () => {
+          Transforms.deselect(editor);
+          for (let i = editor.children.length - 1; i >= 0; i--) {
+            Transforms.removeNodes(editor, { at: [i] });
+          }
+          Transforms.insertNodes(editor, next, { at: [0] });
+        });
+        setValue(editor.children as EditorValue);
+      },
+      getHTML: () => serializeHtml(editor.children as EditorValue),
+      getMarkdown: () => serializeMarkdown(editor.children as EditorValue),
+      getText: () => Editor.string(editor, []),
+      setHTML: (html) => {
+        const next = deserializeHtml(html);
+        Editor.withoutNormalizing(editor, () => {
+          Transforms.deselect(editor);
+          for (let i = editor.children.length - 1; i >= 0; i--) {
+            Transforms.removeNodes(editor, { at: [i] });
+          }
+          Transforms.insertNodes(editor, next, { at: [0] });
+        });
+        setValue(editor.children as EditorValue);
+      },
+      focus: () => ReactEditor.focus(editor),
+      clear: () => {
+        Editor.withoutNormalizing(editor, () => {
+          Transforms.deselect(editor);
+          for (let i = editor.children.length - 1; i >= 0; i--) {
+            Transforms.removeNodes(editor, { at: [i] });
+          }
+          Transforms.insertNodes(editor, emptyValue(), { at: [0] });
+        });
+        setValue(editor.children as EditorValue);
+      },
+    }),
+    [editor],
+  );
+
+  const showPlaceholder = isEditorEmpty(editor);
+
+  return (
+    <div
+      className={`da-editor${readOnly ? ' da-editor--readonly' : ''}${className ? ` ${className}` : ''}`}
+      data-theme={resolvedTheme}
+      style={style}
+    >
+      <Slate editor={editor} initialValue={value} onChange={handleChange}>
+        {fixedToolbar && !readOnly && (
+          <FixedToolbar onAskAi={onAskAi} onLink={() => setLinkOpen(true)} />
+        )}
+
+        <div
+          className="da-editor__scroll"
+          style={{ minHeight, maxHeight, overflowY: maxHeight ? 'auto' : undefined }}
+        >
+          <div className="da-editor__container" style={{ maxWidth }}>
+            <Editable
+              className="da-editor__content"
+              readOnly={readOnly}
+              spellCheck={spellCheck}
+              placeholder={showPlaceholder ? placeholder : undefined}
+              renderElement={renderElement}
+              renderLeaf={renderLeaf}
+              onKeyDown={handleKeyDown}
+            />
+
+            {floatingToolbar && !readOnly && (
+              <FloatingToolbar
+                onAskAi={onAskAi}
+                onLink={() => setLinkOpen(true)}
+                onComment={onComment}
+              />
+            )}
+            {slashMenu && !readOnly && <SlashMenu onAskAi={onAskAi} />}
+            {!readOnly && (
+              <LinkPopover open={linkOpen} onClose={() => setLinkOpen(false)} />
+            )}
+          </div>
+        </div>
+      </Slate>
+    </div>
+  );
+});
