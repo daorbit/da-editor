@@ -91,6 +91,10 @@ export interface BaseElement {
   date?: string;
   /** Footnote body text. */
   note?: string;
+  /** Cell background colour, on table cells. */
+  background?: string;
+  /** Which cell borders are drawn; an absent side counts as drawn. */
+  borders?: Partial<Record<'top' | 'right' | 'bottom' | 'left', boolean>>;
   children: Descendant[];
 }
 

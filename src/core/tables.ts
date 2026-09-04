@@ -155,6 +155,120 @@ export function deleteTable(editor: DaEditor): void {
   Transforms.removeNodes(editor, { at: entry[1] });
 }
 
+export type BorderSide = 'top' | 'right' | 'bottom' | 'left';
+
+export const BORDER_SIDES: BorderSide[] = ['top', 'right', 'bottom', 'left'];
+
+/** The cells covered by the selection, or the single cell holding the caret. */
+function selectedCells(editor: DaEditor) {
+  return Array.from(
+    Editor.nodes(editor, {
+      match: (n) =>
+        !Editor.isEditor(n) &&
+        SlateElement.isElement(n) &&
+        (n.type === ELEMENT.tableCell || n.type === ELEMENT.tableHeaderCell),
+    }),
+  );
+}
+
+/** Applies a background colour to every selected cell. */
+export function setCellBackground(editor: DaEditor, color: string | null): void {
+  Editor.withoutNormalizing(editor, () => {
+    for (const [, path] of selectedCells(editor)) {
+      Transforms.setNodes(
+        editor,
+        { background: color ?? undefined } as Partial<SlateElement>,
+        { at: path },
+      );
+    }
+  });
+}
+
+export function getCellBackground(editor: DaEditor): string | undefined {
+  const [entry] = selectedCells(editor);
+  const node = entry?.[0];
+  return SlateElement.isElement(node) && 'background' in node ? node.background : undefined;
+}
+
+/** Whether a border side is currently drawn on every selected cell. */
+export function hasBorder(editor: DaEditor, side: BorderSide): boolean {
+  const cells = selectedCells(editor);
+  if (cells.length === 0) return false;
+
+  return cells.every(([node]) => {
+    if (!SlateElement.isElement(node)) return false;
+    // Absent means "drawn", so only an explicit false hides the side.
+    return node.borders?.[side] !== false;
+  });
+}
+
+export function toggleBorder(editor: DaEditor, side: BorderSide): void {
+  const next = !hasBorder(editor, side);
+
+  Editor.withoutNormalizing(editor, () => {
+    for (const [node, path] of selectedCells(editor)) {
+      if (!SlateElement.isElement(node)) continue;
+      Transforms.setNodes(
+        editor,
+        { borders: { ...node.borders, [side]: next } } as Partial<SlateElement>,
+        { at: path },
+      );
+    }
+  });
+}
+
+/** Sets every side at once: all on, all off, or just the outer edges. */
+export function setBorders(editor: DaEditor, preset: 'all' | 'none' | 'outside'): void {
+  const tableEntry = getTable(editor);
+  if (!tableEntry) return;
+
+  const [table, tablePath] = tableEntry;
+  if (!SlateElement.isElement(table)) return;
+
+  if (preset !== 'outside') {
+    const value = preset === 'all';
+    Editor.withoutNormalizing(editor, () => {
+      for (const [, path] of selectedCells(editor)) {
+        Transforms.setNodes(
+          editor,
+          {
+            borders: { top: value, right: value, bottom: value, left: value },
+          } as Partial<SlateElement>,
+          { at: path },
+        );
+      }
+    });
+    return;
+  }
+
+  // "Outside" draws only the table's perimeter, so each cell's borders depend
+  // on whether it sits on an edge of the grid.
+  const rows = table.children.filter((row) => SlateElement.isElement(row));
+  const lastRow = rows.length - 1;
+
+  Editor.withoutNormalizing(editor, () => {
+    rows.forEach((row, rowIndex) => {
+      if (!SlateElement.isElement(row)) return;
+      const lastCell = row.children.length - 1;
+
+      row.children.forEach((_, cellIndex) => {
+        Transforms.setNodes(
+          editor,
+          {
+            borders: {
+              top: rowIndex === 0,
+              bottom: rowIndex === lastRow,
+              left: cellIndex === 0,
+              right: cellIndex === lastCell,
+            },
+          } as Partial<SlateElement>,
+          { at: [...tablePath, rowIndex, cellIndex] },
+        );
+      });
+    });
+  });
+}
+
 export function toggleHeaderRow(editor: DaEditor): void {
   const entry = getTable(editor);
   if (!entry) return;

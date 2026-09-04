@@ -17,6 +17,26 @@ function blockStyle(element: RenderElementProps['element']): CSSProperties {
   };
 }
 
+/** Background and per-side borders for a table cell. */
+function cellStyle(element: RenderElementProps['element']): CSSProperties {
+  const style: CSSProperties = {};
+
+  if ('background' in element && element.background) {
+    style.backgroundColor = element.background;
+  }
+
+  // An absent side means "drawn", so only an explicit false removes it.
+  const borders = 'borders' in element ? element.borders : undefined;
+  if (borders) {
+    if (borders.top === false) style.borderTopColor = 'transparent';
+    if (borders.right === false) style.borderRightColor = 'transparent';
+    if (borders.bottom === false) style.borderBottomColor = 'transparent';
+    if (borders.left === false) style.borderLeftColor = 'transparent';
+  }
+
+  return style;
+}
+
 export function ElementRenderer(props: RenderElementProps) {
   const { attributes, children, element } = props;
   const style = blockStyle(element);
@@ -91,9 +111,17 @@ export function ElementRenderer(props: RenderElementProps) {
     case ELEMENT.tableRow:
       return <tr {...attributes} className="da-tr">{children}</tr>;
     case ELEMENT.tableCell:
-      return <td {...attributes} style={style} className="da-td">{children}</td>;
+      return (
+        <td {...attributes} style={{ ...style, ...cellStyle(element) }} className="da-td">
+          {children}
+        </td>
+      );
     case ELEMENT.tableHeaderCell:
-      return <th {...attributes} style={style} className="da-th">{children}</th>;
+      return (
+        <th {...attributes} style={{ ...style, ...cellStyle(element) }} className="da-th">
+          {children}
+        </th>
+      );
     case ELEMENT.tableOfContents:
       return <TableOfContents {...props} />;
     case ELEMENT.equation:

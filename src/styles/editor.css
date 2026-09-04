@@ -769,17 +769,35 @@
   overflow-x: auto;
 }
 
+/* `separate` keeps each cell's borders its own, so a single side can be
+   hidden; `collapse` would let a neighbour's border show through instead. */
 .da-table {
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   width: 100%;
   table-layout: fixed;
+}
+
+/* Shared edges are drawn once, by the cell above or to the left. */
+.da-table .da-td:not(:first-child),
+.da-table .da-th:not(:first-child) {
+  border-left-width: 0;
+}
+
+.da-table .da-tr:not(:first-child) .da-td,
+.da-table .da-tr:not(:first-child) .da-th {
+  border-top-width: 0;
 }
 
 .da-td,
 .da-th {
   min-width: 60px;
   padding: 7px 10px;
-  border: 1px solid var(--da-border-strong);
+  /* Each side is set separately so individual borders can be hidden. */
+  border-top: 1px solid var(--da-border-strong);
+  border-right: 1px solid var(--da-border-strong);
+  border-bottom: 1px solid var(--da-border-strong);
+  border-left: 1px solid var(--da-border-strong);
   vertical-align: top;
   text-align: left;
 }
@@ -1977,6 +1995,27 @@
   border-radius: var(--da-radius-sm);
   background: var(--da-bg);
   box-shadow: var(--da-shadow);
+}
+
+.da-table-toolbar__popover {
+  position: relative;
+}
+
+/* Opens upward, since the toolbar sits at the bottom of the table. */
+.da-table-toolbar__panel {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  z-index: 45;
+  border: 1px solid var(--da-border);
+  border-radius: var(--da-radius-sm);
+  background: var(--da-bg);
+  box-shadow: var(--da-shadow);
+}
+
+.da-table-toolbar__menu {
+  min-width: 190px;
+  padding: 4px;
 }
 
 /* --------------------------------------------------- toggle & columns -- */

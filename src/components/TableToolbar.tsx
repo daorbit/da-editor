@@ -1,24 +1,32 @@
 import { useEffect, useRef, useState } from 'react';
 import { ReactEditor, useSlate } from 'slate-react';
+import type { ReactNode } from 'react';
 import {
   ArrowDownIcon,
   ArrowLeftIcon,
   ArrowRightIcon,
   ArrowUpIcon,
+  CheckIcon,
   CloseIcon,
   PaintBucketIcon,
   TableIcon,
   TrashIcon,
 } from '../icons';
 import {
+  BORDER_SIDES,
   deleteColumn,
   deleteRow,
   deleteTable,
+  getCellBackground,
   getTable,
+  hasBorder,
   insertColumn,
   insertRow,
-  toggleHeaderRow,
+  setBorders,
+  setCellBackground,
+  toggleBorder,
 } from '../core/tables';
+import { ColorPicker } from './ColorPicker';
 import type { DaEditor } from '../core/types';
 
 /** Floating controls anchored under the table containing the selection. */
@@ -26,6 +34,7 @@ export function TableToolbar() {
   const editor = useSlate() as DaEditor;
   const ref = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
+  const [menu, setMenu] = useState<'color' | 'borders' | null>(null);
 
   const entry = getTable(editor);
   const inTable = Boolean(entry);
@@ -70,24 +79,80 @@ export function TableToolbar() {
       }}
       onMouseDown={(event) => event.preventDefault()}
     >
-      <button
-        type="button"
-        className="da-tb__btn"
-        title="Toggle header row"
-        aria-label="Toggle header row"
-        onClick={() => toggleHeaderRow(editor)}
+      <Popover
+        icon={<PaintBucketIcon />}
+        label="Cell background"
+        open={menu === 'color'}
+        onToggle={() => setMenu(menu === 'color' ? null : 'color')}
       >
-        <PaintBucketIcon />
-      </button>
-      <button
-        type="button"
-        className="da-tb__btn"
-        title="Toggle header row"
-        aria-label="Header row"
-        onClick={() => toggleHeaderRow(editor)}
+        <ColorPicker
+          value={getCellBackground(editor)}
+          onChange={(color) => setCellBackground(editor, color)}
+          onClose={() => setMenu(null)}
+          clearLabel="Clear"
+        />
+      </Popover>
+
+      <Popover
+        icon={<TableIcon />}
+        label="Borders"
+        open={menu === 'borders'}
+        onToggle={() => setMenu(menu === 'borders' ? null : 'borders')}
       >
-        <TableIcon />
-      </button>
+        <div className="da-table-toolbar__menu">
+          {BORDER_SIDES.map((side) => (
+            <button
+              key={side}
+              type="button"
+              role="menuitemcheckbox"
+              aria-checked={hasBorder(editor, side)}
+              className="da-tb__item"
+              onClick={() => toggleBorder(editor, side)}
+            >
+              <span className="da-tb__item-icon">
+                {hasBorder(editor, side) ? <CheckIcon size={13} /> : null}
+              </span>
+              <span className="da-tb__item-label">
+                {side.charAt(0).toUpperCase() + side.slice(1)} Border
+              </span>
+            </button>
+          ))}
+
+          <button
+            type="button"
+            className="da-tb__item"
+            onClick={() => {
+              setBorders(editor, 'none');
+              setMenu(null);
+            }}
+          >
+            <span className="da-tb__item-icon" />
+            <span className="da-tb__item-label">No Border</span>
+          </button>
+          <button
+            type="button"
+            className="da-tb__item"
+            onClick={() => {
+              setBorders(editor, 'outside');
+              setMenu(null);
+            }}
+          >
+            <span className="da-tb__item-icon" />
+            <span className="da-tb__item-label">Outside Borders</span>
+          </button>
+          <button
+            type="button"
+            className="da-tb__item"
+            onClick={() => {
+              setBorders(editor, 'all');
+              setMenu(null);
+            }}
+          >
+            <span className="da-tb__item-icon" />
+            <span className="da-tb__item-label">All Borders</span>
+          </button>
+        </div>
+      </Popover>
       <button
         type="button"
         className="da-tb__btn"
@@ -157,6 +222,38 @@ export function TableToolbar() {
       >
         <CloseIcon />
       </button>
+    </div>
+  );
+}
+
+interface PopoverProps {
+  icon: ReactNode;
+  label: string;
+  open: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+}
+
+/** A toolbar button whose panel opens above the floater. */
+function Popover({ icon, label, open, onToggle, children }: PopoverProps) {
+  return (
+    <div className="da-table-toolbar__popover">
+      <button
+        type="button"
+        className={`da-tb__btn${open ? ' da-tb__btn--active' : ''}`}
+        title={label}
+        aria-label={label}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={onToggle}
+      >
+        {icon}
+      </button>
+      {open && (
+        <div className="da-table-toolbar__panel" role="menu">
+          {children}
+        </div>
+      )}
     </div>
   );
 }
