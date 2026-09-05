@@ -29,10 +29,24 @@ export function LinkPopover({ open, onClose }: LinkPopoverProps) {
     setUrl('');
 
     const el = ref.current;
-    const domSelection = window.getSelection();
-    if (!el || !domSelection || domSelection.rangeCount === 0) return;
+    if (!el) return;
 
-    const rect = domSelection.getRangeAt(0).getBoundingClientRect();
+    let rect: DOMRect | null = null;
+    const domSelection = window.getSelection();
+    if (domSelection && domSelection.rangeCount > 0) {
+      rect = domSelection.getRangeAt(0).getBoundingClientRect();
+    }
+    // Selection may be empty right after a toolbar click (no highlighted
+    // text yet); fall back to Slate's own selection to find a DOM range.
+    if ((!rect || (rect.top === 0 && rect.left === 0)) && editor.selection) {
+      try {
+        rect = ReactEditor.toDOMRange(editor, editor.selection).getBoundingClientRect();
+      } catch {
+        rect = null;
+      }
+    }
+    if (!rect) return;
+
     const container = el.offsetParent as HTMLElement | null;
     const base = container?.getBoundingClientRect();
 
