@@ -1,6 +1,6 @@
 {
-  "name": "@da/editor",
-  "version": "0.0.1",
+  "name": "da-text-editor",
+  "version": "0.1.0",
   "description": "A React rich-text editor component.",
   "type": "module",
   "license": "MIT",
@@ -46,6 +46,17 @@
     "typescript": "^5.7.2",
     "vite": "^6.0.5",
     "vite-plugin-dts": "^4.4.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/daorbit/da-editor.git"
+  },
+  "homepage": "https://github.com/daorbit/da-editor#readme",
+  "bugs": {
+    "url": "https://github.com/daorbit/da-editor/issues"
   },
   "keywords": [
     "react",
