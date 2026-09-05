@@ -13,8 +13,11 @@ import { MenuItem, ToolbarButton, ToolbarDropdown, ToolbarSeparator } from './To
 import {
   clearMarks,
   getBlockType,
+  getFontSize,
   isMarkActive,
   replaceBlock,
+  setFontSize,
+  stepFontSize,
   setMark,
   toggleMark,
 } from '../core/transforms';
@@ -35,6 +38,7 @@ export function FloatingToolbar({ onAskAi, onLink }: FloatingToolbarProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<Position | null>(null);
   const blockType = getBlockType(editor);
+  const fontSize = getFontSize(editor);
   // Falls back to the paragraph spec so the button always has an icon.
   const activeBlock =
     BLOCK_SPECS.find((spec) => spec.type === blockType) ??
@@ -128,6 +132,42 @@ export function FloatingToolbar({ onAskAi, onLink }: FloatingToolbarProps) {
           ))
         }
       </ToolbarDropdown>
+
+      <ToolbarSeparator />
+
+      <div className="da-tb__stepper">
+        <button
+          type="button"
+          className="da-tb__btn da-tb__btn--step"
+          title="Decrease font size"
+          aria-label="Decrease font size"
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => stepFontSize(editor, -1)}
+        >
+          −
+        </button>
+        <input
+          type="number"
+          className="da-tb__size"
+          value={fontSize}
+          aria-label="Font size"
+          onMouseDown={(event) => event.stopPropagation()}
+          onChange={(event) => {
+            const next = Number(event.target.value);
+            if (!Number.isNaN(next)) setFontSize(editor, next);
+          }}
+        />
+        <button
+          type="button"
+          className="da-tb__btn da-tb__btn--step"
+          title="Increase font size"
+          aria-label="Increase font size"
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => stepFontSize(editor, 1)}
+        >
+          +
+        </button>
+      </div>
 
       <ToolbarSeparator />
 
