@@ -382,6 +382,16 @@
 .da-p {
   margin: 0 0 2px;
   padding: 3px 0;
+  position: relative;
+}
+
+/* Cues the caret's own empty line, separately from the whole-doc placeholder. */
+.da-p--empty::before {
+  content: 'Type something…';
+  position: absolute;
+  color: var(--da-faint);
+  pointer-events: none;
+  user-select: none;
 }
 
 .da-h1,

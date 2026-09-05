@@ -137,8 +137,29 @@ export function ElementRenderer(props: RenderElementProps) {
     case ELEMENT.mention:
       return <Mention {...props} />;
     default:
-      return <p {...attributes} style={style} className="da-p">{children}</p>;
+      return <EmptyLineParagraph {...props} style={style} />;
   }
+}
+
+/**
+ * Shows a "Type something…" hint on the paragraph the cursor currently sits
+ * in, so an empty line under the caret is never mistaken for no line at all.
+ */
+function EmptyLineParagraph({ attributes, children, element, style }: RenderElementProps & {
+  style: CSSProperties;
+}) {
+  const selected = useSelected();
+  const isEmpty = selected && Node.string(element) === '' && element.children.length === 1;
+
+  return (
+    <p
+      {...attributes}
+      style={style}
+      className={`da-p${isEmpty ? ' da-p--empty' : ''}`}
+    >
+      {children}
+    </p>
+  );
 }
 
 function TodoItem({ attributes, children, element }: RenderElementProps) {
