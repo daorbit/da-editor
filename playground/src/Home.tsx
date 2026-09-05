@@ -1,20 +1,10 @@
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
-  BoldIcon,
-  BulletedListIcon,
-  CalloutIcon,
-  CodeBlockIcon,
   DaEditor,
-  EmojiIcon,
-  H1Icon,
-  ImageIcon,
-  LinkIcon,
   MoonIcon,
-  PaletteIcon,
   SparklesIcon,
-  TableIcon,
-  TodoListIcon,
   type DaEditorHandle,
+  type EditorValue,
   type Mentionable,
 } from '../../src';
 import type { Route } from './router';
@@ -26,59 +16,90 @@ const MENTIONABLES: Mentionable[] = [
   { id: '3', name: 'Priya Sharma', detail: 'priya@example.com' },
 ];
 
-const FEATURES = [
+/* The three things that actually differentiate this editor, each shown
+   rather than described. */
+const PILLARS = [
   {
-    icon: <SparklesIcon size={18} />,
-    title: 'Slash menu',
-    body: 'Press / anywhere to insert any block. Grouped, filterable, fully keyboard navigable.',
+    title: 'Slash commands',
+    body: 'Press / on any empty line. Grouped, filterable, keyboard-driven — no mouse required.',
+    demo: (
+      <div className="pg-mini pg-mini--menu">
+        <div className="pg-mini__input">
+          <span className="pg-mini__slash">/</span>
+          <span className="pg-mini__caret" />
+        </div>
+        <div className="pg-mini__menu">
+          <div className="pg-mini__group">Basic blocks</div>
+          <div className="pg-mini__item pg-mini__item--active">Heading 1</div>
+          <div className="pg-mini__item">Bulleted list</div>
+          <div className="pg-mini__item">Code block</div>
+          <div className="pg-mini__item">Table</div>
+        </div>
+      </div>
+    ),
   },
   {
-    icon: <BulletedListIcon size={18} />,
+    title: 'Mentions over your data',
+    body: 'Type @ to open a combobox. You pass the list, the editor handles matching, keyboard nav and insertion.',
+    demo: (
+      <div className="pg-mini pg-mini--mention">
+        <div className="pg-mini__input">
+          <span className="pg-mini__dim">Ping</span>
+          <span className="pg-mini__at">@ali</span>
+          <span className="pg-mini__caret" />
+        </div>
+        <div className="pg-mini__menu">
+          <div className="pg-mini__row pg-mini__row--active">
+            <span className="pg-mini__avatar">AC</span>
+            <span>
+              Alice Chen
+              <em>alice@example.com</em>
+            </span>
+          </div>
+          <div className="pg-mini__row">
+            <span className="pg-mini__avatar pg-mini__avatar--b">BM</span>
+            <span>
+              Bob Martin
+              <em>bob@example.com</em>
+            </span>
+          </div>
+        </div>
+      </div>
+    ),
+  },
+  {
     title: 'Markdown as you type',
-    body: 'Type # for a heading, - for a list, > for a quote, **bold** inline. Formats on the fly.',
-  },
-  {
-    icon: <TableIcon size={18} />,
-    title: 'Tables',
-    body: 'Insert, resize, add and remove rows and columns, with a contextual toolbar on selection.',
-  },
-  {
-    icon: <LinkIcon size={18} />,
-    title: 'Mentions',
-    body: 'Type @ to open a combobox over your own data. You supply the list, the editor handles the rest.',
-  },
-  {
-    icon: <CodeBlockIcon size={18} />,
-    title: 'Code blocks',
-    body: 'Syntax highlighting via Prism across every common language, with a language picker.',
-  },
-  {
-    icon: <ImageIcon size={18} />,
-    title: 'Media and emoji',
-    body: 'Images with a caption and alignment toolbar, plus a searchable emoji picker.',
-  },
-  {
-    icon: <H1Icon size={18} />,
-    title: 'Import and export',
-    body: 'HTML, Markdown and Slate JSON both ways — plus .docx import through Mammoth.',
-  },
-  {
-    icon: <PaletteIcon size={18} />,
-    title: 'Themeable',
-    body: 'Light, dark or follow the OS. Every colour is a CSS custom property you can override.',
-  },
-  {
-    icon: <BoldIcon size={18} />,
-    title: 'Composable',
-    body: 'Every toolbar, menu and primitive is exported. Drop DaEditor and assemble your own.',
+    body: 'Type # for a heading, - for a list, > for a quote. Input rules fire on the fly, no mode switch.',
+    demo: (
+      <div className="pg-mini pg-mini--md">
+        <div className="pg-mini__before">
+          <code>## </code>
+          <span className="pg-mini__label">type</span>
+        </div>
+        <div className="pg-mini__arrow" />
+        <div className="pg-mini__after">
+          <span className="pg-mini__h2">Section title</span>
+          <span className="pg-mini__label">becomes</span>
+        </div>
+      </div>
+    ),
   },
 ];
 
-const ROADMAP = [
-  { icon: <TodoListIcon size={16} />, label: 'Drag handles' },
-  { icon: <CalloutIcon size={16} />, label: 'Comments' },
-  { icon: <SparklesIcon size={16} />, label: 'AI streaming' },
-  { icon: <EmojiIcon size={16} />, label: 'Collaborative cursors' },
+/* Everything else, as a dense scannable list rather than nine equal cards. */
+const CAPABILITIES: [string, string][] = [
+  ['Blocks', 'Headings, quotes, code, lists, to-dos, callouts, dividers, images, tables'],
+  ['Marks', 'Bold, italic, underline, strike, code, sub, super, kbd, colour, highlight'],
+  ['Tables', 'Insert, resize, add and remove rows and columns, contextual toolbar'],
+  ['Code', 'Prism highlighting across 20+ languages with a language picker'],
+  ['Media', 'Images with captions, alignment toolbar, and a pluggable upload handler'],
+  ['Emoji', 'Searchable picker, plus : shortcodes inline'],
+  ['Import', 'HTML, Markdown, and .docx through Mammoth'],
+  ['Export', 'HTML, Markdown, and Slate JSON — nothing locked in'],
+  ['Theming', 'Light, dark or system. Every colour is a CSS custom property'],
+  ['Toolbars', 'Fixed and floating, both fully composable from exported primitives'],
+  ['Keyboard', 'Full shortcut map, and Tab / Shift+Tab indent handling'],
+  ['Composable', 'Every menu, toolbar and primitive exported for your own assembly'],
 ];
 
 const INSTALL = 'npm install da-text-editor';
@@ -86,14 +107,17 @@ const INSTALL = 'npm install da-text-editor';
 const USAGE = `import { DaEditor } from 'da-text-editor';
 import 'da-text-editor/styles.css';
 
-export function Example() {
+export function Editor() {
   return (
     <DaEditor
       theme="system"
-      onChange={(value) => console.log(value)}
+      mentionables={people}
+      onChange={(value) => save(value)}
     />
   );
 }`;
+
+type OutputTab = 'html' | 'markdown';
 
 export interface HomeProps {
   navigate: (route: Route) => void;
@@ -104,6 +128,32 @@ export interface HomeProps {
 export function Home({ navigate, onToggleTheme, dark }: HomeProps) {
   const editorRef = useRef<DaEditorHandle>(null);
   const [copied, setCopied] = useState(false);
+  const [tab, setTab] = useState<OutputTab>('html');
+  const [output, setOutput] = useState('');
+
+  /* Reading through the ref on every change is what makes the output panel
+     feel live — it is the same API a consumer would use. */
+  const syncOutput = useCallback(
+    (next?: OutputTab) => {
+      const handle = editorRef.current;
+      if (!handle) return;
+      const which = next ?? tab;
+      setOutput(which === 'html' ? handle.getHTML() : handle.getMarkdown());
+    },
+    [tab],
+  );
+
+  const handleChange = useCallback(
+    (_value: EditorValue) => {
+      syncOutput();
+    },
+    [syncOutput],
+  );
+
+  const selectTab = (next: OutputTab) => {
+    setTab(next);
+    syncOutput(next);
+  };
 
   const copyInstall = () => {
     void navigator.clipboard.writeText(INSTALL).then(() => {
@@ -118,7 +168,7 @@ export function Home({ navigate, onToggleTheme, dark }: HomeProps) {
         <span className="pg-brand">da-text-editor</span>
         <div className="pg-nav__actions">
           <a
-            className="pg-btn pg-btn--ghost"
+            className="pg-navlink"
             href="https://www.npmjs.com/package/da-text-editor"
             target="_blank"
             rel="noreferrer"
@@ -126,14 +176,19 @@ export function Home({ navigate, onToggleTheme, dark }: HomeProps) {
             npm
           </a>
           <a
-            className="pg-btn pg-btn--ghost"
+            className="pg-navlink"
             href="https://github.com/daorbit/da-editor"
             target="_blank"
             rel="noreferrer"
           >
             GitHub
           </a>
-          <button type="button" className="pg-btn pg-btn--ghost pg-btn--icon" onClick={onToggleTheme}>
+          <button
+            type="button"
+            className="pg-btn pg-btn--ghost pg-btn--icon"
+            onClick={onToggleTheme}
+            aria-label="Toggle theme"
+          >
             {dark ? '☀' : <MoonIcon size={15} />}
           </button>
         </div>
@@ -145,13 +200,14 @@ export function Home({ navigate, onToggleTheme, dark }: HomeProps) {
           Built on Slate
         </span>
         <h1 className="pg-hero__title">
-          The rich-text editor
+          A rich-text editor
           <br />
-          React was missing.
+          you can ship on Monday.
         </h1>
         <p className="pg-hero__lead">
-          Tables, mentions, slash commands, Markdown shortcuts and a full toolbar —
-          in one install. No icon packages to wire up, no plugin graph to assemble.
+          Tables, mentions, slash commands, Markdown shortcuts, code highlighting
+          and a full toolbar — in one install, 81&nbsp;KB, no plugin graph to
+          assemble.
         </p>
 
         <div className="pg-hero__actions">
@@ -164,81 +220,122 @@ export function Home({ navigate, onToggleTheme, dark }: HomeProps) {
             className="pg-btn pg-btn--lg"
             onClick={() => navigate('/playground')}
           >
-            Open full playground
+            Full playground
           </button>
+        </div>
+
+        <div className="pg-stats">
+          <span>
+            <strong>81 KB</strong> gzipped
+          </span>
+          <span className="pg-stats__dot" />
+          <span>
+            <strong>React 18 &amp; 19</strong>
+          </span>
+          <span className="pg-stats__dot" />
+          <span>
+            <strong>TypeScript</strong> throughout
+          </span>
+          <span className="pg-stats__dot" />
+          <span>
+            <strong>MIT</strong>
+          </span>
         </div>
       </section>
 
-      {/* The product is the demo — so it sits above the fold, editable. */}
+      {/* The editor and its serialized output, side by side. For an editor
+          library this is the argument — everything else is commentary. */}
       <section className="pg-demo">
-        <div className="pg-demo__frame">
-          <DaEditor
-            ref={editorRef}
-            theme={dark ? 'dark' : 'light'}
-            defaultValue={HERO_CONTENT}
-            minHeight="380px"
-            maxHeight="380px"
-            maxWidth="720px"
-            mentionables={MENTIONABLES}
-          />
+        <div className="pg-demo__shell">
+          <div className="pg-demo__editor">
+            <DaEditor
+              ref={editorRef}
+              theme={dark ? 'dark' : 'light'}
+              defaultValue={HERO_CONTENT}
+              onChange={handleChange}
+              minHeight="420px"
+              maxHeight="420px"
+              mentionables={MENTIONABLES}
+            />
+          </div>
+          <aside className="pg-demo__out">
+            <div className="pg-demo__tabs">
+              <button
+                type="button"
+                className={`pg-tab ${tab === 'html' ? 'pg-tab--active' : ''}`}
+                onClick={() => selectTab('html')}
+              >
+                HTML
+              </button>
+              <button
+                type="button"
+                className={`pg-tab ${tab === 'markdown' ? 'pg-tab--active' : ''}`}
+                onClick={() => selectTab('markdown')}
+              >
+                Markdown
+              </button>
+              <span className="pg-demo__live">live</span>
+            </div>
+            <pre className="pg-demo__code">
+              {output || 'Start typing in the editor —\nserialized output appears here.'}
+            </pre>
+          </aside>
         </div>
         <p className="pg-demo__caption">
-          This is the editor, running. Type in it — press <kbd>/</kbd> for the block
-          menu or <kbd>@</kbd> to mention someone.
+          A real instance. Press <kbd>/</kbd> for blocks, <kbd>@</kbd> to mention,
+          or select text for the floating toolbar.
         </p>
       </section>
 
       <section className="pg-section">
-        <h2 className="pg-h2">What's inside</h2>
-        <div className="pg-grid">
-          {FEATURES.map((feature) => (
-            <article key={feature.title} className="pg-card">
-              <span className="pg-card__icon">{feature.icon}</span>
-              <h3 className="pg-card__title">{feature.title}</h3>
-              <p className="pg-card__body">{feature.body}</p>
+        <div className="pg-pillars">
+          {PILLARS.map((pillar) => (
+            <article key={pillar.title} className="pg-pillar">
+              <div className="pg-pillar__demo">{pillar.demo}</div>
+              <h3 className="pg-pillar__title">{pillar.title}</h3>
+              <p className="pg-pillar__body">{pillar.body}</p>
             </article>
           ))}
         </div>
       </section>
 
       <section className="pg-section">
-        <h2 className="pg-h2">Getting started</h2>
         <div className="pg-start">
-          <pre className="pg-code">
-            <code>{USAGE}</code>
-          </pre>
           <div className="pg-start__notes">
-            <h3 className="pg-start__title">Two lines to a working editor</h3>
+            <h2 className="pg-h2">Two imports and you're done</h2>
             <p className="pg-start__body">
-              One import for the component, one for the stylesheet. React 18 or 19 is
-              the only peer dependency — Slate, the icon set and the document model
-              ship inside the package.
+              One for the component, one for the stylesheet. React 18 or 19 is the
+              only peer dependency — Slate, the icon set and the document model
+              come with the package.
             </p>
             <button
               type="button"
               className="pg-link"
               onClick={() => navigate('/playground')}
             >
-              See every prop in the playground →
+              Every prop, in the playground →
             </button>
           </div>
+          <pre className="pg-code">
+            <code>{USAGE}</code>
+          </pre>
         </div>
       </section>
 
       <section className="pg-section">
-        <h2 className="pg-h2">On the roadmap</h2>
-        <div className="pg-chips">
-          {ROADMAP.map((item) => (
-            <span key={item.label} className="pg-chip">
-              {item.icon}
-              {item.label}
-            </span>
+        <h2 className="pg-h2">Everything in the box</h2>
+        <dl className="pg-caps">
+          {CAPABILITIES.map(([term, detail]) => (
+            <div className="pg-caps__row" key={term}>
+              <dt>{term}</dt>
+              <dd>{detail}</dd>
+            </div>
           ))}
-        </div>
+        </dl>
       </section>
 
       <footer className="pg-footer">
-        MIT licensed ·{' '}
+        <span>MIT licensed</span>
         <a
           className="pg-footer__link"
           href="https://github.com/daorbit/da-editor"
@@ -246,8 +343,7 @@ export function Home({ navigate, onToggleTheme, dark }: HomeProps) {
           rel="noreferrer"
         >
           GitHub
-        </a>{' '}
-        ·{' '}
+        </a>
         <a
           className="pg-footer__link"
           href="https://www.npmjs.com/package/da-text-editor"

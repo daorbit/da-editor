@@ -89,8 +89,27 @@
 .da-slash::-webkit-scrollbar,
 .da-mention-menu::-webkit-scrollbar,
 .da-emoji__viewport::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 8px;
+  height: 8px;
+}
+
+/* A scrollable menu has to look scrollable, so give its thumb a solid
+   colour instead of inheriting the near-invisible global one. */
+.da-tb__menu::-webkit-scrollbar-thumb,
+.da-slash::-webkit-scrollbar-thumb,
+.da-mention-menu::-webkit-scrollbar-thumb,
+.da-emoji__viewport::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background-clip: padding-box;
+  background-color: var(--da-border-strong);
+}
+
+.da-tb__menu::-webkit-scrollbar-thumb:hover,
+.da-slash::-webkit-scrollbar-thumb:hover,
+.da-mention-menu::-webkit-scrollbar-thumb:hover,
+.da-emoji__viewport::-webkit-scrollbar-thumb:hover {
+  background-color: var(--da-muted);
 }
 
 /* ------------------------------------------------------------ toolbar -- */
@@ -285,6 +304,20 @@
 .da-tb__menu--right {
   left: auto;
   right: 0;
+}
+
+/* Opens upward when there is more room above the trigger than below —
+   the case in a short editor, where a long menu would otherwise clip. */
+.da-tb__menu--up {
+  top: auto;
+  bottom: calc(100% + 4px);
+}
+
+/* A scrollable menu should look scrollable: fade the bottom edge so a
+   clipped item reads as "more below" rather than as a cut-off menu. */
+.da-tb__menu {
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
 }
 
 .da-tb__item {
@@ -1260,17 +1293,12 @@
   position: relative;
 }
 
-/* A menu holding submenus cannot clip, or the nested panel is cut off. */
-.da-tb__menu:has(.da-tb__submenu) {
-  overflow: visible;
-  max-height: none;
-}
-
+/* Submenus are fixed-positioned from JS, so a menu containing them scrolls
+   like any other instead of having to stay unclipped. */
 .da-tb__menu--sub {
-  top: -5px;
-  left: 100%;
-  margin-left: 2px;
-  max-height: 320px;
+  position: fixed;
+  margin-left: 0;
+  max-height: min(320px, calc(100vh - 16px));
 }
 
 .da-tb__item-arrow,

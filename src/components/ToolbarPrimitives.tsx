@@ -10,6 +10,28 @@ import {
 import { CheckIcon, ChevronDownIcon, ChevronRightIcon } from '../icons';
 
 const OVERFLOW_RESERVE = 44;
+
+/**
+ * The box a popup is actually clipped by: the nearest ancestor that scrolls
+ * or hides its overflow, falling back to the viewport. Without this, a menu
+ * inside a fixed-height editor sizes itself to the whole window and gets cut
+ * off by the editor's own overflow.
+ */
+function findClipBounds(from: HTMLElement): { top: number; bottom: number } {
+  let node = from.parentElement;
+  while (node && node !== document.body) {
+    const { overflowY } = getComputedStyle(node);
+    if (overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'hidden') {
+      const rect = node.getBoundingClientRect();
+      return {
+        top: Math.max(0, rect.top),
+        bottom: Math.min(window.innerHeight, rect.bottom),
+      };
+    }
+    node = node.parentElement;
+  }
+  return { top: 0, bottom: window.innerHeight };
+}
 const SEPARATOR_WIDTH = 9;
 
  
@@ -145,6 +167,9 @@ export function ToolbarDropdown({
 }: DropdownProps) {
   const [open, setOpen] = useState(false);
   const [alignRight, setAlignRight] = useState(false);
+  const [placement, setPlacement] = useState<{ up: boolean; maxHeight?: number }>({
+    up: false,
+  });
   const rootRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
@@ -153,12 +178,29 @@ export function ToolbarDropdown({
 
   // Flips the panel to hang from the right edge when it would otherwise
   // overflow the viewport — most noticeable on trailing buttons like "More".
+  // Also caps its height to the space actually available, and flips it above
+  // the trigger when there is more room there, so long menus never clip.
   useLayoutEffect(() => {
     if (!open) return;
     const menu = menuRef.current;
-    if (!menu) return;
+    const root = rootRef.current;
+    if (!menu || !root) return;
+
     const rect = menu.getBoundingClientRect();
     setAlignRight(rect.right > window.innerWidth);
+
+    const GAP = 8;
+    const trigger = root.getBoundingClientRect();
+
+    // The menu is clipped by the nearest scrolling/hidden ancestor, not by
+    // the viewport — an editor with a fixed height is exactly that case. So
+    // the available space has to be measured against that box.
+    const clip = findClipBounds(root);
+    const below = clip.bottom - trigger.bottom - GAP;
+    const above = trigger.top - clip.top - GAP;
+    // Only flip up when below is genuinely cramped and above is roomier.
+    const up = below < Math.min(rect.height, 180) && above > below;
+    setPlacement({ up, maxHeight: Math.max(120, Math.floor(up ? above : below)) });
   }, [open]);
 
   useEffect(() => {
@@ -238,9 +280,10 @@ export function ToolbarDropdown({
       {open && (
         <div
           ref={menuRef}
-          className={`da-tb__menu${wide ? ' da-tb__menu--wide' : ''}${alignRight ? ' da-tb__menu--right' : ''}`}
+          className={`da-tb__menu${wide ? ' da-tb__menu--wide' : ''}${alignRight ? ' da-tb__menu--right' : ''}${placement.up ? ' da-tb__menu--up' : ''}`}
           id={menuId}
           role="menu"
+          style={placement.maxHeight ? { maxHeight: placement.maxHeight } : undefined}
         >
           {children(() => setOpen(false))}
         </div>
@@ -286,12 +329,50 @@ export interface SubMenuProps {
 /** A menu row that opens a nested panel beside it on hover or focus. */
 export function SubMenu({ icon, label, disabled, children }: SubMenuProps) {
   const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState<{ top: number; left: number; maxHeight: number } | null>(
+    null,
+  );
+  const rowRef = useRef<HTMLDivElement>(null);
+  const subRef = useRef<HTMLDivElement>(null);
+
+  // The submenu is fixed-positioned rather than nested inside the parent's
+  // flow, so the parent menu can scroll without clipping it. That means
+  // computing its position from the row each time it opens.
+  useLayoutEffect(() => {
+    if (!open) return;
+    const row = rowRef.current;
+    const sub = subRef.current;
+    if (!row || !sub) return;
+
+    const trigger = row.getBoundingClientRect();
+    const panel = sub.getBoundingClientRect();
+    const GAP = 2;
+
+    let left = trigger.right + GAP;
+    // Flip to the left of the row when it would run off-screen.
+    if (left + panel.width > window.innerWidth) {
+      left = Math.max(4, trigger.left - panel.width - GAP);
+    }
+
+    // Clamped to the clipping ancestor, for the same reason the parent menu is.
+    const clip = findClipBounds(row);
+    let top = trigger.top - 5;
+    if (top + panel.height > clip.bottom - 4) {
+      top = Math.max(clip.top + 4, clip.bottom - panel.height - 4);
+    }
+
+    setPos({ top, left, maxHeight: Math.max(120, Math.floor(clip.bottom - top - 4)) });
+  }, [open]);
 
   return (
     <div
       className="da-tb__submenu"
+      ref={rowRef}
       onMouseEnter={() => !disabled && setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
+      onMouseLeave={() => {
+        setOpen(false);
+        setPos(null);
+      }}
     >
       <button
         type="button"
@@ -308,7 +389,18 @@ export function SubMenu({ icon, label, disabled, children }: SubMenuProps) {
         <ChevronRightIcon size={13} className="da-tb__item-arrow" />
       </button>
       {open && !disabled && (
-        <div className="da-tb__menu da-tb__menu--sub" role="menu">
+        <div
+          ref={subRef}
+          className="da-tb__menu da-tb__menu--sub"
+          role="menu"
+          style={{
+            top: pos?.top ?? 0,
+            left: pos?.left ?? 0,
+            maxHeight: pos?.maxHeight,
+            // Hidden for the first paint, before its position is measured.
+            visibility: pos ? 'visible' : 'hidden',
+          }}
+        >
           {children}
         </div>
       )}
