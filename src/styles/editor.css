@@ -947,10 +947,13 @@
   font-size: 0.94em;
   font-weight: 500;
   white-space: nowrap;
+  outline: 2px dashed transparent;
+  outline-offset: 2px;
+  transition: outline-color 0.12s ease;
 }
 
 .da-mention--selected {
-  box-shadow: 0 0 0 2px var(--da-accent);
+  outline-color: var(--da-accent);
 }
 
 .da-mention-menu {
