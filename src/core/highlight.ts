@@ -2,30 +2,30 @@ import { Element as SlateElement, Node, Text, type NodeEntry, type Range } from 
 import Prism from 'prismjs';
 
 // Grammars are imported for their side effects, which register them on Prism.
-import 'prismjs/components/prism-markup';
-import 'prismjs/components/prism-clike';
-import 'prismjs/components/prism-javascript';
-import 'prismjs/components/prism-typescript';
-import 'prismjs/components/prism-jsx';
-import 'prismjs/components/prism-tsx';
-import 'prismjs/components/prism-css';
-import 'prismjs/components/prism-json';
-import 'prismjs/components/prism-python';
-import 'prismjs/components/prism-java';
-import 'prismjs/components/prism-c';
-import 'prismjs/components/prism-cpp';
-import 'prismjs/components/prism-csharp';
-import 'prismjs/components/prism-go';
-import 'prismjs/components/prism-rust';
-import 'prismjs/components/prism-ruby';
-import 'prismjs/components/prism-php';
-import 'prismjs/components/prism-sql';
-import 'prismjs/components/prism-bash';
-import 'prismjs/components/prism-yaml';
-import 'prismjs/components/prism-markdown';
-import 'prismjs/components/prism-diff';
-import 'prismjs/components/prism-graphql';
-import 'prismjs/components/prism-docker';
+import 'prismjs/components/prism-markup.js';
+import 'prismjs/components/prism-clike.js';
+import 'prismjs/components/prism-javascript.js';
+import 'prismjs/components/prism-typescript.js';
+import 'prismjs/components/prism-jsx.js';
+import 'prismjs/components/prism-tsx.js';
+import 'prismjs/components/prism-css.js';
+import 'prismjs/components/prism-json.js';
+import 'prismjs/components/prism-python.js';
+import 'prismjs/components/prism-java.js';
+import 'prismjs/components/prism-c.js';
+import 'prismjs/components/prism-cpp.js';
+import 'prismjs/components/prism-csharp.js';
+import 'prismjs/components/prism-go.js';
+import 'prismjs/components/prism-rust.js';
+import 'prismjs/components/prism-ruby.js';
+import 'prismjs/components/prism-php.js';
+import 'prismjs/components/prism-sql.js';
+import 'prismjs/components/prism-bash.js';
+import 'prismjs/components/prism-yaml.js';
+import 'prismjs/components/prism-markdown.js';
+import 'prismjs/components/prism-diff.js';
+import 'prismjs/components/prism-graphql.js';
+import 'prismjs/components/prism-docker.js';
 
 import { ELEMENT } from './types';
 
