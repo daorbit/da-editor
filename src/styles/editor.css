@@ -1604,11 +1604,14 @@
   border: 1px solid var(--da-border);
   border-radius: var(--da-radius-sm);
   background: var(--da-surface);
+  outline: 2px dashed transparent;
+  outline-offset: 4px;
+  transition: outline-color 0.12s ease;
   overflow: visible;
 }
 
 .da-code-wrap--selected {
-  border-color: var(--da-accent);
+  outline-color: var(--da-accent);
 }
 
 .da-code__bar {
