@@ -192,7 +192,7 @@ describe('every mark round-trips', () => {
       const html = serializeHtml([
         { type: ELEMENT.paragraph, children: [{ text: 'x', ...mark }] },
       ] as EditorValue);
-      const [para] = deserializeHtml(html) as { children: Record<string, unknown>[] }[];
+      const [para] = deserializeHtml(html) as unknown as { children: Record<string, unknown>[] }[];
       for (const [key, want] of Object.entries(mark)) {
         expect(para.children[0][key]).toBe(want);
       }
@@ -211,7 +211,7 @@ describe('every mark round-trips', () => {
     const html = serializeHtml([
       { type: ELEMENT.paragraph, children: [{ text: 'x', ...marks }] },
     ] as EditorValue);
-    const [para] = deserializeHtml(html) as { children: Record<string, unknown>[] }[];
+    const [para] = deserializeHtml(html) as unknown as { children: Record<string, unknown>[] }[];
     for (const [key, want] of Object.entries(marks)) {
       expect(para.children[0][key]).toBe(want);
     }
