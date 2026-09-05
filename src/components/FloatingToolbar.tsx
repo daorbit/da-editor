@@ -66,8 +66,16 @@ export function FloatingToolbar({ onAskAi, onLink }: FloatingToolbarProps) {
     const container = el.offsetParent as HTMLElement | null;
     const base = container?.getBoundingClientRect();
 
+    // Flip below the selection when there isn't enough room above (e.g. the
+    // selection sits right under the sticky toolbar).
+    const spaceAbove = rect.top - (base?.top ?? 0);
+    const top =
+      spaceAbove < el.offsetHeight + 8
+        ? rect.bottom - (base?.top ?? 0) + 8
+        : spaceAbove - el.offsetHeight - 8;
+
     setPosition({
-      top: rect.top - (base?.top ?? 0) - el.offsetHeight - 8,
+      top,
       left: Math.max(
         4,
         rect.left - (base?.left ?? 0) + rect.width / 2 - el.offsetWidth / 2,
