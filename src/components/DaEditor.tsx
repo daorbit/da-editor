@@ -29,6 +29,7 @@ import {
   deserializeHtml,
   emptyValue,
   serializeHtml,
+  type SerializeHtmlOptions,
   serializeMarkdown,
 } from '../core/serialize';
 import { insertMedia } from '../core/media';
@@ -89,7 +90,12 @@ export interface DaEditorHandle {
   editor: DaEditorType;
   getValue: () => EditorValue;
   setValue: (value: EditorValue) => void;
-  getHTML: () => string;
+  /**
+   * Serialized HTML. Pass `{ inlineStyles: true }` to embed the editor's own
+   * styling as `style` attributes, so the output looks the same wherever it is
+   * rendered without loading the stylesheet.
+   */
+  getHTML: (options?: SerializeHtmlOptions) => string;
   getMarkdown: () => string;
   getText: () => string;
   setHTML: (html: string) => void;
@@ -357,7 +363,7 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
       editor,
       getValue: () => editor.children as EditorValue,
       setValue: (next) => replaceAll(next),
-      getHTML: () => serializeHtml(editor.children as EditorValue),
+      getHTML: (options) => serializeHtml(editor.children as EditorValue, options),
       getMarkdown: () => serializeMarkdown(editor.children as EditorValue),
       getText: () => Editor.string(editor, []),
       setHTML: (html) => replaceAll(deserializeHtml(html)),

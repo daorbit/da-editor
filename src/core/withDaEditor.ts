@@ -2,6 +2,7 @@ import { Editor, Element as SlateElement, Point, Range, Transforms } from 'slate
 import { ELEMENT, type DaEditor, type ElementType } from './types';
 import { LIST_TYPES, wrapLink } from './transforms';
 import { normalizeTable } from './tables';
+import { parseWordHtml } from './io';
 
 const VOID_TYPES: ElementType[] = [
   ELEMENT.divider,
@@ -150,6 +151,23 @@ export function withDaEditor(editor: DaEditor): DaEditor {
     if (text && URL_PATTERN.test(text.trim())) {
       wrapLink(editor, text.trim());
       return;
+    }
+
+    // Slate's own paste handling understands only a small set of tags, so
+    // pasting from Word, Google Docs or a web page loses tables, callouts,
+    // to-dos and code languages. Route HTML through the same deserializer the
+    // editor uses everywhere else, which knows all of them.
+    const html = data.getData('text/html');
+    if (html) {
+      try {
+        const fragment = parseWordHtml(html);
+        if (fragment.length) {
+          Transforms.insertFragment(editor, fragment);
+          return;
+        }
+      } catch {
+        // Fall through to Slate's default rather than dropping the paste.
+      }
     }
 
     insertData(data);

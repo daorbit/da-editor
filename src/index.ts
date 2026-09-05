@@ -148,3 +148,4 @@ export type {
 
 /* Icons */
 export * from './icons';
+export type { SerializeHtmlOptions } from './core/serialize';
