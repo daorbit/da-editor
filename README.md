@@ -1,14 +1,16 @@
-# @da/editor
+# da-text-editor
 
-A professional React rich-text editor. One install, no peer dependencies to add — Slate and the icon set are bundled in.
+A professional React rich-text editor. Slate and the icon set are bundled in — React is the only peer dependency.
 
 ```bash
-npm install @da/editor
+npm install da-text-editor
 ```
 
+Requires `react` and `react-dom` 18 or 19.
+
 ```tsx
-import { DaEditor } from '@da/editor';
-import '@da/editor/styles.css';
+import { DaEditor } from 'da-text-editor';
+import 'da-text-editor/styles.css';
 
 export function Example() {
   return <DaEditor theme="system" onChange={(value) => console.log(value)} />;
@@ -120,7 +122,7 @@ import {
   withDaEditor, ElementRenderer, LeafRenderer,
   FixedToolbar, FloatingToolbar, SlashMenu, LinkPopover,
   toggleMark, replaceBlock, serializeMarkdown,
-} from '@da/editor';
+} from 'da-text-editor';
 ```
 
 Icons are exported too (`BoldIcon`, `SparklesIcon`, `DragHandleIcon`, …) as plain

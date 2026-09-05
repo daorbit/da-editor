@@ -66,7 +66,7 @@ export function Home({ navigate, onToggleTheme, dark }: HomeProps) {
   return (
     <div className="pg-page">
       <header className="pg-nav">
-        <span className="pg-brand">@da/editor</span>
+        <span className="pg-brand">da-text-editor</span>
         <div className="pg-nav__actions">
           <button type="button" className="pg-btn pg-btn--ghost" onClick={onToggleTheme}>
             {dark ? '☀' : <MoonIcon size={15} />}
@@ -89,8 +89,8 @@ export function Home({ navigate, onToggleTheme, dark }: HomeProps) {
           for React.
         </h1>
         <p className="pg-hero__lead">
-          One install. No peer dependencies to add, no icon packages to wire up —
-          the editor, its icon set and its document model ship together.
+          One install. No icon packages to wire up — the editor, its icon set and
+          its document model ship together. React is the only peer dependency.
         </p>
 
         <div className="pg-hero__actions">
@@ -101,7 +101,7 @@ export function Home({ navigate, onToggleTheme, dark }: HomeProps) {
           >
             Try the editor
           </button>
-          <code className="pg-install">npm install @da/editor</code>
+          <code className="pg-install">npm install da-text-editor</code>
         </div>
       </section>
 
@@ -121,8 +121,8 @@ export function Home({ navigate, onToggleTheme, dark }: HomeProps) {
       <section className="pg-section">
         <h2 className="pg-h2">Getting started</h2>
         <pre className="pg-code">
-          <code>{`import { DaEditor } from '@da/editor';
-import '@da/editor/styles.css';
+          <code>{`import { DaEditor } from 'da-text-editor';
+import 'da-text-editor/styles.css';
 
 export function Example() {
   return (
