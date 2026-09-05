@@ -29,7 +29,6 @@ export function Playground() {
         autoFocus
         mentionables={MENTIONABLES}
         onAskAi={() => window.alert('Ask AI — wire this to your own endpoint.')}
-        onComment={() => window.alert('Comment — wire this to your own store.')}
       />
     </div>
   );

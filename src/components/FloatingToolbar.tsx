@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Editor, Range } from 'slate';
 import { ReactEditor, useSlate } from 'slate-react';
-import { CommentIcon, LinkIcon, MoreIcon, SparklesIcon } from '../icons';
+import { LinkIcon, MoreIcon, SparklesIcon } from '../icons';
 import {
   BLOCK_SPECS,
   EXTRA_MARK_SPECS,
@@ -23,7 +23,6 @@ import { ELEMENT, MARK, type DaEditor } from '../core/types';
 export interface FloatingToolbarProps {
   onAskAi?: () => void;
   onLink?: () => void;
-  onComment?: () => void;
 }
 
 interface Position {
@@ -31,7 +30,7 @@ interface Position {
   left: number;
 }
 
-export function FloatingToolbar({ onAskAi, onLink, onComment }: FloatingToolbarProps) {
+export function FloatingToolbar({ onAskAi, onLink }: FloatingToolbarProps) {
   const editor = useSlate() as DaEditor;
   const ref = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<Position | null>(null);
@@ -164,9 +163,6 @@ export function FloatingToolbar({ onAskAi, onLink, onComment }: FloatingToolbarP
 
       {onLink && (
         <ToolbarButton icon={<LinkIcon />} label="Link" shortcut="Ctrl+K" onClick={onLink} />
-      )}
-      {onComment && (
-        <ToolbarButton icon={<CommentIcon />} label="Comment" onClick={onComment} />
       )}
 
       <ToolbarDropdown label="More" icon={<MoreIcon />}>

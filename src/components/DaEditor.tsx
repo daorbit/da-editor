@@ -117,7 +117,6 @@ export interface DaEditorProps {
   autoformat?: boolean;
   /** Renders the Ask AI affordances and fires when one is used. */
   onAskAi?: () => void;
-  onComment?: () => void;
   /** Entries offered by the `@` mention combobox. */
   mentionables?: Mentionable[];
   /** Uploads a file picked from the device; falls back to a local object URL. */
@@ -149,7 +148,6 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
     slashMenu = true,
     autoformat = true,
     onAskAi,
-    onComment,
     mentionables,
     onUpload,
     onToggleTheme,
@@ -387,7 +385,6 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
           <FixedToolbar
             onAskAi={onAskAi}
             onLink={() => setLinkOpen(true)}
-            onComment={onComment}
             onMedia={(kind) => setMediaKind(kind)}
             onImport={handleImport}
             onExport={handleExport}
@@ -419,7 +416,6 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
               <FloatingToolbar
                 onAskAi={onAskAi}
                 onLink={() => setLinkOpen(true)}
-                onComment={onComment}
               />
             )}
             {slashMenu && !locked && (

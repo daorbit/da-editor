@@ -7,7 +7,6 @@ import {
   ClearFormattingIcon,
   ColumnIcon,
   ColumnsThreeIcon,
-  CommentIcon,
   EmojiIcon,
   ExportIcon,
   HighlighterIcon,
@@ -91,7 +90,6 @@ import { ELEMENT, MARK, type DaEditor, type MediaKind } from '../core/types';
 export interface FixedToolbarProps {
   onAskAi?: () => void;
   onLink?: () => void;
-  onComment?: () => void;
   onMedia?: (kind: MediaKind) => void;
   onImport?: (format: 'html' | 'markdown' | 'word') => void;
   onExport?: (format: 'html' | 'markdown') => void;
@@ -102,7 +100,6 @@ export interface FixedToolbarProps {
 export function FixedToolbar({
   onAskAi,
   onLink,
-  onComment,
   onMedia,
   onImport,
   onExport,
@@ -707,14 +704,6 @@ export function FixedToolbar({
       />
     ),
   });
-
-  if (onComment) {
-    groups.push({
-      key: 'comment',
-      inline: <ToolbarButton icon={<CommentIcon />} label="Comment" onClick={onComment} />,
-      menu: <MenuItem icon={<CommentIcon />} label="Comment" onClick={onComment} />,
-    });
-  }
 
   return (
     <div className="da-tb da-tb--fixed" role="toolbar" aria-label="Editor toolbar">
