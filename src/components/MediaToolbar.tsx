@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Element as SlateElement, Transforms } from 'slate';
 import { ReactEditor, useSlate } from 'slate-react';
-import { TrashIcon } from '../icons';
+import { CheckIcon, CloseIcon, TrashIcon } from '../icons';
 import { ELEMENT, type DaEditor } from '../core/types';
 
 const MEDIA_TYPES = [
@@ -12,11 +12,16 @@ const MEDIA_TYPES = [
   ELEMENT.embed,
 ] as const;
 
+type EditingField = 'url' | 'caption' | null;
+
 /** Floating controls for the selected media block. */
 export function MediaToolbar() {
   const editor = useSlate() as DaEditor;
   const ref = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
+  const [editing, setEditing] = useState<EditingField>(null);
+  const [draft, setDraft] = useState('');
 
   const [entry] = Array.from(
     editor.nodes({
@@ -25,6 +30,15 @@ export function MediaToolbar() {
         (MEDIA_TYPES as readonly string[]).includes(n.type),
     }),
   );
+
+  // Leaving the media block closes editing so it reopens clean next time.
+  useEffect(() => {
+    if (!entry) setEditing(null);
+  }, [entry]);
+
+  useEffect(() => {
+    if (editing) inputRef.current?.focus();
+  }, [editing]);
 
   useEffect(() => {
     const el = ref.current;
@@ -55,6 +69,21 @@ export function MediaToolbar() {
   const url = 'url' in node ? node.url : '';
   const caption = 'caption' in node && node.caption ? node.caption : '';
 
+  const startEditing = (field: EditingField) => {
+    setDraft(field === 'url' ? url : caption);
+    setEditing(field);
+  };
+
+  const apply = () => {
+    if (editing === 'url') {
+      const trimmed = draft.trim();
+      if (trimmed) Transforms.setNodes(editor, { url: trimmed }, { at: path });
+    } else if (editing === 'caption') {
+      Transforms.setNodes(editor, { caption: draft.trim() || undefined }, { at: path });
+    }
+    setEditing(null);
+  };
+
   return (
     <div
       ref={ref}
@@ -69,41 +98,75 @@ export function MediaToolbar() {
       }}
       onMouseDown={(event) => event.preventDefault()}
     >
-      <button
-        type="button"
-        className="da-media-toolbar__btn"
-        onClick={() => {
-          const next = window.prompt('Media URL', url);
-          if (next === null) return;
-          Transforms.setNodes(editor, { url: next }, { at: path });
-        }}
-      >
-        Edit link
-      </button>
+      {editing ? (
+        <>
+          <input
+            ref={inputRef}
+            className="da-media-toolbar__input"
+            value={draft}
+            placeholder={editing === 'url' ? 'Paste or type a link…' : 'Caption'}
+            onChange={(event) => setDraft(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                apply();
+              }
+              if (event.key === 'Escape') {
+                event.preventDefault();
+                setEditing(null);
+              }
+            }}
+          />
+          <button
+            type="button"
+            className="da-media-toolbar__btn da-media-toolbar__btn--icon"
+            title="Apply"
+            aria-label="Apply"
+            onClick={apply}
+          >
+            <CheckIcon size={15} />
+          </button>
+          <button
+            type="button"
+            className="da-media-toolbar__btn da-media-toolbar__btn--icon"
+            title="Cancel"
+            aria-label="Cancel"
+            onClick={() => setEditing(null)}
+          >
+            <CloseIcon size={15} />
+          </button>
+        </>
+      ) : (
+        <>
+          <button
+            type="button"
+            className="da-media-toolbar__btn"
+            onClick={() => startEditing('url')}
+          >
+            Edit link
+          </button>
 
-      <button
-        type="button"
-        className="da-media-toolbar__btn"
-        onClick={() => {
-          const next = window.prompt('Caption', caption);
-          if (next === null) return;
-          Transforms.setNodes(editor, { caption: next || undefined }, { at: path });
-        }}
-      >
-        Caption
-      </button>
+          <button
+            type="button"
+            className="da-media-toolbar__btn"
+            onClick={() => startEditing('caption')}
+          >
+            Caption
+          </button>
 
-      <span className="da-tb__sep" />
+          <span className="da-tb__sep" />
 
-      <button
-        type="button"
-        className="da-media-toolbar__btn da-media-toolbar__btn--icon"
-        title="Delete"
-        aria-label="Delete"
-        onClick={() => Transforms.removeNodes(editor, { at: path })}
-      >
-        <TrashIcon size={15} />
-      </button>
+          <button
+            type="button"
+            className="da-media-toolbar__btn da-media-toolbar__btn--icon"
+            title="Delete"
+            aria-label="Delete"
+            onClick={() => Transforms.removeNodes(editor, { at: path })}
+          >
+            <TrashIcon size={15} />
+          </button>
+        </>
+      )}
     </div>
   );
 }

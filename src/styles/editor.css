@@ -1884,6 +1884,23 @@
   color: #dc2626;
 }
 
+.da-media-toolbar__input {
+  width: 240px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--da-border);
+  border-radius: var(--da-radius-sm);
+  background: var(--da-surface);
+  color: var(--da-fg);
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+}
+
+.da-media-toolbar__input:focus {
+  border-color: var(--da-accent);
+}
+
 /* --------------------------------------------------------- link toolbar -- */
 
 .da-link-toolbar {
