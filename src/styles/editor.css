@@ -325,7 +325,11 @@
 }
 
 .da-tb__swatch:hover {
-  background: var(--da-surface-hover);
+  box-shadow: 0 0 0 2px var(--da-border-strong);
+}
+
+.da-tb__swatch:hover .da-tb__swatch-chip {
+  transform: scale(1.08);
 }
 
 .da-tb__swatch-chip {
@@ -333,6 +337,7 @@
   height: 20px;
   border: 1px solid var(--da-border-strong);
   border-radius: 4px;
+  transition: transform 0.1s ease;
 }
 
 .da-tb__swatch-chip[data-empty] {
@@ -1039,44 +1044,75 @@
   align-items: center;
   justify-content: center;
   padding: 20px;
-  background: rgba(16, 20, 30, 0.45);
+  background: rgba(12, 14, 20, 0.55);
+  backdrop-filter: blur(3px);
+  animation: da-dialog-backdrop-in 0.15s ease;
+}
+
+@keyframes da-dialog-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .da-dialog {
   width: 100%;
-  max-width: 420px;
-  padding: 20px;
+  max-width: 400px;
+  padding: 22px;
   border: 1px solid var(--da-border);
-  border-radius: var(--da-radius);
+  border-radius: 16px;
   background: var(--da-bg);
   color: var(--da-fg);
-  box-shadow: var(--da-shadow);
+  box-shadow: 0 24px 48px -12px rgba(16, 20, 30, 0.32), 0 4px 12px rgba(16, 20, 30, 0.08);
+  animation: da-dialog-in 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes da-dialog-in {
+  from { opacity: 0; transform: translateY(4px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .da-dialog__title {
-  margin: 0 0 16px;
-  font-size: 16px;
-  font-weight: 620;
+  margin: 0 0 18px;
+  font-size: 15.5px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
 }
 
 .da-dialog__drop {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 10px;
   width: 100%;
-  padding: 22px 16px;
-  border: 1.5px dashed var(--da-border-strong);
-  border-radius: var(--da-radius-sm);
+  padding: 26px 16px;
+  border: 1px solid var(--da-border);
+  border-radius: 12px;
   background: var(--da-surface);
   color: var(--da-fg);
   font: inherit;
   cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+
+.da-dialog__drop-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--da-accent-soft);
+  color: var(--da-accent);
 }
 
 .da-dialog__drop:hover:not(:disabled) {
   border-color: var(--da-accent);
   background: var(--da-accent-soft);
+}
+
+.da-dialog__drop:hover:not(:disabled) .da-dialog__drop-icon {
+  background: var(--da-accent);
+  color: var(--da-accent-fg);
 }
 
 .da-dialog__drop:disabled {
@@ -1085,11 +1121,12 @@
 }
 
 .da-dialog__drop-label {
-  font-size: 14px;
-  font-weight: 550;
+  font-size: 13.5px;
+  font-weight: 580;
 }
 
 .da-dialog__drop-hint {
+  margin-top: -6px;
   color: var(--da-faint);
   font-size: 12px;
 }
@@ -1098,9 +1135,12 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  margin: 16px 0;
+  margin: 18px 0;
   color: var(--da-faint);
-  font-size: 12px;
+  font-size: 11.5px;
+  font-weight: 550;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .da-dialog__divider::before,
@@ -1113,18 +1153,20 @@
 
 .da-dialog__input {
   width: 100%;
-  padding: 9px 12px;
+  padding: 10px 12px;
   border: 1px solid var(--da-border);
-  border-radius: var(--da-radius-sm);
+  border-radius: 10px;
   background: var(--da-surface);
   color: var(--da-fg);
   font: inherit;
-  font-size: 14px;
+  font-size: 13.5px;
   outline: none;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
 }
 
 .da-dialog__input:focus {
   border-color: var(--da-accent);
+  box-shadow: 0 0 0 3px var(--da-accent-soft);
 }
 
 .da-dialog__error {
@@ -1137,18 +1179,20 @@
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  margin-top: 18px;
+  margin-top: 20px;
 }
 
 .da-dialog__btn {
   padding: 8px 16px;
   border: 1px solid var(--da-border);
-  border-radius: var(--da-radius-sm);
+  border-radius: 10px;
   background: var(--da-bg);
   color: var(--da-fg);
   font: inherit;
   font-size: 13.5px;
+  font-weight: 550;
   cursor: pointer;
+  transition: background 0.12s ease, opacity 0.12s ease;
 }
 
 .da-dialog__btn:hover:not(:disabled) {
@@ -1156,7 +1200,7 @@
 }
 
 .da-dialog__btn--primary {
-  border-color: var(--da-accent);
+  border-color: transparent;
   background: var(--da-accent);
   color: var(--da-accent-fg);
 }

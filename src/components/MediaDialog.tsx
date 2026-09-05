@@ -101,7 +101,9 @@ export function MediaDialog({ kind, onUpload, onInsert, onClose }: MediaDialogPr
           disabled={busy}
           onClick={chooseFile}
         >
-          {kind === 'image' ? <ImageIcon size={20} /> : <PlusIcon size={20} />}
+          <span className="da-dialog__drop-icon">
+            {kind === 'image' ? <ImageIcon size={18} /> : <PlusIcon size={18} />}
+          </span>
           <span className="da-dialog__drop-label">
             {busy ? 'Uploading…' : 'Choose from your device'}
           </span>
