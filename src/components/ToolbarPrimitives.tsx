@@ -7,6 +7,27 @@ import {
 } from 'react';
 import { CheckIcon, ChevronDownIcon, ChevronRightIcon } from '../icons';
 
+/** Broadcast so opening one toolbar popover closes any other that's open. */
+const DA_TB_CLOSE_OTHERS = 'da-tb-close-others';
+
+/** Closes this popover when a *different* one announces it just opened. */
+export function useCloseOnOtherOpen(open: boolean, close: () => void, id: string) {
+  useEffect(() => {
+    if (open) {
+      document.dispatchEvent(new CustomEvent(DA_TB_CLOSE_OTHERS, { detail: id }));
+    }
+  }, [open, id]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onCloseOthers = (event: Event) => {
+      if ((event as CustomEvent<string>).detail !== id) close();
+    };
+    document.addEventListener(DA_TB_CLOSE_OTHERS, onCloseOthers);
+    return () => document.removeEventListener(DA_TB_CLOSE_OTHERS, onCloseOthers);
+  }, [open, close, id]);
+}
+
 export interface ToolbarButtonProps {
   icon?: ReactNode;
   label: string;
@@ -78,6 +99,8 @@ export function ToolbarDropdown({
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
+
+  useCloseOnOtherOpen(open, () => setOpen(false), menuId);
 
   useEffect(() => {
     if (!open) return;

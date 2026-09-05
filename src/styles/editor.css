@@ -115,6 +115,7 @@
   top: 0;
   z-index: 5;
   flex-wrap: nowrap;
+  box-shadow: 0 1px 0 var(--da-border), 0 4px 8px -4px rgba(16, 20, 30, 0.12);
   /* Must stay visible so dropdown menus are not clipped. */
   overflow: visible;
 }
@@ -324,12 +325,8 @@
   cursor: pointer;
 }
 
-.da-tb__swatch:hover {
-  box-shadow: 0 0 0 2px var(--da-border-strong);
-}
-
 .da-tb__swatch:hover .da-tb__swatch-chip {
-  transform: scale(1.08);
+  border-color: var(--da-fg);
 }
 
 .da-tb__swatch-chip {
@@ -395,6 +392,8 @@
   font-weight: 650;
   line-height: 1.3;
   letter-spacing: -0.01em;
+  /* Keeps headings clear of the sticky toolbar when scrolled into view. */
+  scroll-margin-top: 56px;
 }
 
 .da-h1 {

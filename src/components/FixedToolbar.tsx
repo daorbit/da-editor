@@ -1,4 +1,4 @@
-import { Fragment, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { useSlate } from 'slate-react';
 import {
   AlignJustifyIcon,
@@ -47,6 +47,7 @@ import {
   ToolbarButton,
   ToolbarDropdown,
   ToolbarSeparator,
+  useCloseOnOtherOpen,
 } from './ToolbarPrimitives';
 import { EmojiPicker } from './EmojiPicker';
 import { ColorPicker } from './ColorPicker';
@@ -108,8 +109,28 @@ export function FixedToolbar({
 }: FixedToolbarProps) {
   const editor = useSlate() as DaEditor;
   const [emojiOpen, setEmojiOpen] = useState(false);
+  const emojiId = useId();
+  const emojiRef = useRef<HTMLDivElement>(null);
   const [customTextColors, setCustomTextColors] = useState<string[]>([]);
   const [customBgColors, setCustomBgColors] = useState<string[]>([]);
+
+  useCloseOnOtherOpen(emojiOpen, () => setEmojiOpen(false), emojiId);
+
+  useEffect(() => {
+    if (!emojiOpen) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (!emojiRef.current?.contains(event.target as globalThis.Node)) setEmojiOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setEmojiOpen(false);
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [emojiOpen]);
 
   const blockType = getBlockType(editor);
   const align = getAlign(editor);
@@ -636,7 +657,7 @@ export function FixedToolbar({
   groups.push({
     key: 'emoji',
     inline: (
-      <div className="da-tb__dropdown">
+      <div className="da-tb__dropdown" ref={emojiRef}>
         <ToolbarButton
           icon={<EmojiIcon />}
           label="Emoji"
