@@ -7,6 +7,7 @@ import {
   type RenderElementProps,
 } from 'slate-react';
 import { ELEMENT } from '../core/types';
+import { isEditorEmpty } from '../core/transforms';
 import { CodeBlock } from './CodeBlock';
 
 function blockStyle(element: RenderElementProps['element']): CSSProperties {
@@ -148,8 +149,13 @@ export function ElementRenderer(props: RenderElementProps) {
 function EmptyLineParagraph({ attributes, children, element, style }: RenderElementProps & {
   style: CSSProperties;
 }) {
+  const editor = useSlateStatic();
   const selected = useSelected();
-  const isEmpty = selected && Node.string(element) === '' && element.children.length === 1;
+  const isEmpty =
+    selected &&
+    Node.string(element) === '' &&
+    element.children.length === 1 &&
+    !isEditorEmpty(editor);
 
   return (
     <p
