@@ -551,10 +551,13 @@
   height: auto;
   border-radius: var(--da-radius-sm);
   display: block;
+  outline: 2px dashed transparent;
+  outline-offset: 4px;
+  transition: outline-color 0.12s ease;
 }
 
 .da-image--selected {
-  box-shadow: 0 0 0 2px var(--da-accent);
+  outline-color: var(--da-accent);
 }
 
 .da-figcaption {
@@ -828,6 +831,9 @@
   display: block;
   max-width: 100%;
   border-radius: var(--da-radius-sm);
+  outline: 2px dashed transparent;
+  outline-offset: 4px;
+  transition: outline-color 0.12s ease;
 }
 
 .da-audio {
@@ -835,7 +841,7 @@
 }
 
 .da-media--selected {
-  box-shadow: 0 0 0 2px var(--da-accent);
+  outline-color: var(--da-accent);
 }
 
 .da-embed {
