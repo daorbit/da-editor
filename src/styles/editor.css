@@ -89,8 +89,8 @@
 .da-slash::-webkit-scrollbar,
 .da-mention-menu::-webkit-scrollbar,
 .da-emoji__viewport::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 /* ------------------------------------------------------------ toolbar -- */
@@ -967,72 +967,6 @@
   white-space: nowrap;
 }
 
-/* --------------------------------------------------------------- emoji -- */
-
-.da-emoji {
-  display: flex;
-  flex-direction: column;
-  max-height: 300px;
-}
-
-.da-emoji__search {
-  margin: 8px;
-  padding: 6px 10px;
-  border: 1px solid var(--da-border);
-  border-radius: var(--da-radius-sm);
-  background: var(--da-surface);
-  color: var(--da-fg);
-  font: inherit;
-  font-size: 13px;
-  outline: none;
-}
-
-.da-emoji__search:focus {
-  border-color: var(--da-accent);
-}
-
-.da-emoji__scroll {
-  flex: 1;
-  overflow-y: auto;
-  padding: 0 8px 8px;
-}
-
-.da-emoji__group {
-  margin: 6px 0 4px;
-  color: var(--da-faint);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.da-emoji__grid {
-  display: grid;
-  grid-template-columns: repeat(8, 1fr);
-  gap: 2px;
-}
-
-.da-emoji__item {
-  padding: 4px;
-  border: none;
-  border-radius: 5px;
-  background: transparent;
-  font-size: 19px;
-  line-height: 1.3;
-  cursor: pointer;
-}
-
-.da-emoji__item:hover {
-  background: var(--da-surface-hover);
-}
-
-.da-emoji__empty {
-  padding: 16px 8px;
-  color: var(--da-faint);
-  font-size: 13px;
-  text-align: center;
-}
-
 /* -------------------------------------------------------------- dialog -- */
 
 .da-dialog__backdrop {
@@ -1521,9 +1455,8 @@
 .da-emoji__header {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   padding: 10px;
-  border-bottom: 1px solid var(--da-border);
 }
 
 .da-emoji__search-wrap {
@@ -1537,7 +1470,7 @@
 
 .da-emoji__search-icon {
   position: absolute;
-  left: 11px;
+  left: 10px;
   color: var(--da-faint);
   pointer-events: none;
 }
@@ -1546,18 +1479,20 @@
   width: 100%;
   height: 100%;
   padding: 0 12px 0 32px;
-  border: 1px solid var(--da-border);
-  border-radius: var(--da-radius-sm);
+  border: 1px solid transparent;
+  border-radius: 999px;
   background: var(--da-surface);
   color: var(--da-fg);
   font: inherit;
   font-size: 13px;
   line-height: 1;
   outline: none;
+  transition: border-color 0.12s ease, background 0.12s ease;
 }
 
 .da-emoji__search:focus {
   border-color: var(--da-accent);
+  background: var(--da-bg);
 }
 
 .da-emoji__search::-webkit-search-cancel-button {
@@ -1572,13 +1507,14 @@
   width: 32px;
   height: 32px;
   padding: 0;
-  border: 1px solid var(--da-border);
-  border-radius: var(--da-radius-sm);
+  border: 1px solid transparent;
+  border-radius: 999px;
   background: var(--da-surface);
   font-size: 16px;
   line-height: 1;
   cursor: pointer;
   flex-shrink: 0;
+  transition: background 0.12s ease;
 }
 
 .da-emoji__skin:hover {
@@ -1593,7 +1529,7 @@
 }
 
 .da-emoji__list {
-  padding: 0 8px 8px;
+  padding: 0 10px 10px;
   user-select: none;
 }
 
@@ -1623,17 +1559,19 @@
   height: var(--da-emoji-size);
   padding: 0;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   background: transparent;
-  font-size: 21px;
+  font-size: 20px;
   line-height: 1;
   cursor: pointer;
   flex-shrink: 0;
+  transition: background 0.1s ease, transform 0.1s ease;
 }
 
 .da-emoji__item[data-active],
 .da-emoji__item:hover {
   background: var(--da-surface-hover);
+  transform: scale(1.12);
 }
 
 .da-emoji__state {

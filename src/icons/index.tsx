@@ -415,17 +415,19 @@ export const H6Icon = (p: IconProps) => (
 
 export const ImportIcon = (p: IconProps) => (
   <Icon {...p}>
-    <path d="M12 3v12" />
-    <polyline points="8 11 12 15 16 11" />
-    <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
+    <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+    <polyline points="14 3 14 8 19 8" />
+    <path d="M12 11v6" />
+    <polyline points="9.5 14.5 12 17 14.5 14.5" />
   </Icon>
 );
 
 export const ExportIcon = (p: IconProps) => (
   <Icon {...p}>
-    <path d="M12 15V3" />
-    <polyline points="8 7 12 3 16 7" />
-    <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
+    <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+    <polyline points="14 3 14 8 19 8" />
+    <path d="M12 17v-6" />
+    <polyline points="9.5 13.5 12 11 14.5 13.5" />
   </Icon>
 );
 
