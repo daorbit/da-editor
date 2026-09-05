@@ -25,7 +25,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -p tsconfig.build.json && vite build",
-    "build:playground": "vite build --config vite.playground.config.ts",
+    "build:playground": "npm run build && cp dist/da-editor.css public/da-editor.css && vite build --config vite.playground.config.ts",
     "typecheck": "tsc --noEmit",
     "preview": "vite preview",
     "prepublishOnly": "npm run build"
