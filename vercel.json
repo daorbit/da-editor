@@ -1,4 +1,6 @@
 {
+  "buildCommand": "npm run build:playground",
+  "outputDirectory": "dist-playground",
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ]
