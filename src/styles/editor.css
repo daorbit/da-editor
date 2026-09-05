@@ -1441,13 +1441,13 @@
 /* --------------------------------------------------- emoji (frimousse) -- */
 
 .da-emoji {
-  /* 8 columns of 34px, plus 8px padding on each side of the list. */
+  /* 8 columns of 34px, 10px list padding each side, 5px for the scrollbar. */
   --da-emoji-size: 34px;
   --da-emoji-columns: 8;
 
   display: flex;
   flex-direction: column;
-  width: calc(var(--da-emoji-size) * var(--da-emoji-columns) + 16px);
+  width: calc(var(--da-emoji-size) * var(--da-emoji-columns) + 25px);
   height: 360px;
   overflow: hidden;
 }
@@ -1548,7 +1548,6 @@
 
 .da-emoji__row {
   display: flex;
-  width: 100%;
 }
 
 .da-emoji__item {
