@@ -10,7 +10,8 @@
   --pg-accent-fg: #ffffff;
   --pg-accent-soft: #eaeeff;
   --pg-radius: 10px;
-  --pg-mono: ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, monospace;
+  --pg-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --pg-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 :root[data-pg-theme='dark'] {
@@ -67,8 +68,13 @@ body {
   margin: 0;
   background: var(--pg-bg);
   color: var(--pg-fg);
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--pg-sans);
+  /* Inter's defaults are loose for UI; contextual alternates and tighter
+     tracking are what make it read as designed rather than dropped in. */
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  letter-spacing: -0.011em;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* ------------------------------------------------------------------ nav -- */
@@ -92,9 +98,10 @@ body {
 }
 
 .pg-brand {
-  font-weight: 650;
+  font-weight: 620;
   font-size: 15px;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
+  font-family: var(--pg-mono);
 }
 
 .pg-nav__actions {
@@ -123,6 +130,11 @@ body {
 
 .pg-btn:hover {
   opacity: 0.9;
+}
+
+/* Nav uses anchors styled as buttons. */
+a.pg-btn {
+  text-decoration: none;
 }
 
 .pg-btn--ghost {
@@ -183,19 +195,21 @@ body {
 }
 
 .pg-hero__title {
-  margin: 0 0 18px;
-  font-size: clamp(32px, 5.5vw, 52px);
-  font-weight: 680;
-  line-height: 1.1;
-  letter-spacing: -0.03em;
+  margin: 0 0 20px;
+  font-size: clamp(36px, 6vw, 60px);
+  font-weight: 700;
+  line-height: 1.06;
+  /* Display sizes need tighter tracking than body text or they read loose. */
+  letter-spacing: -0.038em;
 }
 
 .pg-hero__lead {
-  max-width: 560px;
+  max-width: 580px;
   margin: 0 auto;
   color: var(--pg-muted);
-  font-size: 17px;
-  line-height: 1.6;
+  font-size: 17.5px;
+  line-height: 1.62;
+  letter-spacing: -0.008em;
 }
 
 .pg-hero__actions {
@@ -207,27 +221,94 @@ body {
   margin-top: 30px;
 }
 
-.pg-install {
-  padding: 11px 16px;
+/* Install line doubles as a copy button — the single most common action
+   a visitor takes on a package landing page. */
+.pg-install-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px 10px 16px;
   border: 1px solid var(--pg-border);
   border-radius: 8px;
   background: var(--pg-surface);
-  color: var(--pg-muted);
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+
+.pg-install-btn:hover {
+  border-color: var(--pg-accent);
+  background: var(--pg-surface-hover);
+}
+
+.pg-install-btn code {
+  color: var(--pg-fg);
   font-family: var(--pg-mono);
   font-size: 13.5px;
+}
+
+.pg-install-btn__hint {
+  color: var(--pg-faint);
+  font-size: 12px;
+  font-weight: 550;
+  letter-spacing: 0.01em;
+}
+
+.pg-install-btn:hover .pg-install-btn__hint {
+  color: var(--pg-accent);
+}
+
+.pg-btn--icon {
+  padding: 8px 10px;
+}
+
+/* ------------------------------------------------------------ hero demo -- */
+
+.pg-demo {
+  padding: 8px 24px 12px;
+}
+
+.pg-demo__frame {
+  border: 1px solid var(--pg-border);
+  border-radius: 14px;
+  background: var(--pg-bg);
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(16, 18, 22, 0.04), 0 12px 32px -12px rgba(16, 18, 22, 0.14);
+}
+
+:root[data-pg-theme='dark'] .pg-demo__frame {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 32px -12px rgba(0, 0, 0, 0.6);
+}
+
+.pg-demo__caption {
+  margin: 14px 0 0;
+  color: var(--pg-faint);
+  font-size: 13.5px;
+  text-align: center;
+}
+
+.pg-demo__caption kbd {
+  padding: 2px 6px;
+  border: 1px solid var(--pg-border);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  background: var(--pg-surface);
+  color: var(--pg-muted);
+  font-family: var(--pg-mono);
+  font-size: 11.5px;
 }
 
 /* ------------------------------------------------------------- sections -- */
 
 .pg-section {
-  padding: 32px 24px;
+  padding: 52px 24px;
 }
 
 .pg-h2 {
-  margin: 0 0 20px;
-  font-size: 20px;
-  font-weight: 620;
-  letter-spacing: -0.015em;
+  margin: 0 0 24px;
+  font-size: 22px;
+  font-weight: 640;
+  letter-spacing: -0.024em;
 }
 
 .pg-grid {
@@ -237,47 +318,89 @@ body {
 }
 
 .pg-card {
-  padding: 20px;
+  padding: 22px;
   border: 1px solid var(--pg-border);
-  border-radius: var(--pg-radius);
+  border-radius: 12px;
   background: var(--pg-surface);
+  transition: border-color 0.14s ease, transform 0.14s ease, box-shadow 0.14s ease;
+}
+
+.pg-card:hover {
+  border-color: var(--pg-accent);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px -6px rgba(59, 91, 253, 0.22);
 }
 
 .pg-card__icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
-  margin-bottom: 12px;
-  border-radius: 8px;
-  background: var(--pg-accent-soft);
+  width: 36px;
+  height: 36px;
+  margin-bottom: 14px;
+  border: 1px solid var(--pg-border);
+  border-radius: 9px;
+  background: var(--pg-bg);
   color: var(--pg-accent);
+  box-shadow: 0 1px 2px rgba(16, 18, 22, 0.05);
+}
+
+:root[data-pg-theme='dark'] .pg-card__icon {
+  box-shadow: none;
 }
 
 .pg-card__title {
-  margin: 0 0 6px;
+  margin: 0 0 7px;
   font-size: 15px;
   font-weight: 600;
+  letter-spacing: -0.014em;
 }
 
 .pg-card__body {
   margin: 0;
   color: var(--pg-muted);
   font-size: 14px;
-  line-height: 1.6;
+  line-height: 1.62;
 }
 
 .pg-code {
   margin: 0;
-  padding: 18px 20px;
+  padding: 20px 22px;
   border: 1px solid var(--pg-border);
-  border-radius: var(--pg-radius);
+  border-radius: 12px;
   background: var(--pg-surface);
   font-family: var(--pg-mono);
   font-size: 13px;
-  line-height: 1.7;
+  line-height: 1.75;
+  letter-spacing: 0;
   overflow-x: auto;
+}
+
+/* Code sample and its explanation, side by side on wide screens. */
+.pg-start {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.pg-start__title {
+  margin: 0 0 8px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.pg-start__body {
+  margin: 0 0 14px;
+  color: var(--pg-muted);
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+@media (max-width: 780px) {
+  .pg-start {
+    grid-template-columns: 1fr;
+  }
 }
 
 .pg-chips {
@@ -299,11 +422,22 @@ body {
 }
 
 .pg-footer {
+  margin-top: 20px;
   padding: 28px 24px;
   border-top: 1px solid var(--pg-border);
   color: var(--pg-faint);
   font-size: 13.5px;
   text-align: center;
+}
+
+.pg-footer__link {
+  color: var(--pg-muted);
+  text-decoration: none;
+}
+
+.pg-footer__link:hover {
+  color: var(--pg-accent);
+  text-decoration: underline;
 }
 
 /* ----------------------------------------------------- playground route -- */

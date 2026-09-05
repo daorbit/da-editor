@@ -336,3 +336,45 @@ export default publish;`,
 
   { type: 'p', children: [{ text: '' }] },
 ];
+
+/**
+ * A deliberately short document for the homepage demo frame, which is only
+ * tall enough for a few blocks. Shows range without needing to be scrolled.
+ */
+export const HERO_CONTENT: EditorValue = [
+  {
+    type: 'h2',
+    children: [{ text: 'Try it — this editor is live' }],
+  },
+  {
+    type: 'p',
+    children: [
+      { text: 'Select this text to see the floating toolbar. Everything works: ' },
+      { text: 'bold', bold: true },
+      { text: ', ' },
+      { text: 'italic', italic: true },
+      { text: ', ' },
+      { text: 'code', code: true },
+      { text: ', and ' },
+      { text: 'highlight', highlight: '#fde68a' },
+      { text: '.' },
+    ],
+  },
+  {
+    type: 'callout',
+    variant: 'info',
+    children: [
+      {
+        text: 'Press / on an empty line for the block menu, or @ to mention someone.',
+      },
+    ],
+  },
+  {
+    type: 'ul',
+    children: [
+      { type: 'li', children: [{ text: 'Type - or * to start a list like this one' }] },
+      { type: 'li', children: [{ text: 'Type # for a heading, > for a quote' }] },
+    ],
+  },
+  { type: 'p', children: [{ text: '' }] },
+];
