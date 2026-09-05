@@ -6,7 +6,8 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { useSlate } from 'slate-react';
+import { Editor, Element as SlateElement } from 'slate';
+import { ReactEditor, useSlate } from 'slate-react';
 import {
   AlignJustifyIcon,
   BulletedListIcon,
@@ -62,6 +63,7 @@ import { ColorPicker } from './ColorPicker';
 import {
   BULLET_STYLES,
   clearMarks,
+  DEFAULT_FONT_SIZE,
   FONT_FAMILIES,
   getAlign,
   getBlockType,
@@ -95,6 +97,28 @@ import {
   toggleHeaderRow,
 } from '../core/tables';
 import { ELEMENT, MARK, type DaEditor, type MediaKind } from '../core/types';
+
+/**
+ * The `fontSize` mark, or — when unset — the selection's actual rendered
+ * size (e.g. a heading's CSS-driven size), so the stepper always shows what
+ * the user sees rather than a stale default.
+ */
+function getEffectiveFontSize(editor: DaEditor): number {
+  const marked = getFontSize(editor);
+  if (marked !== null) return marked;
+
+  try {
+    const [node] = Editor.nodes(editor, {
+      match: (n) => SlateElement.isElement(n) && Editor.isBlock(editor, n),
+    });
+    if (!node) return DEFAULT_FONT_SIZE;
+    const dom = ReactEditor.toDOMNode(editor, node[0]);
+    const computed = Number.parseFloat(getComputedStyle(dom).fontSize);
+    return Number.isFinite(computed) ? Math.round(computed) : DEFAULT_FONT_SIZE;
+  } catch {
+    return DEFAULT_FONT_SIZE;
+  }
+}
 
 export interface FixedToolbarProps {
   onAskAi?: () => void;
@@ -143,7 +167,7 @@ export function FixedToolbar({
 
   const blockType = getBlockType(editor);
   const align = getAlign(editor);
-  const fontSize = getFontSize(editor);
+  const fontSize = getEffectiveFontSize(editor);
   const lineHeight = getLineHeight(editor);
   const listStyle = getListStyle(editor);
   const inTable = isInTable(editor);

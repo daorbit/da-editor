@@ -326,11 +326,15 @@ export const FONT_FAMILIES = [
 
 export const LINE_HEIGHTS = [1, 1.15, 1.5, 1.75, 2];
 
-const DEFAULT_FONT_SIZE = 16;
+/** The editor's base font-size (`.da-editor` in the stylesheet), used when
+ *  no explicit `fontSize` mark and no DOM measurement is available. */
+export const DEFAULT_FONT_SIZE = 15;
 
-export function getFontSize(editor: DaEditor): number {
+/** The `fontSize` mark on the current selection, or `null` when unset — a
+ *  heading's larger size, for instance, comes from CSS, not a mark. */
+export function getFontSize(editor: DaEditor): number | null {
   const value = Editor.marks(editor)?.fontSize;
-  return typeof value === 'number' ? value : DEFAULT_FONT_SIZE;
+  return typeof value === 'number' ? value : null;
 }
 
 export function setFontSize(editor: DaEditor, size: number): void {
@@ -344,7 +348,7 @@ export function setFontSize(editor: DaEditor, size: number): void {
 
 /** Steps the font size to the next or previous value in `FONT_SIZES`. */
 export function stepFontSize(editor: DaEditor, delta: 1 | -1): void {
-  setFontSize(editor, getFontSize(editor) + delta * 2);
+  setFontSize(editor, (getFontSize(editor) ?? DEFAULT_FONT_SIZE) + delta * 2);
 }
 
 export function setLineHeight(editor: DaEditor, lineHeight: number): void {
