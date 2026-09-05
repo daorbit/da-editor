@@ -1,6 +1,7 @@
 node_modules
 .npmrc
 dist
+dist-playground
 .vite
 *.log
 .DS_Store
