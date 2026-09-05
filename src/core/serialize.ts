@@ -8,6 +8,9 @@ const ELEMENT_STYLE_KEY: Record<string, string> = {
   [ELEMENT.h1]: 'h1',
   [ELEMENT.h2]: 'h2',
   [ELEMENT.h3]: 'h3',
+  [ELEMENT.h4]: 'h4',
+  [ELEMENT.h5]: 'h5',
+  [ELEMENT.h6]: 'h6',
   [ELEMENT.blockquote]: 'blockquote',
   [ELEMENT.codeBlock]: 'pre',
   [ELEMENT.bulletedList]: 'ul',
@@ -30,6 +33,26 @@ function escapeHtml(text: string): string {
     .replace(/"/g, '&quot;');
 }
 
+/**
+ * Schemes that execute code when a link is followed. Serialized HTML is
+ * typically stored and rendered again later, so letting one through is stored
+ * XSS: it runs for every viewer of the saved document, not just its author.
+ */
+const UNSAFE_URL = /^\s*(?:javascript|data|vbscript|file)\s*:/i;
+
+function safeUrl(url: string): string {
+  return UNSAFE_URL.test(url) ? '' : escapeHtml(url);
+}
+
+/**
+ * A CSS value safe to place inside a `style` attribute. Colours arrive from
+ * pasted content, so they can carry extra declarations or a `url()` payload.
+ */
+function safeCss(value: string): string {
+  if (/[<>"';(){}]|url\s*\(|expression|@import|\/\*/i.test(value)) return '';
+  return escapeHtml(value.trim());
+}
+
 function serializeLeaf(node: Text): string {
   let html = escapeHtml(node.text);
   if (html === '') return '';
@@ -41,8 +64,14 @@ function serializeLeaf(node: Text): string {
   if (node.subscript) html = `<sub>${html}</sub>`;
   if (node.superscript) html = `<sup>${html}</sup>`;
   if (node.kbd) html = `<kbd>${html}</kbd>`;
-  if (node.highlight) html = `<mark style="background:${node.highlight}">${html}</mark>`;
-  if (node.color) html = `<span style="color:${node.color}">${html}</span>`;
+  if (node.highlight) {
+    const bg = safeCss(String(node.highlight));
+    if (bg) html = `<mark style="background:${bg}">${html}</mark>`;
+  }
+  if (node.color) {
+    const fg = safeCss(String(node.color));
+    if (fg) html = `<span style="color:${fg}">${html}</span>`;
+  }
   return html;
 }
 
@@ -69,14 +98,24 @@ function styleAttr(element: CustomElement, key?: string): string {
 
   if (element.align && element.align !== 'left') styles.push(`text-align:${element.align}`);
   if (element.indent) styles.push(`margin-left:${element.indent * 24}px`);
-  return styles.length ? ` style="${styles.join(';')}"` : '';
+  return styles.length ? ` style="${attrSafeCss(styles.join(';'))}"` : '';
+}
+
+/**
+ * A style value is emitted inside a double-quoted attribute, so a double quote
+ * in it (a font family such as "Segoe UI", say) would close the attribute early
+ * and scatter the rest as bogus attributes. Swap them for single quotes, which
+ * CSS accepts and HTML leaves alone.
+ */
+function attrSafeCss(value: string): string {
+  return value.replace(/"/g, "'");
 }
 
 /** Style attribute for elements that carry no Slate node of their own. */
 function s(key: string): string {
   if (!inlineStyles) return '';
   const value = INLINE_STYLES[key];
-  return value ? ` style="${value}"` : '';
+  return value ? ` style="${attrSafeCss(value)}"` : '';
 }
 
 export interface SerializeHtmlOptions {
@@ -112,12 +151,20 @@ function serializeNode(node: Node): string {
       return `<h2${attrs}>${children}</h2>`;
     case ELEMENT.h3:
       return `<h3${attrs}>${children}</h3>`;
+    case ELEMENT.h4:
+      return `<h4${attrs}>${children}</h4>`;
+    case ELEMENT.h5:
+      return `<h5${attrs}>${children}</h5>`;
+    case ELEMENT.h6:
+      return `<h6${attrs}>${children}</h6>`;
     case ELEMENT.blockquote:
       return `<blockquote${attrs}>${children}</blockquote>`;
     case ELEMENT.codeBlock: {
       // The language is kept so a downstream highlighter can pick it up —
       // `language-x` is the convention Prism and highlight.js both read.
-      const lang = 'lang' in node && node.lang ? escapeHtml(String(node.lang)) : '';
+      // A language name is only ever a bare identifier; anything else is dropped.
+      const rawLang = 'lang' in node && node.lang ? String(node.lang) : '';
+      const lang = /^[\w+-]{1,30}$/.test(rawLang) ? rawLang : '';
       const cls = lang ? ` class="language-${lang}"` : '';
       return `<pre${attrs}><code${cls}${s('code')}>${children}</code></pre>`;
     }
@@ -132,14 +179,17 @@ function serializeNode(node: Node): string {
       const checked = isChecked ? ' checked' : '';
       // Checked items get the struck-through style, matching the editor.
       const todoStyle = inlineStyles
-        ? ` style="${INLINE_STYLES[isChecked ? 'todoChecked' : 'todo']}"`
+        ? ` style="${attrSafeCss(INLINE_STYLES[isChecked ? 'todoChecked' : 'todo'])}"`
         : attrs;
       return `<div data-todo${checked}${todoStyle}><input type="checkbox"${checked} disabled>${children}</div>`;
     }
     case ELEMENT.divider:
       return '<hr>';
     case ELEMENT.callout: {
-      const variant = 'variant' in node && node.variant ? node.variant : 'info';
+      const raw = 'variant' in node && node.variant ? String(node.variant) : 'info';
+      // Constrained to the known set rather than escaped, so an unexpected
+      // value cannot reach the attribute at all.
+      const variant = ['info', 'warning', 'success', 'danger'].includes(raw) ? raw : 'info';
       return `<div data-callout="${variant}"${attrs}>${children}</div>`;
     }
     case ELEMENT.table: {
@@ -162,6 +212,27 @@ function serializeNode(node: Node): string {
       const name = 'name' in node ? escapeHtml(String(node.name)) : '';
       return `<span data-mention="${id}"${s('mention')}>@${name}</span>`;
     }
+    case ELEMENT.equation: {
+      // The source formula is the durable form; a renderer downstream can
+      // typeset it, and it stays readable if none does.
+      const formula = 'formula' in node ? escapeHtml(String(node.formula)) : '';
+      return `<div data-equation="${formula}">${formula}</div>`;
+    }
+    case ELEMENT.inlineEquation: {
+      const formula = 'formula' in node ? escapeHtml(String(node.formula)) : '';
+      return `<span data-inline-equation="${formula}">${formula}</span>`;
+    }
+    case ELEMENT.date: {
+      const iso = 'date' in node ? escapeHtml(String(node.date)) : '';
+      return `<time datetime="${iso}">${iso}</time>`;
+    }
+    case ELEMENT.footnote: {
+      const note = 'note' in node ? escapeHtml(String(node.note)) : '';
+      return `<sup data-footnote="${note}">${children}</sup>`;
+    }
+    case ELEMENT.tableOfContents:
+      // Regenerated from the headings on render; nothing to persist.
+      return '';
     case ELEMENT.toggleList: {
       const [summary, ...rest] = node.children;
       const head = summary ? serializeNode(summary) : '';
@@ -173,31 +244,31 @@ function serializeNode(node: Node): string {
     case ELEMENT.column:
       return `<div data-column${attrs}>${children}</div>`;
     case ELEMENT.video: {
-      const url = 'url' in node ? escapeHtml(node.url) : '';
+      const url = 'url' in node ? safeUrl(node.url) : '';
       return `<video src="${url}" controls${s('video')}></video>`;
     }
     case ELEMENT.audio: {
-      const url = 'url' in node ? escapeHtml(node.url) : '';
+      const url = 'url' in node ? safeUrl(node.url) : '';
       return `<audio src="${url}" controls${s('audio')}></audio>`;
     }
     case ELEMENT.file: {
-      const url = 'url' in node ? escapeHtml(node.url) : '';
+      const url = 'url' in node ? safeUrl(node.url) : '';
       const name = 'caption' in node && node.caption ? escapeHtml(node.caption) : url;
       return `<a href="${url}" data-file download>${name}</a>`;
     }
     case ELEMENT.embed: {
-      const url = 'url' in node ? escapeHtml(node.url) : '';
+      const url = 'url' in node ? safeUrl(node.url) : '';
       return `<div data-embed${s('embed')}><iframe src="${url}" loading="lazy" allowfullscreen${s('iframe')}></iframe></div>`;
     }
     case ELEMENT.image: {
-      const url = 'url' in node ? escapeHtml(node.url) : '';
+      const url = 'url' in node ? safeUrl(node.url) : '';
       const caption = 'caption' in node && node.caption ? escapeHtml(node.caption) : '';
       return caption
         ? `<figure${s('figure')}><img src="${url}" alt="${caption}"${s('img')}><figcaption${s('figcaption')}>${caption}</figcaption></figure>`
         : `<img src="${url}" alt=""${s('img')}>`;
     }
     case ELEMENT.link: {
-      const url = 'url' in node ? escapeHtml(node.url) : '';
+      const url = 'url' in node ? safeUrl(node.url) : '';
       return `<a href="${url}"${s('link')} target="_blank" rel="noopener noreferrer">${children}</a>`;
     }
     case ELEMENT.paragraph:
@@ -207,7 +278,9 @@ function serializeNode(node: Node): string {
       // a typo in a node's `type` into invisible data loss — and, for inline
       // and table nodes, into invalid markup the browser then reshuffles.
       // Warn once and keep the content rather than the wrapper.
-      warnUnknownType(node.type);
+      // `node` narrows to never here now that every known type is handled —
+      // this branch exists for values arriving at runtime from outside.
+      warnUnknownType((node as CustomElement).type);
       return children;
     }
   }
@@ -314,6 +387,21 @@ const MARK_TAGS: Record<string, keyof Omit<Text, 'text'>> = {
 };
 
 /**
+ * <mark> means highlighted even with no colour of its own — a plain <mark>
+ * pasted from elsewhere should still come back as a highlight.
+ */
+const DEFAULT_HIGHLIGHT = '#fef08a';
+
+/** Elements that live inside a paragraph rather than replacing it. */
+const INLINE_ELEMENTS = new Set<string>([
+  ELEMENT.link,
+  ELEMENT.mention,
+  ELEMENT.inlineEquation,
+  ELEMENT.date,
+  ELEMENT.footnote,
+]);
+
+/**
  * Marks carried by inline CSS rather than by tags. Google Docs, Notion and
  * most web pages style text this way, so ignoring it drops the formatting of
  * anything pasted from them.
@@ -335,7 +423,9 @@ function styleMarks(element: HTMLElement): Partial<Text> {
     marks.color = color;
   }
 
-  const bg = /background-color\s*:\s*([^;]+)/i.exec(style)?.[1]?.trim();
+  // Matches both `background-color` and the `background` shorthand the
+  // serializer itself writes, or highlights would be lost on reload.
+  const bg = /background(?:-color)?\s*:\s*([^;]+)/i.exec(style)?.[1]?.trim();
   if (bg && !/^(transparent|inherit|initial|#ffffff|#fff|rgb\(255,\s*255,\s*255\))$/i.test(bg)) {
     marks.highlight = bg;
   }
@@ -343,11 +433,20 @@ function styleMarks(element: HTMLElement): Partial<Text> {
   return marks as Partial<Text>;
 }
 
+
+/** Drops executable URL schemes arriving from pasted or imported HTML. */
+function sanitizeIncomingUrl(url: string): string {
+  return UNSAFE_URL.test(url) ? '' : url;
+}
+
 const BLOCK_TAGS: Record<string, CustomElement['type']> = {
   H1: ELEMENT.h1,
   H2: ELEMENT.h2,
   H3: ELEMENT.h3,
-  H4: ELEMENT.h3,
+  H4: ELEMENT.h4,
+  H5: ELEMENT.h5,
+  H6: ELEMENT.h6,
+  TIME: ELEMENT.date,
   BLOCKQUOTE: ELEMENT.blockquote,
   PRE: ELEMENT.codeBlock,
   UL: ELEMENT.bulletedList,
@@ -380,6 +479,7 @@ function deserializeNode(el: globalThis.Node, marks: Partial<Text> = {}): Descen
   const nextMarks = {
     ...marks,
     ...(markKey && !isCodeInPre ? { [markKey]: true } : null),
+    ...(tag === 'MARK' ? { highlight: DEFAULT_HIGHLIGHT } : null),
     // Google Docs and most rich web content express marks as inline styles
     // rather than tags, so reading only tags loses all their formatting.
     ...styleMarks(element),
@@ -392,7 +492,9 @@ function deserializeNode(el: globalThis.Node, marks: Partial<Text> = {}): Descen
   }
 
   if (tag === 'IMG') {
-    const url = element.getAttribute('src') ?? '';
+    // Pasted markup is untrusted: an executable scheme here would be stored
+    // and re-rendered for every later viewer.
+    const url = sanitizeIncomingUrl(element.getAttribute('src') ?? '');
     return [{ type: ELEMENT.image, url, children: [{ text: '' }] }];
   }
 
@@ -446,7 +548,7 @@ function deserializeNode(el: globalThis.Node, marks: Partial<Text> = {}): Descen
   }
 
   if (tag === 'A') {
-    const url = element.getAttribute('href') ?? '';
+    const url = sanitizeIncomingUrl(element.getAttribute('href') ?? '');
     return [
       {
         type: ELEMENT.link,
@@ -462,7 +564,10 @@ function deserializeNode(el: globalThis.Node, marks: Partial<Text> = {}): Descen
     // must not swallow them into a single paragraph — that is what collapses
     // a pasted web page into one line. Lift the children instead.
     const isWrapper = blockType === ELEMENT.paragraph;
-    if (isWrapper && children.some((child) => SlateElement.isElement(child))) {
+    const hasBlockChild = children.some(
+      (child) => SlateElement.isElement(child) && !INLINE_ELEMENTS.has(child.type),
+    );
+    if (isWrapper && hasBlockChild) {
       return children;
     }
 

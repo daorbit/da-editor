@@ -128,6 +128,155 @@ describe('serializeHtml / deserializeHtml round-trip', () => {
   ] as EditorValue);
 });
 
+describe('pasting foreign HTML', () => {
+  /** What actually arrives on the clipboard from other applications. */
+  const types = (value: unknown[]) => value.map((n) => (n as { type?: string }).type ?? 'text');
+
+  it('keeps Google Docs marks, which are inline styles rather than tags', () => {
+    const [para] = deserializeHtml(
+      '<p><span style="font-weight:700">B</span><span style="font-style:italic">I</span></p>',
+    ) as { children: { bold?: boolean; italic?: boolean }[] }[];
+    expect(para.children[0].bold).toBe(true);
+    expect(para.children[1].italic).toBe(true);
+  });
+
+  it('keeps highlight from background-color but ignores plain white', () => {
+    const [hl] = deserializeHtml(
+      '<p><span style="background-color:#ffff00">x</span></p>',
+    ) as { children: { highlight?: string }[] }[];
+    expect(hl.children[0].highlight).toBe('#ffff00');
+
+    const [plain] = deserializeHtml(
+      '<p><span style="background-color:#ffffff">x</span></p>',
+    ) as { children: { highlight?: string }[] }[];
+    expect(plain.children[0].highlight).toBeUndefined();
+  });
+
+  it('does not collapse a nested web page into one paragraph', () => {
+    const value = deserializeHtml(
+      '<div><article><h2>Head</h2><p>Body</p><ul><li>one</li></ul></article></div>',
+    );
+    expect(types(value)).toEqual([ELEMENT.h2, ELEMENT.paragraph, ELEMENT.bulletedList]);
+  });
+
+  it('keeps a paragraph whose only child is inline', () => {
+    const value = deserializeHtml('<p>see <a href="https://x">this</a></p>');
+    expect(types(value)).toEqual([ELEMENT.paragraph]);
+  });
+
+  it('reads a table pasted from Google Docs', () => {
+    const value = deserializeHtml(
+      '<table><tbody><tr><td><p>A</p></td><td><p>B</p></td></tr></tbody></table>',
+    );
+    expect(types(value)).toEqual([ELEMENT.table]);
+  });
+});
+
+
+describe('every mark round-trips', () => {
+  const cases: [string, Record<string, unknown>][] = [
+    ['bold', { bold: true }],
+    ['italic', { italic: true }],
+    ['underline', { underline: true }],
+    ['strikethrough', { strikethrough: true }],
+    ['code', { code: true }],
+    ['subscript', { subscript: true }],
+    ['superscript', { superscript: true }],
+    ['kbd', { kbd: true }],
+    ['color', { color: '#ff0000' }],
+    ['highlight', { highlight: '#ffff00' }],
+  ];
+
+  for (const [name, mark] of cases) {
+    it(name, () => {
+      const html = serializeHtml([
+        { type: ELEMENT.paragraph, children: [{ text: 'x', ...mark }] },
+      ] as EditorValue);
+      const [para] = deserializeHtml(html) as { children: Record<string, unknown>[] }[];
+      for (const [key, want] of Object.entries(mark)) {
+        expect(para.children[0][key]).toBe(want);
+      }
+    });
+  }
+
+  it('keeps every mark when they are stacked on one span', () => {
+    const marks = {
+      bold: true,
+      italic: true,
+      underline: true,
+      strikethrough: true,
+      color: '#ff0000',
+      highlight: '#ffff00',
+    };
+    const html = serializeHtml([
+      { type: ELEMENT.paragraph, children: [{ text: 'x', ...marks }] },
+    ] as EditorValue);
+    const [para] = deserializeHtml(html) as { children: Record<string, unknown>[] }[];
+    for (const [key, want] of Object.entries(marks)) {
+      expect(para.children[0][key]).toBe(want);
+    }
+  });
+});
+
+describe('document-level integrity', () => {
+  it('keeps block order across a mixed document', () => {
+    const value = [
+      { type: ELEMENT.h1, children: [{ text: '1' }] },
+      { type: ELEMENT.paragraph, children: [{ text: '2' }] },
+      { type: ELEMENT.divider, children: [{ text: '' }] },
+      { type: ELEMENT.h2, children: [{ text: '3' }] },
+    ] as EditorValue;
+    const back = deserializeHtml(serializeHtml(value)) as { type: string }[];
+    expect(back.map((n) => n.type)).toEqual([
+      ELEMENT.h1,
+      ELEMENT.paragraph,
+      ELEMENT.divider,
+      ELEMENT.h2,
+    ]);
+  });
+
+  it('escapes markup in text rather than emitting it', () => {
+    const html = serializeHtml([
+      { type: ELEMENT.paragraph, children: [{ text: '<script>alert(1)</script>' }] },
+    ] as EditorValue);
+    expect(html).not.toContain('<script>');
+    const [para] = deserializeHtml(html) as { children: { text: string }[] }[];
+    expect(para.children[0].text).toBe('<script>alert(1)</script>');
+  });
+
+  it('keeps alignment and indent', () => {
+    const html = serializeHtml([
+      { type: ELEMENT.paragraph, align: 'center', indent: 2, children: [{ text: 'x' }] },
+    ] as EditorValue);
+    expect(html).toContain('text-align:center');
+    expect(html).toContain('margin-left:48px');
+  });
+
+  it('drops executable URL schemes', () => {
+    const html = serializeHtml([
+      {
+        type: ELEMENT.paragraph,
+        children: [
+          { type: ELEMENT.link, url: 'javascript:alert(1)', children: [{ text: 'x' }] },
+        ],
+      },
+    ] as EditorValue);
+    expect(html).not.toContain('javascript:');
+  });
+
+  it('keeps ordinary URL schemes', () => {
+    for (const url of ['https://example.com', 'mailto:a@b.com', '/docs/page']) {
+      const html = serializeHtml([
+        {
+          type: ELEMENT.paragraph,
+          children: [{ type: ELEMENT.link, url, children: [{ text: 'x' }] }],
+        },
+      ] as EditorValue);
+      expect(html).toContain(url);
+    }
+  });
+});
+
 describe('serializeHtml element coverage', () => {
   /**
    * Guards the failure mode that made unknown types invisible: anything not
@@ -171,6 +320,45 @@ describe('serializeHtml element coverage', () => {
     expect(html).toMatch(/<td style="[^"]*border:1px solid/);
     // No custom properties or color-mix, so it survives in email clients.
     expect(html).not.toMatch(/var\(--|color-mix/);
+  });
+
+  it('never puts a double quote inside a style attribute', () => {
+    // A font family such as "Segoe UI" would close the attribute early and
+    // scatter the rest of the declaration as bogus attributes.
+    const html = serializeHtml(
+      [
+        {
+          type: ELEMENT.bulletedList,
+          children: [{ type: ELEMENT.listItem, children: [{ text: 'x' }] }],
+        },
+      ] as EditorValue,
+      { inlineStyles: true },
+    );
+    for (const style of html.match(/style="[^"]*"/g) ?? []) {
+      expect(style.slice(7, -1)).not.toContain('"');
+    }
+  });
+
+  it('inlined styles survive being parsed by a browser', () => {
+    const html = serializeHtml(
+      [
+        {
+          type: ELEMENT.bulletedList,
+          children: [
+            { type: ELEMENT.listItem, children: [{ text: 'a' }] },
+            { type: ELEMENT.listItem, children: [{ text: 'b' }] },
+          ],
+        },
+      ] as EditorValue,
+      { inlineStyles: true },
+    );
+
+    const body = new JSDOM(`<!doctype html><body>${html}</body>`).window.document.body;
+    const list = body.querySelector('ul');
+    expect(list).not.toBeNull();
+    expect(body.querySelectorAll('li')).toHaveLength(2);
+    // Anything other than `style` here means the attribute was terminated early.
+    expect([...list!.attributes].map((a) => a.name)).toEqual(['style']);
   });
 
   it('inlined output still round-trips', () => {
