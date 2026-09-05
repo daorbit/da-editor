@@ -16,7 +16,24 @@ export default defineConfig({
       formats: ['es', 'cjs'],
     },
     rollupOptions: {
-      external: ['react', 'react-dom', 'react/jsx-runtime'],
+      // Everything in `dependencies` stays external: npm installs it anyway,
+      // and bundling copies of Slate/Prism defeats deduping when the consumer
+      // already has them.
+      external: [
+        'react',
+        'react-dom',
+        'react/jsx-runtime',
+        'slate',
+        'slate-dom',
+        'slate-react',
+        'slate-history',
+        'is-hotkey',
+        'prismjs',
+        'frimousse',
+        'react-colorful',
+        'mammoth',
+        /^prismjs\//,
+      ],
       output: {
         globals: {
           react: 'React',
@@ -25,6 +42,8 @@ export default defineConfig({
         assetFileNames: 'da-editor.[ext]',
       },
     },
-    sourcemap: true,
+    // Sourcemaps are 6 MB of the published tarball. Consumers debug their own
+    // app, not this library's internals, so they are not worth the weight.
+    sourcemap: false,
   },
 });

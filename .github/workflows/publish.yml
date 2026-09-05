@@ -51,7 +51,9 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
       - name: Bump version
-        run: npm version ${{ inputs.release-type || 'patch' }} -m "chore: release v%s [skip ci]"
+        # Block scalar avoids YAML parsing the colon inside the commit message.
+        run: |
+          npm version ${{ inputs.release-type || 'patch' }} -m "chore: release v%s [skip ci]"
 
       - run: npm publish --provenance --access public
         env:
