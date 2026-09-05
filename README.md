@@ -72,8 +72,11 @@ export function Example() {
 | `floatingToolbar` | `boolean` | `true` | Toolbar over the current selection. |
 | `slashMenu` | `boolean` | `true` | The `/` block menu. |
 | `autoformat` | `boolean` | `true` | Markdown input rules. |
-| `onAskAi` | `() => void` | – | When set, renders the Ask AI affordances. |
+| `onAskAi` | `() => void` | – | When set, renders the Ask AI affordances and binds `Ctrl/Cmd + J`. |
 | `onComment` | `() => void` | – | When set, renders the comment button. |
+| `mentionables` | `Mentionable[]` | – | Enables the `@` combobox over your own data. |
+| `onUpload` | `(file, kind) => Promise<string>` | – | Store media yourself and return its URL. Without it, files embed as data URLs. |
+| `onToggleTheme` | `() => void` | – | When set, renders the theme toggle in the toolbar. |
 | `minHeight` / `maxHeight` | `string` | `'320px'` / – | Editable area height. `maxHeight` makes it scroll. |
 | `maxWidth` | `string` | – | Constrains the text column. |
 | `autoFocus` | `boolean` | `false` | Focus on mount. |
@@ -130,9 +133,103 @@ SVG components taking a `size` prop.
 
 ## Ask AI
 
-`onAskAi` is a hook, not an implementation — the editor renders the Ask AI button
-in both toolbars and the slash menu, and calls your handler. Wire it to whatever
-endpoint you use; nothing is sent anywhere by default.
+`onAskAi` is a hook, not an implementation. Pass it and the editor renders the
+Ask AI button in both toolbars and wires up `Ctrl/Cmd + J`; leave it off and none
+of that UI appears. Nothing is ever sent anywhere by the editor itself — you own
+the request, the endpoint and the key.
+
+The handler takes no arguments, so read the document through the ref and write
+the result back the same way:
+
+```tsx
+const ref = useRef<DaEditorHandle>(null);
+
+async function askAi() {
+  const editor = ref.current;
+  if (!editor) return;
+
+  // Whatever the user has selected, or the whole document if nothing is.
+  const prompt = window.getSelection()?.toString() || editor.getText();
+
+  const res = await fetch('/api/ai', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt }),
+  });
+  const { html } = await res.json();
+
+  editor.setHTML(html);
+}
+
+<DaEditor ref={ref} onAskAi={askAi} />;
+```
+
+`setHTML` replaces the whole document. To insert at the cursor instead, reach
+for the underlying Slate editor, exposed on the same ref. Slate is a dependency
+of this package, so import its transforms directly:
+
+```tsx
+import { Transforms } from 'slate';
+
+// ref.current.editor is the live Slate editor
+Transforms.insertText(ref.current.editor, completion);
+```
+
+For streaming, call `insertText` per chunk as it arrives.
+
+Keep your API key on the server. The editor runs in the browser, so a key passed
+to a client-side call is readable by anyone using the page.
+
+## Images and uploads
+
+Without `onUpload`, images are embedded as base64 data URLs — fine for a demo,
+heavy for real documents. Pass a handler to store the file yourself and return
+its URL:
+
+```tsx
+<DaEditor
+  onUpload={async (file, kind) => {
+    const body = new FormData();
+    body.append('file', file);
+    const res = await fetch('/api/upload', { method: 'POST', body });
+    const { url } = await res.json();
+    return url; // becomes the src of the inserted media
+  }}
+/>
+```
+
+`kind` is one of `'image' | 'video' | 'audio' | 'file' | 'embed'`, so a single
+handler can route by type. Throwing rejects the insertion.
+
+## Mentions
+
+Pass `mentionables` and typing `@` opens a combobox over your data. Matching,
+keyboard navigation and insertion are handled for you:
+
+```tsx
+<DaEditor
+  mentionables={[
+    { id: '1', name: 'Alice Chen', detail: 'alice@example.com' },
+    { id: '2', name: 'Bob Martin', detail: 'bob@example.com', avatar: '/bob.jpg' },
+  ]}
+/>
+```
+
+Only `id` and `name` are required. `detail` renders as a second line and
+`avatar` as an image. For a large or remote directory, hold the list in state
+and refetch as the user types.
+
+## Getting content out
+
+```tsx
+ref.current?.getHTML();      // serialized HTML
+ref.current?.getMarkdown();  // Markdown
+ref.current?.getValue();     // Slate JSON, for storing structure
+ref.current?.getText();      // plain text
+```
+
+`onChange` fires on content changes only — not selection changes — so it is safe
+to persist from directly.
 
 ## Development
 

@@ -9,7 +9,8 @@ import {
 } from 'react';
 import { CheckIcon, ChevronDownIcon, ChevronRightIcon } from '../icons';
 
-const OVERFLOW_RESERVE = 44;
+/* Width kept clear for the trailing "More" button, which is 32px plus gaps. */
+const OVERFLOW_RESERVE = 48;
 
 /**
  * The box a popup is actually clipped by: the nearest ancestor that scrolls

@@ -3,14 +3,14 @@ import type { SVGProps } from 'react';
 /**
  * Icon set inlined as SVG path data so consumers install no icon packages.
  * Sources: Lucide (ISC), Remix Icon (Apache-2.0), Phosphor (MIT) — each icon
- * picked from whichever set reads best at 16px in a dense toolbar.
+ * picked from whichever set reads best at 18px in a dense toolbar.
  */
 
 export interface IconProps extends SVGProps<SVGSVGElement> {
   size?: number;
 }
 
-function Icon({ size = 16, children, ...props }: IconProps) {
+function Icon({ size = 18, children, ...props }: IconProps) {
   return (
     <svg
       width={size}
@@ -18,7 +18,8 @@ function Icon({ size = 16, children, ...props }: IconProps) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth={2}
+      /* Lighter than the usual 2 — at 18px a 2px stroke reads heavy and dated. */
+      strokeWidth={1.75}
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
@@ -31,7 +32,7 @@ function Icon({ size = 16, children, ...props }: IconProps) {
 }
 
 /** Filled-glyph variant: some marks read better as solid shapes than strokes. */
-function SolidIcon({ size = 16, children, ...props }: IconProps) {
+function SolidIcon({ size = 18, children, ...props }: IconProps) {
   return (
     <svg
       width={size}

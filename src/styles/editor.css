@@ -124,12 +124,12 @@
 .da-tb--fixed {
   display: flex;
   align-items: center;
-  gap: 4px;
-  height: 44px;
-  min-height: 44px;
-  padding: 0 10px;
+  gap: 2px;
+  height: 50px;
+  min-height: 50px;
+  padding: 0 12px;
   border-bottom: 1px solid var(--da-border);
-  background: var(--da-surface);
+  background: var(--da-bg);
   position: sticky;
   top: 0;
   z-index: 5;
@@ -207,21 +207,23 @@
   align-items: center;
   justify-content: center;
   gap: 4px;
-  min-width: 28px;
-  height: 28px;
-  padding: 0 6px;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 7px;
   border: none;
-  border-radius: var(--da-radius-sm);
+  border-radius: 7px;
   background: transparent;
-  color: var(--da-fg);
+  /* Slightly recessed by default so active state reads as a real change. */
+  color: var(--da-muted);
   font: inherit;
   font-size: 13px;
   cursor: pointer;
-  transition: background 0.12s ease, color 0.12s ease;
+  transition: background 0.13s ease, color 0.13s ease;
 }
 
 .da-tb__btn:hover:not(:disabled) {
   background: var(--da-surface-hover);
+  color: var(--da-fg);
 }
 
 .da-tb__btn:focus-visible {
@@ -271,8 +273,8 @@
 
 .da-tb__sep {
   width: 1px;
-  height: 18px;
-  margin: 0 4px;
+  height: 20px;
+  margin: 0 6px;
   background: var(--da-border);
   flex-shrink: 0;
 }
@@ -323,15 +325,15 @@
 .da-tb__item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   width: 100%;
-  padding: 6px 8px;
+  padding: 7px 9px;
   border: none;
-  border-radius: var(--da-radius-sm);
+  border-radius: 6px;
   background: transparent;
   color: var(--da-fg);
   font: inherit;
-  font-size: 13px;
+  font-size: 13.5px;
   text-align: left;
   cursor: pointer;
 }

@@ -53,8 +53,13 @@ function serializeNode(node: Node): string {
       return `<h3${attrs}>${children}</h3>`;
     case ELEMENT.blockquote:
       return `<blockquote${attrs}>${children}</blockquote>`;
-    case ELEMENT.codeBlock:
-      return `<pre${attrs}><code>${children}</code></pre>`;
+    case ELEMENT.codeBlock: {
+      // The language is kept so a downstream highlighter can pick it up —
+      // `language-x` is the convention Prism and highlight.js both read.
+      const lang = 'lang' in node && node.lang ? escapeHtml(String(node.lang)) : '';
+      const cls = lang ? ` class="language-${lang}"` : '';
+      return `<pre${attrs}><code${cls}>${children}</code></pre>`;
+    }
     case ELEMENT.bulletedList:
       return `<ul${attrs}>${children}</ul>`;
     case ELEMENT.numberedList:
@@ -70,6 +75,53 @@ function serializeNode(node: Node): string {
     case ELEMENT.callout: {
       const variant = 'variant' in node && node.variant ? node.variant : 'info';
       return `<div data-callout="${variant}"${attrs}>${children}</div>`;
+    }
+    case ELEMENT.table: {
+      // Column widths are emitted as a colgroup so the layout survives
+      // outside the editor, where the resize handles do not exist.
+      const widths = 'columnWidths' in node ? node.columnWidths : undefined;
+      const colgroup = widths?.length
+        ? `<colgroup>${widths.map((w) => `<col style="width:${w}px">`).join('')}</colgroup>`
+        : '';
+      return `<table${attrs}>${colgroup}<tbody>${children}</tbody></table>`;
+    }
+    case ELEMENT.tableRow:
+      return `<tr${attrs}>${children}</tr>`;
+    case ELEMENT.tableHeaderCell:
+      return `<th${attrs}>${children}</th>`;
+    case ELEMENT.tableCell:
+      return `<td${attrs}>${children}</td>`;
+    case ELEMENT.mention: {
+      const id = 'id' in node ? escapeHtml(String(node.id)) : '';
+      const name = 'name' in node ? escapeHtml(String(node.name)) : '';
+      return `<span data-mention="${id}">@${name}</span>`;
+    }
+    case ELEMENT.toggleList: {
+      const [summary, ...rest] = node.children;
+      const head = summary ? serializeNode(summary) : '';
+      const body = rest.map(serializeNode).join('');
+      return `<details${attrs}><summary>${head}</summary>${body}</details>`;
+    }
+    case ELEMENT.columns:
+      return `<div data-columns="${node.children.length}"${attrs}>${children}</div>`;
+    case ELEMENT.column:
+      return `<div data-column${attrs}>${children}</div>`;
+    case ELEMENT.video: {
+      const url = 'url' in node ? escapeHtml(node.url) : '';
+      return `<video src="${url}" controls></video>`;
+    }
+    case ELEMENT.audio: {
+      const url = 'url' in node ? escapeHtml(node.url) : '';
+      return `<audio src="${url}" controls></audio>`;
+    }
+    case ELEMENT.file: {
+      const url = 'url' in node ? escapeHtml(node.url) : '';
+      const name = 'caption' in node && node.caption ? escapeHtml(node.caption) : url;
+      return `<a href="${url}" data-file download>${name}</a>`;
+    }
+    case ELEMENT.embed: {
+      const url = 'url' in node ? escapeHtml(node.url) : '';
+      return `<div data-embed><iframe src="${url}" loading="lazy" allowfullscreen></iframe></div>`;
     }
     case ELEMENT.image: {
       const url = 'url' in node ? escapeHtml(node.url) : '';
@@ -186,6 +238,11 @@ const BLOCK_TAGS: Record<string, CustomElement['type']> = {
   P: ELEMENT.paragraph,
   DIV: ELEMENT.paragraph,
   HR: ELEMENT.divider,
+  TABLE: ELEMENT.table,
+  TR: ELEMENT.tableRow,
+  TD: ELEMENT.tableCell,
+  TH: ELEMENT.tableHeaderCell,
+  DETAILS: ELEMENT.toggleList,
 };
 
 function deserializeNode(el: globalThis.Node, marks: Partial<Text> = {}): Descendant[] {
@@ -212,9 +269,54 @@ function deserializeNode(el: globalThis.Node, marks: Partial<Text> = {}): Descen
     return [{ type: ELEMENT.image, url, children: [{ text: '' }] }];
   }
 
+  // Structural wrappers carry no meaning of their own; passing their children
+  // straight through keeps rows attached to the table rather than turning
+  // these into paragraphs.
+  if (tag === 'TBODY' || tag === 'THEAD' || tag === 'TFOOT' || tag === 'COLGROUP') {
+    return Array.from(element.childNodes).flatMap((child) =>
+      deserializeNode(child, nextMarks),
+    );
+  }
+
   const children = Array.from(element.childNodes).flatMap((child) =>
     deserializeNode(child, nextMarks),
   );
+
+  // Round-trip the data-* attributes the serializer writes, so content saved
+  // as HTML and loaded back keeps its structure.
+  const mentionId = element.getAttribute('data-mention');
+  if (mentionId !== null) {
+    return [
+      {
+        type: ELEMENT.mention,
+        id: mentionId,
+        name: (element.textContent ?? '').replace(/^@/, ''),
+        children: [{ text: '' }],
+      } as CustomElement,
+    ];
+  }
+
+  const calloutVariant = element.getAttribute('data-callout');
+  if (calloutVariant !== null) {
+    return [
+      {
+        type: ELEMENT.callout,
+        variant: calloutVariant,
+        children: children.length ? children : [{ text: '' }],
+      } as CustomElement,
+    ];
+  }
+
+  if (element.hasAttribute('data-todo')) {
+    return [
+      {
+        type: ELEMENT.todoListItem,
+        checked: element.hasAttribute('checked') || !!element.querySelector('[checked]'),
+        // Drop the disabled checkbox the serializer emits for display.
+        children: children.length ? children : [{ text: '' }],
+      } as CustomElement,
+    ];
+  }
 
   if (tag === 'A') {
     const url = element.getAttribute('href') ?? '';
@@ -229,9 +331,26 @@ function deserializeNode(el: globalThis.Node, marks: Partial<Text> = {}): Descen
 
   const blockType = BLOCK_TAGS[tag];
   if (blockType) {
+    const extra: Record<string, unknown> = {};
+
+    if (blockType === ELEMENT.codeBlock) {
+      const lang = element
+        .querySelector('code')
+        ?.className.match(/language-([\w-]+)/)?.[1];
+      if (lang) extra.lang = lang;
+    }
+
+    if (blockType === ELEMENT.table) {
+      const widths = Array.from(element.querySelectorAll('col'))
+        .map((col) => parseInt(col.style.width, 10))
+        .filter((w) => !Number.isNaN(w));
+      if (widths.length) extra.columnWidths = widths;
+    }
+
     return [
       {
         type: blockType,
+        ...extra,
         children: children.length ? children : [{ text: '' }],
       } as CustomElement,
     ];

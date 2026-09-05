@@ -637,6 +637,87 @@ a.pg-btn {
   transform: rotate(45deg);
 }
 
+/* -------------------------------------------------- integration hooks -- */
+
+.pg-section__lead {
+  max-width: 620px;
+  margin: -12px 0 26px;
+  color: var(--pg-muted);
+  font-size: 14.5px;
+  line-height: 1.62;
+}
+
+.pg-hooks {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 820px) {
+  .pg-hooks {
+    grid-template-columns: 1fr;
+  }
+
+  .pg-hooks__tabs {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+}
+
+.pg-hooks__tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pg-hooks__tab {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 11px 13px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--pg-muted);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 550;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+
+.pg-hooks__tab code {
+  color: var(--pg-faint);
+  font-family: var(--pg-mono);
+  font-size: 11.5px;
+  font-weight: 400;
+}
+
+.pg-hooks__tab:hover {
+  background: var(--pg-surface);
+  color: var(--pg-fg);
+}
+
+.pg-hooks__tab--active {
+  border-color: var(--pg-border);
+  background: var(--pg-surface);
+  color: var(--pg-accent);
+}
+
+.pg-hooks__tab--active code {
+  color: var(--pg-accent);
+}
+
+.pg-hooks__blurb {
+  margin: 0 0 14px;
+  color: var(--pg-muted);
+  font-size: 14px;
+  line-height: 1.62;
+}
+
 /* -------------------------------------------------------- capabilities -- */
 
 .pg-caps {

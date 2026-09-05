@@ -117,6 +117,78 @@ export function Editor() {
   );
 }`;
 
+/* The three integration points people actually ask about. Each is a hook the
+   editor calls — it never talks to a network itself. */
+const HOOKS = [
+  {
+    id: 'ai',
+    label: 'Ask AI',
+    prop: 'onAskAi',
+    blurb:
+      'Renders the Ask AI button and binds Ctrl+J. You read the document off the ref, call your own endpoint, and write the answer back. Nothing is sent anywhere by the editor.',
+    code: `const ref = useRef<DaEditorHandle>(null);
+
+async function askAi() {
+  const editor = ref.current;
+  if (!editor) return;
+
+  const prompt =
+    window.getSelection()?.toString() || editor.getText();
+
+  const res = await fetch('/api/ai', {
+    method: 'POST',
+    body: JSON.stringify({ prompt }),
+  });
+
+  editor.setHTML((await res.json()).html);
+}
+
+<DaEditor ref={ref} onAskAi={askAi} />`,
+  },
+  {
+    id: 'upload',
+    label: 'Uploads',
+    prop: 'onUpload',
+    blurb:
+      'Return a URL and the editor inserts it. Without this, media embeds as base64 data URLs — fine for a demo, heavy for real documents.',
+    code: `<DaEditor
+  onUpload={async (file, kind) => {
+    const body = new FormData();
+    body.append('file', file);
+
+    const res = await fetch('/api/upload', {
+      method: 'POST',
+      body,
+    });
+
+    const { url } = await res.json();
+    return url; // becomes the media src
+  }}
+/>`,
+  },
+  {
+    id: 'mentions',
+    label: 'Mentions',
+    prop: 'mentionables',
+    blurb:
+      'Pass a list and @ opens a combobox over it. Matching, keyboard navigation and insertion are handled for you.',
+    code: `<DaEditor
+  mentionables={[
+    {
+      id: '1',
+      name: 'Alice Chen',
+      detail: 'alice@example.com',
+    },
+    {
+      id: '2',
+      name: 'Bob Martin',
+      avatar: '/bob.jpg',
+    },
+  ]}
+/>`,
+  },
+] as const;
+
 type OutputTab = 'html' | 'markdown';
 
 export interface HomeProps {
@@ -130,6 +202,9 @@ export function Home({ navigate, onToggleTheme, dark }: HomeProps) {
   const [copied, setCopied] = useState(false);
   const [tab, setTab] = useState<OutputTab>('html');
   const [output, setOutput] = useState('');
+  const [hook, setHook] = useState<(typeof HOOKS)[number]['id']>('ai');
+
+  const activeHook = HOOKS.find((h) => h.id === hook) ?? HOOKS[0];
 
   /* Reading through the ref on every change is what makes the output panel
      feel live — it is the same API a consumer would use. */
@@ -319,6 +394,37 @@ export function Home({ navigate, onToggleTheme, dark }: HomeProps) {
           <pre className="pg-code">
             <code>{USAGE}</code>
           </pre>
+        </div>
+      </section>
+
+      <section className="pg-section">
+        <h2 className="pg-h2">Bring your own backend</h2>
+        <p className="pg-section__lead">
+          AI, uploads and mentions are hooks, not integrations. The editor calls
+          your handler and never makes a network request of its own — so your
+          keys stay on your server and your data stays yours.
+        </p>
+
+        <div className="pg-hooks">
+          <div className="pg-hooks__tabs">
+            {HOOKS.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className={`pg-hooks__tab ${hook === item.id ? 'pg-hooks__tab--active' : ''}`}
+                onClick={() => setHook(item.id)}
+              >
+                {item.label}
+                <code>{item.prop}</code>
+              </button>
+            ))}
+          </div>
+          <div className="pg-hooks__panel">
+            <p className="pg-hooks__blurb">{activeHook.blurb}</p>
+            <pre className="pg-code">
+              <code>{activeHook.code}</code>
+            </pre>
+          </div>
         </div>
       </section>
 
