@@ -144,10 +144,22 @@ export function ToolbarDropdown({
   children,
 }: DropdownProps) {
   const [open, setOpen] = useState(false);
+  const [alignRight, setAlignRight] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
 
   useCloseOnOtherOpen(open, () => setOpen(false), menuId);
+
+  // Flips the panel to hang from the right edge when it would otherwise
+  // overflow the viewport — most noticeable on trailing buttons like "More".
+  useLayoutEffect(() => {
+    if (!open) return;
+    const menu = menuRef.current;
+    if (!menu) return;
+    const rect = menu.getBoundingClientRect();
+    setAlignRight(rect.right > window.innerWidth);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -225,7 +237,8 @@ export function ToolbarDropdown({
       )}
       {open && (
         <div
-          className={`da-tb__menu${wide ? ' da-tb__menu--wide' : ''}`}
+          ref={menuRef}
+          className={`da-tb__menu${wide ? ' da-tb__menu--wide' : ''}${alignRight ? ' da-tb__menu--right' : ''}`}
           id={menuId}
           role="menu"
         >

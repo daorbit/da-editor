@@ -280,6 +280,13 @@
   box-shadow: var(--da-shadow);
 }
 
+/* Hangs from the trigger's right edge instead, when opening from the left
+   would overflow the viewport (e.g. the trailing "More" button). */
+.da-tb__menu--right {
+  left: auto;
+  right: 0;
+}
+
 .da-tb__item {
   display: flex;
   align-items: center;
