@@ -131,6 +131,21 @@
   overflow: visible;
 }
 
+/* Off-screen, full-width render of every group used only to measure widths
+   for the overflow collapse — never shown, never interactive. */
+.da-tb__measure {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 44px;
+  visibility: hidden;
+  pointer-events: none;
+  z-index: -1;
+}
+
 /* Pinned cluster keeps the theme and mode controls always reachable. */
 .da-tb__end {
   display: flex;

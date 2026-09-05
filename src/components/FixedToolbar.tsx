@@ -1,4 +1,11 @@
-import { Fragment, useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import {
+  Fragment,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { useSlate } from 'slate-react';
 import {
   AlignJustifyIcon,
@@ -48,6 +55,7 @@ import {
   ToolbarDropdown,
   ToolbarSeparator,
   useCloseOnOtherOpen,
+  useOverflowCollapse,
 } from './ToolbarPrimitives';
 import { EmojiPicker } from './EmojiPicker';
 import { ColorPicker } from './ColorPicker';
@@ -108,6 +116,7 @@ export function FixedToolbar({
   isDark,
 }: FixedToolbarProps) {
   const editor = useSlate() as DaEditor;
+  const scrollRef = useRef<HTMLDivElement>(null);
   const [emojiOpen, setEmojiOpen] = useState(false);
   const emojiId = useId();
   const emojiRef = useRef<HTMLDivElement>(null);
@@ -237,33 +246,39 @@ export function FixedToolbar({
     });
   }
 
+  const insertMenuItems = (close?: () => void) =>
+    INSERT_GROUPS.map((group) => {
+      const items = INSERT_SPECS.filter((spec) => spec.group === group);
+      if (items.length === 0) return null;
+      return (
+        <Fragment key={group}>
+          <MenuLabel>{group}</MenuLabel>
+          {items.map((spec) => (
+            <MenuItem
+              key={spec.key}
+              icon={spec.icon}
+              label={spec.label}
+              onClick={() => {
+                spec.run(editor, { onMedia, onAskAi, onLink });
+                close?.();
+              }}
+            />
+          ))}
+        </Fragment>
+      );
+    });
+
   groups.push({
     key: 'insert',
     inline: (
       <ToolbarDropdown label="Insert" icon={<PlusIcon />}>
-        {(close) =>
-          INSERT_GROUPS.map((group) => {
-            const items = INSERT_SPECS.filter((spec) => spec.group === group);
-            if (items.length === 0) return null;
-            return (
-              <Fragment key={group}>
-                <MenuLabel>{group}</MenuLabel>
-                {items.map((spec) => (
-                  <MenuItem
-                    key={spec.key}
-                    icon={spec.icon}
-                    label={spec.label}
-                    onClick={() => {
-                      spec.run(editor, { onMedia, onAskAi, onLink });
-                      close();
-                    }}
-                  />
-                ))}
-              </Fragment>
-            );
-          })
-        }
+        {(close) => insertMenuItems(close)}
       </ToolbarDropdown>
+    ),
+    menu: (
+      <SubMenu icon={<PlusIcon />} label="Insert">
+        {insertMenuItems()}
+      </SubMenu>
     ),
   });
 
@@ -671,6 +686,11 @@ export function FixedToolbar({
         )}
       </div>
     ),
+    menu: (
+      <SubMenu icon={<EmojiIcon />} label="Emoji">
+        <EmojiPicker onClose={() => {}} />
+      </SubMenu>
+    ),
   });
 
   if (onMedia) {
@@ -726,55 +746,85 @@ export function FixedToolbar({
     ),
   });
 
+  const extraMenu = (close?: () => void) => (
+    <>
+      {EXTRA_MARK_SPECS.map((spec) => (
+        <MenuItem
+          key={spec.mark}
+          icon={spec.icon}
+          label={spec.label}
+          active={isMarkActive(editor, spec.mark)}
+          onClick={() => {
+            toggleMark(editor, spec.mark);
+            close?.();
+          }}
+        />
+      ))}
+      <MenuLabel>Font</MenuLabel>
+      {FONT_FAMILIES.map((font) => (
+        <MenuItem
+          key={font.label}
+          label={font.label}
+          onClick={() => {
+            setMark(editor, MARK.fontFamily, font.value || null);
+            close?.();
+          }}
+        />
+      ))}
+      <MenuSeparator />
+      <MenuItem
+        icon={<ClearFormattingIcon />}
+        label="Clear formatting"
+        onClick={() => {
+          clearMarks(editor);
+          close?.();
+        }}
+      />
+    </>
+  );
+
+  // Groups that don't fit collapse whole into the "More" menu, keeping every
+  // feature reachable instead of clipping the toolbar on a narrow screen.
+  // Measured off-screen so widths stay available even once collapsed away.
+  const measureRef = useRef<HTMLDivElement>(null);
+  const visibleCount = useOverflowCollapse(scrollRef, measureRef, groups.length);
+  const visibleGroups = groups.slice(0, visibleCount);
+  const overflowGroups = groups.slice(visibleCount);
+
   return (
     <div className="da-tb da-tb--fixed" role="toolbar" aria-label="Editor toolbar">
-      {/* Tools scroll horizontally when the window is too narrow for them. */}
-      <div className="da-tb__scroll">
-        {groups.map((group, index) => (
+      <div className="da-tb__measure" ref={measureRef} aria-hidden="true">
+        {groups.map((group) => (
+          <div className="da-tb__group" data-tb-group key={group.key}>
+            {group.inline}
+          </div>
+        ))}
+      </div>
+      <div className="da-tb__scroll" ref={scrollRef}>
+        {visibleGroups.map((group, index) => (
           <Fragment key={group.key}>
             {index > 0 && <ToolbarSeparator />}
-            <div className="da-tb__group">{group.inline}</div>
+            <div className="da-tb__group">
+              {group.inline}
+            </div>
           </Fragment>
         ))}
 
         <ToolbarSeparator />
 
-      {/* Always-present overflow for the rarely used marks. */}
+      {/* Always-present overflow: groups collapsed for width, plus rarely used marks. */}
       <ToolbarDropdown label="More" icon={<MoreIcon />}>
         {(close) => (
           <>
-            {EXTRA_MARK_SPECS.map((spec) => (
-              <MenuItem
-                key={spec.mark}
-                icon={spec.icon}
-                label={spec.label}
-                active={isMarkActive(editor, spec.mark)}
-                onClick={() => {
-                  toggleMark(editor, spec.mark);
-                  close();
-                }}
-              />
-            ))}
-            <MenuLabel>Font</MenuLabel>
-            {FONT_FAMILIES.map((font) => (
-              <MenuItem
-                key={font.label}
-                label={font.label}
-                onClick={() => {
-                  setMark(editor, MARK.fontFamily, font.value || null);
-                  close();
-                }}
-              />
-            ))}
-            <MenuSeparator />
-            <MenuItem
-              icon={<ClearFormattingIcon />}
-              label="Clear formatting"
-              onClick={() => {
-                clearMarks(editor);
-                close();
-              }}
-            />
+            {overflowGroups.length > 0 && (
+              <>
+                {overflowGroups.map((group) => (
+                  <Fragment key={group.key}>{group.menu ?? group.inline}</Fragment>
+                ))}
+                <MenuSeparator />
+              </>
+            )}
+            {extraMenu(close)}
           </>
         )}
         </ToolbarDropdown>

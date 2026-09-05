@@ -1,11 +1,58 @@
 import {
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
   type ReactNode,
+  type RefObject,
 } from 'react';
 import { CheckIcon, ChevronDownIcon, ChevronRightIcon } from '../icons';
+
+const OVERFLOW_RESERVE = 44;
+const SEPARATOR_WIDTH = 9;
+
+ 
+export function useOverflowCollapse(
+  availableRef: RefObject<HTMLDivElement | null>,
+  measureRef: RefObject<HTMLDivElement | null>,
+  groupCount: number,
+): number {
+  const [visibleCount, setVisibleCount] = useState(groupCount);
+
+  useLayoutEffect(() => {
+    const availableEl = availableRef.current;
+    const measureEl = measureRef.current;
+    if (!availableEl || !measureEl) return;
+
+    const recalc = () => {
+      const groups = Array.from(
+        measureEl.querySelectorAll<HTMLElement>(':scope > [data-tb-group]'),
+      );
+      if (groups.length === 0) return;
+
+      const available = availableEl.clientWidth - OVERFLOW_RESERVE;
+      let used = 0;
+      let fit = 0;
+      for (const group of groups) {
+        const width = group.offsetWidth + (fit > 0 ? SEPARATOR_WIDTH : 0);
+        if (used + width > available) break;
+        used += width;
+        fit += 1;
+      }
+      setVisibleCount(Math.max(1, fit));
+    };
+
+    recalc();
+    const observer = new ResizeObserver(recalc);
+    observer.observe(availableEl);
+    return () => observer.disconnect();
+    // Re-measure whenever the number of groups changes (props/state driven).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groupCount]);
+
+  return Math.min(visibleCount, groupCount);
+}
 
 /** Broadcast so opening one toolbar popover closes any other that's open. */
 const DA_TB_CLOSE_OTHERS = 'da-tb-close-others';
