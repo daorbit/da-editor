@@ -13,6 +13,9 @@ import { withHistory } from 'slate-history';
 import { Editable, ReactEditor, Slate, withReact } from 'slate-react';
 import isHotkey from 'is-hotkey';
 import { withDaEditor } from '../core/withDaEditor';
+import { withUndoGrouping } from '../core/withUndoGrouping';
+import { FindReplace } from './FindReplace';
+import { WordCount } from './WordCount';
 import {
   autoformatBlock,
   autoformatMark,
@@ -61,6 +64,7 @@ import { TableToolbar } from './TableToolbar';
 import { MediaToolbar } from './MediaToolbar';
 import { LinkToolbar } from './LinkToolbar';
 import { decorateCode } from '../core/highlight';
+import { decorateSearch, findMatches } from '../core/search';
 import {
   exportHtml,
   exportMarkdown,
@@ -143,6 +147,8 @@ export interface DaEditorProps {
   maxHeight?: string;
   /** Constrain the text column, like a document editor. */
   maxWidth?: string;
+  /** Shows a word, character and reading-time counter below the document. */
+  wordCount?: boolean;
   autoFocus?: boolean;
   spellCheck?: boolean;
 }
@@ -170,13 +176,17 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
     minHeight = '320px',
     maxHeight,
     maxWidth,
+    wordCount = false,
     autoFocus = false,
     spellCheck = true,
   },
   ref,
 ) {
   const editor = useMemo(
-    () => withDaEditor(withHistory(withReact(createEditor())) as DaEditorType),
+    () =>
+      withUndoGrouping(
+        withDaEditor(withHistory(withReact(createEditor())) as DaEditorType),
+      ),
     [],
   );
 
@@ -191,6 +201,10 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
   const [value, setValue] = useState<EditorValue>(initialValue);
   const [linkOpen, setLinkOpen] = useState(false);
   const [mediaKind, setMediaKind] = useState<MediaKind | null>(null);
+  const [findOpen, setFindOpen] = useState(false);
+  const [findQuery, setFindQuery] = useState('');
+  const [findCaseSensitive, setFindCaseSensitive] = useState(false);
+  const [findIndex, setFindIndex] = useState(0);
   const [promptRequest, setPromptRequest] = useState<PromptRequest | null>(null);
   const [alert, setAlert] = useState<{ title: string; message: string } | null>(null);
 
@@ -375,7 +389,36 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
     if (isContentChange) onChange?.(next);
   };
 
+  /**
+   * Code highlighting and find highlighting share the one `decorate` slot, so
+   * their ranges are concatenated rather than one replacing the other.
+   */
+  const decorate = useCallback(
+    (entry: Parameters<typeof decorateCode>[0]) => {
+      const code = decorateCode(entry);
+      if (!findOpen || !findQuery) return code;
+
+      const active = findMatches(editor, findQuery, { caseSensitive: findCaseSensitive })[
+        findIndex
+      ];
+      return [
+        ...code,
+        ...decorateSearch(entry as [unknown, number[]], findQuery, {
+          caseSensitive: findCaseSensitive,
+          activeRange: active?.range,
+        }),
+      ];
+    },
+    [editor, findOpen, findQuery, findCaseSensitive, findIndex],
+  );
+
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (isHotkey('mod+f', event.nativeEvent)) {
+      event.preventDefault();
+      setFindOpen(true);
+      return;
+    }
+
     for (const [hotkey, mark] of Object.entries(MARK_HOTKEYS)) {
       if (isHotkey(hotkey, event.nativeEvent)) {
         event.preventDefault();
@@ -498,6 +541,19 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
           />
         )}
 
+        {!locked && (
+          <FindReplace
+            open={findOpen}
+            onClose={() => setFindOpen(false)}
+            query={findQuery}
+            onQueryChange={setFindQuery}
+            caseSensitive={findCaseSensitive}
+            onCaseSensitiveChange={setFindCaseSensitive}
+            activeIndex={findIndex}
+            onActiveIndexChange={setFindIndex}
+          />
+        )}
+
         <div
           className="da-editor__scroll"
           // A `minHeight` of "0" lets the editor fill a flex parent instead.
@@ -516,7 +572,7 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
               placeholder={showPlaceholder ? placeholder : undefined}
               renderElement={renderElement}
               renderLeaf={renderLeaf}
-              decorate={decorateCode}
+              decorate={decorate}
               onKeyDown={handleKeyDown}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
@@ -547,6 +603,8 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
             )}
           </div>
         </div>
+
+        {wordCount && <WordCount />}
 
         <MediaDialog
           kind={mediaKind}

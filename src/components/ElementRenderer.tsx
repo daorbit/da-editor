@@ -16,6 +16,9 @@ import { BlockDragHandle } from './BlockDragHandle';
 /** Narrow enough to sit inline with text, wide enough to still grab a handle. */
 const MIN_IMAGE_WIDTH = 80;
 
+/** Below this a column cannot hold a word, and its handle becomes unhittable. */
+const MIN_COLUMN_WIDTH = 48;
+
 function blockStyle(element: RenderElementProps['element']): CSSProperties {
   return {
     textAlign: element.align,
@@ -443,14 +446,60 @@ function Embed({ attributes, children, element }: RenderElementProps) {
 }
 
 function Table({ attributes, children, element }: RenderElementProps) {
+  const editor = useSlateStatic();
   const widths = 'columnWidths' in element ? element.columnWidths : undefined;
+  const [dragWidths, setDragWidths] = useState<number[] | null>(null);
+
+  const shown = dragWidths ?? widths;
+
+  /** Drags the boundary on the right of column `index`. */
+  const startResize = (event: React.PointerEvent, index: number) => {
+    if (!widths || widths.length === 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+
+    const startX = event.clientX;
+    const startWidths = [...widths];
+    const handle = event.currentTarget as HTMLElement;
+    handle.setPointerCapture(event.pointerId);
+
+    const onMove = (move: PointerEvent) => {
+      const next = [...startWidths];
+      next[index] = Math.max(MIN_COLUMN_WIDTH, startWidths[index] + (move.clientX - startX));
+      setDragWidths(next);
+    };
+
+    const onUp = () => {
+      handle.releasePointerCapture(event.pointerId);
+      handle.removeEventListener('pointermove', onMove);
+      handle.removeEventListener('pointerup', onUp);
+      handle.removeEventListener('pointercancel', onUp);
+
+      // Committed once, for the same reason as the image resize: a transform
+      // per pointer event would fill the undo history with one drag.
+      setDragWidths((final) => {
+        if (final) {
+          Transforms.setNodes(
+            editor,
+            { columnWidths: final },
+            { at: ReactEditor.findPath(editor, element) },
+          );
+        }
+        return null;
+      });
+    };
+
+    handle.addEventListener('pointermove', onMove);
+    handle.addEventListener('pointerup', onUp);
+    handle.addEventListener('pointercancel', onUp);
+  };
 
   return (
     <div className="da-table-wrap">
       <table {...attributes} className="da-table">
-        {widths && widths.length > 0 && (
+        {shown && shown.length > 0 && (
           <colgroup contentEditable={false}>
-            {widths.map((width, index) => (
+            {shown.map((width, index) => (
               // eslint-disable-next-line react/no-array-index-key
               <col key={index} style={{ width }} />
             ))}
@@ -458,6 +507,25 @@ function Table({ attributes, children, element }: RenderElementProps) {
         )}
         <tbody>{children}</tbody>
       </table>
+
+      {/* Overlaid on the column boundaries rather than placed in cells: a
+          handle inside a <td> would sit in editable content and take the
+          caret when clicked. */}
+      {shown && shown.length > 1 && (
+        <div className="da-table-handles" contentEditable={false}>
+          {shown.slice(0, -1).map((_, index) => (
+            <span
+              // eslint-disable-next-line react/no-array-index-key
+              key={index}
+              className="da-table-handle"
+              role="separator"
+              aria-label={`Resize column ${index + 1}`}
+              style={{ left: shown.slice(0, index + 1).reduce((sum, w) => sum + w, 0) }}
+              onPointerDown={(event) => startResize(event, index)}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -465,18 +533,29 @@ function Table({ attributes, children, element }: RenderElementProps) {
 function Link({ attributes, children, element }: RenderElementProps) {
   const url = 'url' in element ? element.url : '';
   const selected = useSelected();
+  const [hovered, setHovered] = useState(false);
 
   return (
     <a
       {...attributes}
       href={url}
       className={`da-link${selected ? ' da-link--selected' : ''}`}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       // The href is live in the editor, so plain clicks must not navigate away.
       onClick={(event) => {
         if (event.metaKey || event.ctrlKey) window.open(url, '_blank', 'noopener');
       }}
     >
       {children}
+      {hovered && url && (
+        <span className="da-link-preview" contentEditable={false}>
+          {url}
+          <span className="da-link-preview__hint">
+            {navigator.platform.startsWith('Mac') ? '⌘' : 'Ctrl'}+click to open
+          </span>
+        </span>
+      )}
     </a>
   );
 }

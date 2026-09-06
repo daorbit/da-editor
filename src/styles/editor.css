@@ -9,10 +9,14 @@
   --da-border-strong: #d0d4da;
   --da-surface: #f7f8fa;
   --da-surface-hover: #eef0f3;
-  --da-accent: #3b5bfd;
+  /* Neutral rather than a brand blue: the accent's job here is to mark what is
+     active, and a saturated hue competes with the document's own colour —
+     highlights, links, images. Black carries the same weight without it. */
+  --da-accent: #111111;
   --da-accent-fg: #ffffff;
-  --da-accent-soft: #eaeeff;
-  --da-selection: #d5e0ff;
+  --da-accent-soft: #ededed;
+  --da-selection: #e2e2e2;
+  --da-link: #2b62d9;
   /* Every actionable icon — toolbar, menu items, slash menu, media and link
      toolbars — sits at full black rather than the muted grey used for
      secondary text: at 18px a glyph carries much less ink than a word, so the
@@ -56,10 +60,11 @@
   --da-border-strong: #3a3f49;
   --da-surface: #1d2027;
   --da-surface-hover: #262a33;
-  --da-accent: #6f86ff;
-  --da-accent-fg: #0f1115;
-  --da-accent-soft: #232842;
-  --da-selection: #2c3560;
+  --da-accent: #f0f0f0;
+  --da-accent-fg: #16181d;
+  --da-accent-soft: #2e323b;
+  --da-selection: #3a3f49;
+  --da-link: #7aa2f7;
   /* Not pure white, which glares against the dark chrome. */
   --da-tb-icon: #e6e8ec;
   --da-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.4);
@@ -147,7 +152,7 @@
   min-width: 0;
   max-width: 100%;
   padding: 0 12px;
-  border-bottom: 1px solid var(--da-border);
+  border-bottom: none;
   background: var(--da-bg);
   position: sticky;
   top: 0;
@@ -808,11 +813,16 @@
 
 /* ------------------------------------------------------------- inline -- */
 
+/* Its own token, not `--da-accent`: the accent is neutral black, and a link
+   that matches the body text is not recognisable as a link. This is document
+   content rather than chrome, so it keeps a real hue. */
 .da-link {
-  color: var(--da-accent);
+  color: var(--da-link);
   text-decoration: underline;
   text-underline-offset: 2px;
   cursor: pointer;
+  /* Anchors the hover preview. */
+  position: relative;
 }
 
 .da-link--selected {
@@ -1016,6 +1026,9 @@
 .da-table-wrap {
   margin: 10px 0;
   overflow-x: auto;
+  /* Anchors the column-resize handles, which are absolutely positioned over
+     the table's column boundaries. */
+  position: relative;
 }
 
 /* `separate` keeps each cell's borders its own, so a single side can be
@@ -1386,8 +1399,227 @@
   white-space: nowrap;
 }
 
+/* -------------------------------------------------------- find/replace -- */
+
+.da-find {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--da-border);
+  background: var(--da-surface);
+}
+
+.da-find__row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.da-find__icon {
+  display: inline-flex;
+  width: 18px;
+  justify-content: center;
+  color: var(--da-muted);
+  flex-shrink: 0;
+}
+
+.da-find__input {
+  flex: 1;
+  min-width: 0;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--da-border);
+  border-radius: 6px;
+  background: var(--da-bg);
+  color: var(--da-fg);
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+}
+
+.da-find__input:focus {
+  border-color: var(--da-border-strong);
+}
+
+.da-find__count {
+  color: var(--da-muted);
+  font-size: 12px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.da-find__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 5px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--da-tb-icon);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.da-find__btn:hover:not(:disabled) {
+  background: var(--da-surface-hover);
+}
+
+.da-find__btn--on {
+  background: var(--da-accent-soft);
+}
+
+.da-find__btn:disabled {
+  color: var(--da-faint);
+  cursor: not-allowed;
+}
+
+/* The same chevron as "next", turned: shipping one glyph keeps the pair
+   visually identical, which two separately drawn arrows would not be. */
+.da-find__up {
+  transform: rotate(180deg);
+}
+
+.da-find__text-btn {
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--da-border);
+  border-radius: 5px;
+  background: var(--da-bg);
+  color: var(--da-fg);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.da-find__text-btn:hover:not(:disabled) {
+  background: var(--da-surface-hover);
+}
+
+.da-find__text-btn:disabled {
+  color: var(--da-faint);
+  cursor: not-allowed;
+}
+
+.da-search-hit {
+  background: #fde68a;
+  border-radius: 2px;
+}
+
+/* The one the counter is pointing at, distinct from the rest so stepping
+   through results is visible without reading the "3 of 12". */
+.da-search-hit--active {
+  background: #fb923c;
+  box-shadow: 0 0 0 1px #ea760c;
+}
+
+.da-editor[data-theme='dark'] .da-search-hit {
+  background: #78610f;
+  color: #f5f0e0;
+}
+
+.da-editor[data-theme='dark'] .da-search-hit--active {
+  background: #b45309;
+  box-shadow: 0 0 0 1px #f59e0b;
+}
+
+/* ---------------------------------------------------------- word count -- */
+
+.da-wordcount {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  border-top: 1px solid var(--da-border);
+  color: var(--da-muted);
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.da-wordcount__sep {
+  color: var(--da-faint);
+}
+
+/* ------------------------------------------------------- link preview -- */
+
+.da-link-preview {
+  position: absolute;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  padding: 5px 9px;
+  border: 1px solid var(--da-border);
+  border-radius: 6px;
+  background: var(--da-bg);
+  box-shadow: var(--da-shadow);
+  color: var(--da-fg);
+  font-family: var(--da-font);
+  font-size: 12px;
+  font-weight: 400;
+  text-decoration: none;
+  white-space: nowrap;
+  max-width: 380px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+.da-link-preview__hint {
+  color: var(--da-faint);
+  flex-shrink: 0;
+}
+
+/* ------------------------------------------------- table column resize -- */
+
+.da-table-handles {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  pointer-events: none;
+}
+
+.da-table-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 9px;
+  margin-left: -4px;
+  cursor: col-resize;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.da-table-handle::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  transform: translateX(-50%);
+  background: var(--da-accent);
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.da-table-handle:hover::after {
+  opacity: 1;
+}
+
 /* -------------------------------------------------------------- dialog -- */
 
+/* Also matches `.da-editor.da-dialog__backdrop`, which a dialog rendered
+   outside the editor uses to pick up the theme tokens — hence the resets for
+   the border and sizing that class otherwise brings. */
 .da-dialog__backdrop {
   position: fixed;
   inset: 0;
@@ -1396,6 +1628,8 @@
   align-items: center;
   justify-content: center;
   padding: 20px;
+  border: none;
+  max-width: none;
   background: rgba(12, 14, 20, 0.55);
   backdrop-filter: blur(3px);
   animation: da-dialog-backdrop-in 0.15s ease;
@@ -1409,9 +1643,9 @@
 .da-dialog {
   width: 100%;
   max-width: 380px;
-  padding: 20px;
+  padding: 16px;
   border: 1px solid var(--da-border);
-  border-radius: 14px;
+  border-radius: 10px;
   background: var(--da-bg);
   color: var(--da-fg);
   font-family: var(--da-font);
@@ -1549,20 +1783,27 @@
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  margin-top: 20px;
+  margin-top: 16px;
 }
 
 .da-dialog__btn {
-  padding: 8px 16px;
+  min-width: 72px;
+  height: 32px;
+  padding: 0 14px;
   border: 1px solid var(--da-border);
-  border-radius: 10px;
+  border-radius: 7px;
   background: var(--da-bg);
   color: var(--da-fg);
   font: inherit;
-  font-size: 13.5px;
-  font-weight: 550;
+  font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
-  transition: background 0.12s ease, opacity 0.12s ease;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.da-dialog__btn:hover:not(:disabled) {
+  background: var(--da-surface-hover);
+  border-color: var(--da-border-strong);
 }
 
 .da-dialog__btn:hover:not(:disabled) {
@@ -1575,8 +1816,16 @@
   color: var(--da-accent-fg);
 }
 
+/* A real colour change rather than `opacity`, which washes the button out
+   against the backdrop instead of reading as a hover. */
 .da-dialog__btn--primary:hover:not(:disabled) {
-  opacity: 0.9;
+  background: color-mix(in srgb, var(--da-accent) 82%, var(--da-bg));
+  border-color: transparent;
+}
+
+.da-dialog__btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .da-dialog__btn:disabled {

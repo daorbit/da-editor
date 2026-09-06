@@ -17,7 +17,12 @@ export function LeafRenderer({ attributes, children, leaf }: RenderLeafProps) {
     .filter((key) => key.startsWith('prism-'))
     .map((key) => `da-token--${key.slice(6)}`);
 
-  const className = [leaf.comment ? 'da-commented' : '', ...tokenClasses]
+  const className = [
+    leaf.comment ? 'da-commented' : '',
+    leaf.searchMatch ? 'da-search-hit' : '',
+    leaf.searchActive ? 'da-search-hit--active' : '',
+    ...tokenClasses,
+  ]
     .filter(Boolean)
     .join(' ');
 

@@ -1,4 +1,8 @@
-# da-text-editor
+<p align="center">
+  <img src="https://raw.githubusercontent.com/daorbit/da-editor/main/public/da-editor-logo-512.png" alt="da-text-editor" width="120" height="120" />
+</p>
+
+<h1 align="center">da-text-editor</h1>
 
 A professional React rich-text editor. Slate and the icon set are bundled in — React is the only peer dependency.
 

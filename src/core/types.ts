@@ -176,6 +176,9 @@ export interface CustomText {
   fontSize?: number;
   fontFamily?: string;
   comment?: string;
+  /** Set by the find decoration, not stored in the document. */
+  searchMatch?: boolean;
+  searchActive?: boolean;
 }
 
 export type DaEditor = BaseEditor & ReactEditor & HistoryEditor;

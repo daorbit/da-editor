@@ -269,18 +269,18 @@ export const KbdIcon = (p: IconProps) => (
    square one, and stretching it into 24x24 would distort the bullets. The
    source path's (571,210) offset has been folded into the coordinates so no
    wrapping transform is needed. */
-export const BulletedListIcon = ({ size = 18, ...props }: IconProps) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="-1 -3.5 31 29"
-    fill="currentColor"
-    aria-hidden="true"
-    focusable="false"
-    {...props}
-  >
-    <path d="M27,17 L11,17 C9.896,17 9,17.896 9,19 C9,20.104 9.896,21 11,21 L27,21 C28.104,21 29,20.104 29,19 C29,17.896 28.104,17 27,17 L27,17 Z M27,9 L11,9 C9.896,9 9,9.896 9,11 C9,12.104 9.896,13 11,13 L27,13 C28.104,13 29,12.104 29,11 C29,9.896 28.104,9 27,9 L27,9 Z M11,5 L27,5 C28.104,5 29,4.104 29,3 C29,1.896 28.104,1 27,1 L11,1 C9.896,1 9,1.896 9,3 C9,4.104 9.896,5 11,5 L11,5 Z M3,16 C1.343,16 0,17.343 0,19 C0,20.657 1.343,22 3,22 C4.657,22 6,20.657 6,19 C6,17.343 4.657,16 3,16 L3,16 Z M3,8 C1.343,8 0,9.343 0,11 C0,12.657 1.343,14 3,14 C4.657,14 6,12.657 6,11 C6,9.343 4.657,8 3,8 L3,8 Z M3,0 C1.343,0 0,1.343 0,3 C0,4.657 1.343,6 3,6 C4.657,6 6,4.657 6,3 C6,1.343 4.657,0 3,0 L3,0 Z" />
-  </svg>
+/* Stroked rather than the filled source glyph: its bars were 4 units tall on a
+   22-unit box, which reads far heavier than the 1.75 strokes beside it. Drawn
+   here so it inherits the one shared stroke weight like every other icon. */
+export const BulletedListIcon = (p: IconProps) => (
+  <StrokeIcon {...p}>
+    <path d="M9 6H20" />
+    <path d="M9 12H20" />
+    <path d="M9 18H20" />
+    <circle cx="4.5" cy="6" r="1.4" fill="currentColor" stroke="none" />
+    <circle cx="4.5" cy="12" r="1.4" fill="currentColor" stroke="none" />
+    <circle cx="4.5" cy="18" r="1.4" fill="currentColor" stroke="none" />
+  </StrokeIcon>
 );
 
 export const NumberedListIcon = (p: IconProps) => (

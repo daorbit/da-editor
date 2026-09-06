@@ -2,7 +2,7 @@ import { Editor, Element as SlateElement, Point, Range, Transforms } from 'slate
 import { ELEMENT, type DaEditor, type ElementType } from './types';
 import { LIST_TYPES, wrapLink } from './transforms';
 import { normalizeTable } from './tables';
-import { parseWordHtml } from './io';
+import { parseMarkdown, parseWordHtml } from './io';
 
 const VOID_TYPES: ElementType[] = [
   ELEMENT.divider,
@@ -26,7 +26,6 @@ const INLINE_TYPES: ElementType[] = [
   ELEMENT.footnote,
 ];
 
-/** Blocks that reset to a paragraph when Backspace is pressed at their start. */
 const RESET_ON_BACKSPACE: ElementType[] = [
   ELEMENT.h1,
   ELEMENT.h2,
@@ -38,10 +37,23 @@ const RESET_ON_BACKSPACE: ElementType[] = [
   ELEMENT.todoListItem,
 ];
 
-/** Blocks where pressing Enter should exit into a fresh paragraph. */
 const EXIT_ON_ENTER: ElementType[] = [ELEMENT.h1, ELEMENT.h2, ELEMENT.h3];
 
 const URL_PATTERN = /^https?:\/\/[^\s]+$/i;
+
+ 
+function looksLikeMarkdown(text: string): boolean {
+  const MARKERS = [
+    /^#{1,6}\s+\S/m, // headings
+    /^\s*[-*+]\s+\S/m, // bullet lists
+    /^\s*\d+\.\s+\S/m, // numbered lists
+    /^\s*>\s+\S/m, // blockquotes
+    /^```/m, // fenced code
+    /^\s*\|.*\|\s*$/m, // tables
+    /^\s*(?:---|\*\*\*|___)\s*$/m, // thematic breaks
+  ];
+  return MARKERS.some((pattern) => pattern.test(text));
+}
 
 export function withDaEditor(editor: DaEditor): DaEditor {
   const { isVoid, isInline, insertBreak, deleteBackward, insertData, normalizeNode } = editor;
@@ -73,7 +85,6 @@ export function withDaEditor(editor: DaEditor): DaEditor {
 
     const isEmpty = Editor.string(editor, path) === '';
 
-    // Enter on an empty list item lifts out of the list instead of nesting deeper.
     if (
       isEmpty &&
       (block.type === ELEMENT.listItem || block.type === ELEMENT.todoListItem)
@@ -87,7 +98,6 @@ export function withDaEditor(editor: DaEditor): DaEditor {
       return;
     }
 
-    // A code block keeps Enter as a soft newline; Mod+Enter exits (handled in Editable).
     if (block.type === ELEMENT.codeBlock) {
       Transforms.insertText(editor, '\n');
       return;
@@ -95,11 +105,9 @@ export function withDaEditor(editor: DaEditor): DaEditor {
 
     insertBreak();
 
-    // Headings should not propagate their type to the next block.
     if (EXIT_ON_ENTER.includes(block.type)) {
       Transforms.setNodes(editor, { type: ELEMENT.paragraph });
     }
-    // A todo item continues as an unchecked item, never a checked one.
     if (block.type === ELEMENT.todoListItem) {
       Transforms.setNodes(editor, { checked: false });
     }
@@ -147,16 +155,12 @@ export function withDaEditor(editor: DaEditor): DaEditor {
   editor.insertData = (data) => {
     const text = data.getData('text/plain');
 
-    // Pasting a bare URL over a selection turns it into a link.
     if (text && URL_PATTERN.test(text.trim())) {
       wrapLink(editor, text.trim());
       return;
     }
 
-    // Slate's own paste handling understands only a small set of tags, so
-    // pasting from Word, Google Docs or a web page loses tables, callouts,
-    // to-dos and code languages. Route HTML through the same deserializer the
-    // editor uses everywhere else, which knows all of them.
+ 
     const html = data.getData('text/html');
     if (html) {
       try {
@@ -167,6 +171,19 @@ export function withDaEditor(editor: DaEditor): DaEditor {
         }
       } catch {
         // Fall through to Slate's default rather than dropping the paste.
+      }
+    }
+
+
+    if (text && looksLikeMarkdown(text)) {
+      try {
+        const fragment = parseMarkdown(text);
+        if (fragment.length) {
+          Transforms.insertFragment(editor, fragment);
+          return;
+        }
+      } catch {
+        // Fall through to the plain-text paste.
       }
     }
 

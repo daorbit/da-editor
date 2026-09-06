@@ -38,14 +38,12 @@ export function Playground() {
         onAskAi={() => setNotice('Wire this to your own endpoint.')}
       />
 
-    
-      <div className="da-editor" data-theme={theme} style={{ display: 'contents' }}>
-        <AlertDialog
-          message={notice}
-          title="Ask AI"
-          onClose={() => setNotice(null)}
-        />
-      </div>
+      <AlertDialog
+        message={notice}
+        title="Ask AI"
+        theme={theme === 'dark' ? 'dark' : 'light'}
+        onClose={() => setNotice(null)}
+      />
     </div>
   );
 }
