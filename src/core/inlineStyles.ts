@@ -63,6 +63,12 @@ export const INLINE_STYLES: Record<string, string> = {
   iframe: `width:100%;aspect-ratio:16/9;border:1px solid ${BORDER};border-radius:8px`,
   columns: 'display:flex;gap:20px;margin:14px 0',
   column: 'flex:1;min-width:0',
+  calloutIcon: 'flex:none;line-height:1.5;font-size:16px',
+  calloutBody: 'flex:1;min-width:0',
+  file: `display:inline-flex;gap:8px;align-items:center;padding:9px 12px;border:1px solid ${BORDER};border-radius:8px;color:${FG};text-decoration:none;font-family:${FONT}`,
+  footnote: `color:${ACCENT};cursor:help`,
+  equation: `margin:14px 0;padding:12px;border-radius:8px;background:${SURFACE};font-family:${MONO};text-align:center`,
+  inlineEquation: `padding:1px 4px;border-radius:4px;background:${SURFACE};font-family:${MONO}`,
 };
 
 export function calloutStyle(variant: string): string {

@@ -14,6 +14,98 @@ beforeAll(() => {
   globalThis.DOMParser = dom.window.DOMParser;
 });
 
+/**
+ * A document that uses every element the editor can produce, so the round-trip
+ * guards below fail when a new type is added to the serializer without a
+ * matching branch in the parser.
+ */
+const DEMO_CONTENT: EditorValue = [
+  { type: ELEMENT.h1, children: [{ text: 'Title' }] },
+  { type: ELEMENT.h2, children: [{ text: 'Section' }] },
+  { type: ELEMENT.h3, children: [{ text: 'Sub' }] },
+  { type: ELEMENT.h4, children: [{ text: 'Minor' }] },
+  { type: ELEMENT.h5, children: [{ text: 'Small' }] },
+  { type: ELEMENT.h6, children: [{ text: 'Smallest' }] },
+  {
+    type: ELEMENT.paragraph,
+    children: [
+      { text: 'Bold', bold: true },
+      { text: ' code', code: true },
+      { text: ' high', highlight: '#fef08a' },
+      { text: ' colour', color: '#e03131' },
+      { type: ELEMENT.link, url: 'https://example.com', children: [{ text: 'link' }] },
+      { type: ELEMENT.mention, id: '1', name: 'Alice', children: [{ text: '' }] },
+      { type: ELEMENT.date, date: '2026-01-01T00:00:00.000Z', children: [{ text: '' }] },
+      { type: ELEMENT.inlineEquation, formula: 'a^2', children: [{ text: '' }] },
+      { type: ELEMENT.footnote, note: 'aside', children: [{ text: '' }] },
+    ],
+  },
+  { type: ELEMENT.paragraph, align: 'center', children: [{ text: 'Centred' }] },
+  { type: ELEMENT.paragraph, indent: 1, children: [{ text: 'Indented' }] },
+  { type: ELEMENT.blockquote, children: [{ text: 'Quote' }] },
+  { type: ELEMENT.codeBlock, lang: 'ts', children: [{ text: 'const x = 1;' }] },
+  {
+    type: ELEMENT.bulletedList,
+    listStyle: 'square',
+    children: [{ type: ELEMENT.listItem, children: [{ text: 'one' }] }],
+  },
+  {
+    type: ELEMENT.numberedList,
+    children: [{ type: ELEMENT.listItem, children: [{ text: 'first' }] }],
+  },
+  { type: ELEMENT.todoListItem, checked: true, children: [{ text: 'done' }] },
+  { type: ELEMENT.todoListItem, checked: false, children: [{ text: 'todo' }] },
+  { type: ELEMENT.divider, children: [{ text: '' }] },
+  { type: ELEMENT.callout, variant: 'warning', emoji: '⚠️', children: [{ text: 'Careful' }] },
+  {
+    type: ELEMENT.toggleList,
+    open: true,
+    children: [
+      { type: ELEMENT.paragraph, children: [{ text: 'Summary' }] },
+      { type: ELEMENT.paragraph, children: [{ text: 'Body' }] },
+    ],
+  },
+  {
+    type: ELEMENT.columns,
+    children: [
+      {
+        type: ELEMENT.column,
+        children: [{ type: ELEMENT.paragraph, children: [{ text: 'left' }] }],
+      },
+      {
+        type: ELEMENT.column,
+        children: [{ type: ELEMENT.paragraph, children: [{ text: 'right' }] }],
+      },
+    ],
+  },
+  {
+    type: ELEMENT.table,
+    columnWidths: [120, 200],
+    children: [
+      {
+        type: ELEMENT.tableRow,
+        children: [
+          { type: ELEMENT.tableHeaderCell, children: [{ text: 'Feature' }] },
+          { type: ELEMENT.tableHeaderCell, children: [{ text: 'Notes' }] },
+        ],
+      },
+      {
+        type: ELEMENT.tableRow,
+        children: [
+          { type: ELEMENT.tableCell, background: '#d3f9d8', children: [{ text: 'Yes' }] },
+          { type: ELEMENT.tableCell, children: [{ text: 'Fine' }] },
+        ],
+      },
+    ],
+  },
+  { type: ELEMENT.image, url: 'https://example.com/a.png', caption: 'A photo', children: [{ text: '' }] },
+  { type: ELEMENT.video, url: 'https://example.com/a.mp4', children: [{ text: '' }] },
+  { type: ELEMENT.audio, url: 'https://example.com/a.mp3', children: [{ text: '' }] },
+  { type: ELEMENT.file, url: 'https://example.com/a.pdf', caption: 'Spec.pdf', children: [{ text: '' }] },
+  { type: ELEMENT.embed, url: 'https://example.com/embed', children: [{ text: '' }] },
+  { type: ELEMENT.equation, formula: 'E = mc^2', children: [{ text: '' }] },
+] as EditorValue;
+
 /** Strips the empty-text padding Slate requires so trees compare cleanly. */
 function normalize(value: unknown): unknown {
   if (Array.isArray(value)) {
@@ -290,11 +382,40 @@ describe('serializeHtml element coverage', () => {
     expect(html).toBe('kept');
   });
 
-  it('emits no style attributes by default', () => {
+  it('emits no style attributes by default, only the stylesheet class', () => {
     const html = serializeHtml([
       { type: ELEMENT.h1, children: [{ text: 'Title' }] },
     ] as EditorValue);
-    expect(html).toBe('<h1>Title</h1>');
+    expect(html).toBe('<h1 class="da-h1">Title</h1>');
+  });
+
+  /**
+   * Published HTML is styled by the same `styles.css` the editor loads, so the
+   * serializer has to write the classes that stylesheet targets — without them
+   * a preview renders unstyled however the page is built.
+   */
+  it('carries the editor class on every block', () => {
+    const html = serializeHtml([
+      { type: ELEMENT.paragraph, children: [{ text: 'p' }] },
+      { type: ELEMENT.blockquote, children: [{ text: 'q' }] },
+      {
+        type: ELEMENT.bulletedList,
+        children: [{ type: ELEMENT.listItem, children: [{ text: 'i' }] }],
+      },
+      {
+        type: ELEMENT.table,
+        children: [
+          {
+            type: ELEMENT.tableRow,
+            children: [{ type: ELEMENT.tableCell, children: [{ text: 'c' }] }],
+          },
+        ],
+      },
+    ] as EditorValue);
+
+    for (const cls of ['da-p', 'da-blockquote', 'da-ul', 'da-li', 'da-table', 'da-tr', 'da-td']) {
+      expect(html).toContain(`class="${cls}"`);
+    }
   });
 
   it('inlines styles when asked, so output renders without the stylesheet', () => {
@@ -315,9 +436,9 @@ describe('serializeHtml element coverage', () => {
       { inlineStyles: true },
     );
 
-    expect(html).toMatch(/<h1 style="[^"]*font-size:30px/);
-    expect(html).toMatch(/<div data-callout="warning" style="[^"]*background:#fef6e7/);
-    expect(html).toMatch(/<td style="[^"]*border:1px solid/);
+    expect(html).toMatch(/<h1 class="da-h1" style="[^"]*font-size:30px/);
+    expect(html).toMatch(/data-callout="warning"[^>]*style="[^"]*background:#fef6e7/);
+    expect(html).toMatch(/<td class="da-td" style="[^"]*border:1px solid/);
     // No custom properties or color-mix, so it survives in email clients.
     expect(html).not.toMatch(/var\(--|color-mix/);
   });
@@ -357,8 +478,8 @@ describe('serializeHtml element coverage', () => {
     const list = body.querySelector('ul');
     expect(list).not.toBeNull();
     expect(body.querySelectorAll('li')).toHaveLength(2);
-    // Anything other than `style` here means the attribute was terminated early.
-    expect([...list!.attributes].map((a) => a.name)).toEqual(['style']);
+    // Anything beyond these means the attribute was terminated early.
+    expect([...list!.attributes].map((a) => a.name).sort()).toEqual(['class', 'style']);
   });
 
   it('inlined output still round-trips', () => {
@@ -368,6 +489,42 @@ describe('serializeHtml element coverage', () => {
     const back = deserializeHtml(serializeHtml(value, { inlineStyles: true }));
     expect((back[0] as { type: string }).type).toBe(ELEMENT.callout);
     expect((back[0] as { variant?: string }).variant).toBe('success');
+  });
+
+  /**
+   * The whole-document guard. Saving as HTML and loading it back is what a CMS
+   * does on every edit, so a type the parser cannot read is silent data loss —
+   * the document degrades a little more each save. Comparing type counts across
+   * a document that uses every block catches that, where a per-feature test
+   * only catches the feature someone remembered to add.
+   */
+  it('keeps every element type across a full-document round-trip', () => {
+    const back = deserializeHtml(serializeHtml(DEMO_CONTENT));
+
+    const types = (value: unknown[]): string[] =>
+      value.flatMap((node) => {
+        const el = node as { type?: string; children?: unknown[] };
+        return el.children ? [el.type ?? '', ...types(el.children)] : [];
+      });
+
+    const tally = (list: string[]) =>
+      list.reduce<Record<string, number>>((acc, key) => {
+        acc[key] = (acc[key] ?? 0) + 1;
+        return acc;
+      }, {});
+
+    expect(tally(types(back))).toEqual(tally(types(DEMO_CONTENT)));
+  });
+
+  /**
+   * Once through the parser the document has reached its normalized form, so a
+   * second save must produce byte-identical HTML. A drift here is a property
+   * that survives one save and disappears on the next.
+   */
+  it('is stable on a second save', () => {
+    const once = serializeHtml(deserializeHtml(serializeHtml(DEMO_CONTENT)));
+    const twice = serializeHtml(deserializeHtml(once));
+    expect(twice).toBe(once);
   });
 
   it('never nests a block inside a paragraph', () => {

@@ -24,7 +24,7 @@
   /* Lets the editor shrink inside a flex parent so its content area scrolls. */
   min-height: 0;
   border: 1px solid var(--da-border);
-  border-radius: var(--da-radius);
+  /* border-radius: var(--da-radius); */
   background: var(--da-bg);
   color: var(--da-fg);
   font-family: var(--da-font);
