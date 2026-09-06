@@ -33,6 +33,42 @@ function findClipBounds(from: HTMLElement): { top: number; bottom: number } {
   }
   return { top: 0, bottom: window.innerHeight };
 }
+
+/**
+ * The horizontal counterpart. Separate walk rather than a second axis on the
+ * one above, because the element that clips vertically is often not the one
+ * that clips horizontally — an editor pane scrolls on Y while the surrounding
+ * layout column is what bounds X.
+ *
+ * Falls back to the editor's own box rather than the viewport: when the editor
+ * is a panel with a sidebar beside it, a menu can overflow the editor by a wide
+ * margin while still sitting well inside the window, so measuring against the
+ * window would never flip it.
+ */
+function findClipBoundsX(from: HTMLElement): { left: number; right: number } {
+  let node = from.parentElement;
+  while (node && node !== document.body) {
+    const { overflowX } = getComputedStyle(node);
+    if (overflowX === 'auto' || overflowX === 'scroll' || overflowX === 'hidden') {
+      const rect = node.getBoundingClientRect();
+      return {
+        left: Math.max(0, rect.left),
+        right: Math.min(window.innerWidth, rect.right),
+      };
+    }
+    node = node.parentElement;
+  }
+
+  const editor = from.closest<HTMLElement>('.da-editor');
+  if (editor) {
+    const rect = editor.getBoundingClientRect();
+    return {
+      left: Math.max(0, rect.left),
+      right: Math.min(window.innerWidth, rect.right),
+    };
+  }
+  return { left: 0, right: window.innerWidth };
+}
 const SEPARATOR_WIDTH = 9;
 
  
@@ -211,6 +247,9 @@ export function ToolbarDropdown({
 }: DropdownProps) {
   const [open, setOpen] = useState(false);
   const [alignRight, setAlignRight] = useState(false);
+  // Pixels to shift the panel back inside its clip box once it has been
+  // aligned, for panels too wide to fit either edge of the trigger.
+  const [nudge, setNudge] = useState(0);
   const [placement, setPlacement] = useState<{ up: boolean; maxHeight?: number }>({
     up: false,
   });
@@ -225,16 +264,35 @@ export function ToolbarDropdown({
   // Also caps its height to the space actually available, and flips it above
   // the trigger when there is more room there, so long menus never clip.
   useLayoutEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setNudge(0);
+      setAlignRight(false);
+      return;
+    }
     const menu = menuRef.current;
     const root = rootRef.current;
     if (!menu || !root) return;
 
     const rect = menu.getBoundingClientRect();
-    setAlignRight(rect.right > window.innerWidth);
 
     const GAP = 8;
     const trigger = root.getBoundingClientRect();
+
+    /* Horizontal placement, in three steps: hang from the left edge of the
+       trigger; flip to its right edge if that overflows; then, if the panel is
+       wider than the room on either side (the emoji and colour pickers are),
+       nudge it back by the leftover pixels. Flipping alone cannot fix a panel
+       that does not fit whichever edge it hangs from. */
+    const clipX = findClipBoundsX(root);
+    const width = rect.width;
+    const flip = trigger.left + width > clipX.right && trigger.right - width >= clipX.left;
+    setAlignRight(flip);
+
+    const projectedLeft = flip ? trigger.right - width : trigger.left;
+    const overflowRight = Math.max(0, projectedLeft + width - clipX.right);
+    const shifted = projectedLeft - overflowRight;
+    const overflowLeft = Math.max(0, clipX.left - shifted);
+    setNudge(Math.round(overflowLeft - overflowRight));
 
     // The menu is clipped by the nearest scrolling/hidden ancestor, not by
     // the viewport — an editor with a fixed height is exactly that case. So
@@ -327,7 +385,12 @@ export function ToolbarDropdown({
           className={`da-tb__menu${wide ? ' da-tb__menu--wide' : ''}${alignRight ? ' da-tb__menu--right' : ''}${placement.up ? ' da-tb__menu--up' : ''}`}
           id={menuId}
           role="menu"
-          style={placement.maxHeight ? { maxHeight: placement.maxHeight } : undefined}
+          style={{
+            ...(placement.maxHeight ? { maxHeight: placement.maxHeight } : null),
+            // Applied as a transform rather than an offset so it composes with
+            // whichever edge the panel is anchored to.
+            ...(nudge ? { transform: `translateX(${nudge}px)` } : null),
+          }}
         >
           {children(() => setOpen(false))}
         </div>
