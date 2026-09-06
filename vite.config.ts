@@ -42,8 +42,6 @@ export default defineConfig({
         assetFileNames: 'da-editor.[ext]',
       },
     },
-    // Sourcemaps are 6 MB of the published tarball. Consumers debug their own
-    // app, not this library's internals, so they are not worth the weight.
     sourcemap: false,
   },
 });

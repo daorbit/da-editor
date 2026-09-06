@@ -7,6 +7,7 @@ import {
   useState,
   type CSSProperties,
   type KeyboardEvent,
+  type ReactNode,
 } from 'react';
 import { createEditor, Editor, Transforms, type Descendant } from 'slate';
 import { withHistory } from 'slate-history';
@@ -149,6 +150,8 @@ export interface DaEditorProps {
   maxWidth?: string;
   /** Shows a word, character and reading-time counter below the document. */
   wordCount?: boolean;
+  /** Rendered at the start of the fixed toolbar, before the editor's controls. */
+  toolbarLeading?: ReactNode;
   autoFocus?: boolean;
   spellCheck?: boolean;
 }
@@ -177,6 +180,7 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
     maxHeight,
     maxWidth,
     wordCount = false,
+    toolbarLeading,
     autoFocus = false,
     spellCheck = true,
   },
@@ -531,6 +535,7 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
       <Slate key={slateKey} editor={editor} initialValue={value} onChange={handleChange}>
         {fixedToolbar && !readOnly && (
           <FixedToolbar
+            leading={toolbarLeading}
             onAskAi={onAskAi}
             onLink={() => setLinkOpen(true)}
             onMedia={(kind) => pickMedia(kind)}

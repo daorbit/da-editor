@@ -113,6 +113,8 @@ function getEffectiveFontSize(editor: DaEditor): number {
 }
 
 export interface FixedToolbarProps {
+  /** Rendered at the start of the toolbar, before the editor's own controls. */
+  leading?: ReactNode;
   onAskAi?: () => void;
   onLink?: () => void;
   onMedia?: (kind: MediaKind) => void;
@@ -123,6 +125,7 @@ export interface FixedToolbarProps {
 }
 
 export function FixedToolbar({
+  leading,
   onAskAi,
   onLink,
   onMedia,
@@ -781,6 +784,13 @@ export function FixedToolbar({
 
   return (
     <div className="da-tb da-tb--fixed" role="toolbar" aria-label="Editor toolbar">
+      {leading && (
+        <div className="da-tb__leading">
+          {leading}
+          <ToolbarSeparator />
+        </div>
+      )}
+
       <div className="da-tb__measure" ref={measureRef} aria-hidden="true">
         {groups.map((group) => (
           <div className="da-tb__group" data-tb-group key={group.key}>

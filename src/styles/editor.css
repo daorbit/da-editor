@@ -1,4 +1,4 @@
-/* ------------------------------------------------------------- tokens -- */
+
 
 .da-editor {
   --da-bg: #ffffff;
@@ -9,20 +9,13 @@
   --da-border-strong: #d0d4da;
   --da-surface: #f7f8fa;
   --da-surface-hover: #eef0f3;
-  /* Neutral rather than a brand blue: the accent's job here is to mark what is
-     active, and a saturated hue competes with the document's own colour —
-     highlights, links, images. Black carries the same weight without it. */
+  
   --da-accent: #111111;
   --da-accent-fg: #ffffff;
   --da-accent-soft: #ededed;
   --da-selection: #e2e2e2;
   --da-link: #2b62d9;
-  /* Every actionable icon — toolbar, menu items, slash menu, media and link
-     toolbars — sits at full black rather than the muted grey used for
-     secondary text: at 18px a glyph carries much less ink than a word, so the
-     same grey that reads as "secondary" on text reads as "disabled" on an
-     icon. Carets and search adornments stay muted on purpose: they label a
-     control rather than being one. */
+  
   --da-tb-icon: #000000;
   --da-shadow: 0 4px 16px rgba(16, 20, 30, 0.1), 0 1px 3px rgba(16, 20, 30, 0.07);
   --da-radius: 10px;
@@ -32,22 +25,20 @@
 
   display: flex;
   flex-direction: column;
-  /* Lets the editor shrink inside a flex parent so its content area scrolls. */
+  
   min-height: 0;
-  /* The toolbar is a nowrap row, so without this its min-content width sets the
-     editor's, and the whole editor grows past a narrow container instead of the
-     toolbar collapsing into its overflow menu. */
+  
   min-width: 0;
   max-width: 100%;
   border: 1px solid var(--da-border);
-  /* border-radius: var(--da-radius); */
+  
   background: var(--da-bg);
   color: var(--da-fg);
   font-family: var(--da-font);
   font-size: 15px;
   line-height: 1.65;
   position: relative;
-  /* Not `hidden`: toolbar dropdowns must escape the editor bounds. */
+  
   overflow: visible;
 }
 
@@ -65,7 +56,7 @@
   --da-accent-soft: #2e323b;
   --da-selection: #3a3f49;
   --da-link: #7aa2f7;
-  /* Not pure white, which glares against the dark chrome. */
+  
   --da-tb-icon: #e6e8ec;
   --da-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.4);
 }
@@ -74,7 +65,7 @@
   background: var(--da-selection);
 }
 
-/* ---------------------------------------------------------- scrollbars -- */
+
 
 .da-editor,
 .da-editor * {
@@ -103,7 +94,7 @@
   background-color: var(--da-muted);
 }
 
-/* Overlay the scrollbar inside menus so it never adds a visible gutter. */
+
 .da-tb__menu::-webkit-scrollbar,
 .da-slash::-webkit-scrollbar,
 .da-mention-menu::-webkit-scrollbar,
@@ -112,8 +103,7 @@
   height: 8px;
 }
 
-/* A scrollable menu has to look scrollable, so give its thumb a solid
-   colour instead of inheriting the near-invisible global one. */
+
 .da-tb__menu::-webkit-scrollbar-thumb,
 .da-slash::-webkit-scrollbar-thumb,
 .da-mention-menu::-webkit-scrollbar-thumb,
@@ -121,9 +111,7 @@
   border: 2px solid transparent;
   border-radius: 8px;
   background-clip: padding-box;
-  /* `--da-border-strong` is only a shade off the menu's own background and
-     reads as no scrollbar at all; the muted tone is the faintest that still
-     announces the list continues. */
+  
   background-color: var(--da-muted);
 }
 
@@ -134,7 +122,6 @@
   background-color: var(--da-muted);
 }
 
-/* ------------------------------------------------------------ toolbar -- */
 
 .da-tb {
   display: flex;
@@ -152,24 +139,18 @@
   min-width: 0;
   max-width: 100%;
   padding: 0 12px;
-  border-bottom: none;
+  
   background: var(--da-bg);
   position: sticky;
   top: 0;
   z-index: 5;
   flex-wrap: nowrap;
   isolation: isolate;
-  /* box-shadow: 0 1px 0 var(--da-border), 0 4px 8px -4px rgba(16, 20, 30, 0.12); */
+  box-shadow: none;
   overflow: visible;
 }
 
-/* Tools shrink to fit rather than scrolling, which would clip open menus.
-
-   `width: 0` with `flex: 1` rather than `flex: 1` alone: a flex item's base
-   size is its content, so a nowrap row of buttons sets its own width and the
-   toolbar grows to hold it. Starting from zero and growing into the space
-   that is left makes the row a consequence of the toolbar's width rather than
-   the cause of it. */
+ 
 .da-tb__scroll {
   display: flex;
   align-items: center;
@@ -178,18 +159,14 @@
   width: 0;
   min-width: 0;
   height: 100%;
-  /* Popovers are positioned against this row, so it cannot clip its children.
-     The overflow collapse keeps the row inside its width instead; the button
-     row itself may not grow past it, whatever measurement lag there is. */
+ 
   overflow: visible;
 }
 
 .da-tb__scroll > * {
   min-width: 0;
 }
-
-/* Off-screen, full-width render of every group used only to measure widths
-   for the overflow collapse — never shown, never interactive. */
+ 
 .da-tb__measure {
   position: absolute;
   top: 0;
@@ -197,8 +174,7 @@
   display: flex;
   align-items: center;
   gap: 2px;
-  /* Matches the real toolbar's height: groups are measured in this row, and a
-     different height changes how their contents lay out. */
+ 
   height: 42px;
   width: max-content;
   max-width: none;
@@ -212,9 +188,15 @@
   flex: 0 0 auto;
   min-width: max-content;
 }
+ 
+.da-tb__leading {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 100%;
+  flex-shrink: 0;
+}
 
-/* Holds the overflow button, outside the row that collapses. Never shrinks:
-   everything the toolbar hides is reachable only through this. */
 .da-tb__overflow {
   display: flex;
   align-items: center;
@@ -223,7 +205,6 @@
   flex-shrink: 0;
 }
 
-/* Pinned cluster keeps the theme and mode controls always reachable. */
 .da-tb__end {
   display: flex;
   align-items: center;
@@ -260,17 +241,14 @@
   flex-wrap: nowrap;
 }
 
-/* Denser than the fixed toolbar: this bar floats over the text it acts on, so
-   it should take as little of the document as it can. Overrides the 18px the
-   icon components render at, and tightens the buttons to match. */
+
 .da-tb--floating .da-tb__btn > svg,
 .da-tb--floating .da-tb__icon > svg {
   width: 16px;
   height: 16px;
 }
 
-/* `:not(--step)` so the font-size steppers keep their own tighter metrics
-   rather than being padded back out to icon-button width. */
+
 .da-tb--floating .da-tb__btn:not(.da-tb__btn--step) {
   min-width: 28px;
   height: 28px;
@@ -299,8 +277,7 @@
   transition: background 0.13s ease, color 0.13s ease;
 }
 
-/* Only the background moves on hover. The icon is already at full strength,
-   so recolouring it to `--da-fg` here would make it *lighter* than at rest. */
+
 .da-tb__btn:hover:not(:disabled) {
   background: var(--da-surface-hover);
 }
@@ -320,15 +297,11 @@
   cursor: not-allowed;
 }
 
-/* Value-bearing dropdowns keep a stable width as their label changes, so their
-   contents are pinned left rather than recentring on every edit. An icon-only
-   dropdown has nothing to keep stable and stays centred like a plain button —
-   left-aligning it leaves the fill sitting off-centre behind the icon. */
+ 
 .da-tb__btn--dropdown:has(.da-tb__value) {
   justify-content: flex-start;
 }
 
-/* Fixed icon slot: block-type icons differ in width (H1 vs Text). */
 .da-tb__icon {
   display: inline-flex;
   align-items: center;
@@ -337,7 +310,7 @@
   flex-shrink: 0;
 }
 
-/* Fixed width so a changing label cannot reflow the rest of the toolbar. */
+
 .da-tb__value {
   display: inline-block;
   width: 78px;
@@ -348,8 +321,7 @@
   text-align: left;
 }
 
-/* A static button label: sized to its text, unlike `--value` which is pinned
-   to a fixed width because its content changes. */
+
 .da-tb__label {
   font-size: 13px;
   white-space: nowrap;
@@ -368,7 +340,7 @@
   flex-shrink: 0;
 }
 
-/* --------------------------------------------------------- dropdowns -- */
+
 
 .da-tb__dropdown {
   position: relative;
@@ -390,27 +362,23 @@
   box-shadow: var(--da-shadow);
 }
 
-/* Hangs from the trigger's right edge instead, when opening from the left
-   would overflow the viewport (e.g. the trailing "More" button). */
+ 
 .da-tb__menu--right {
   left: auto;
   right: 0;
 }
 
-/* Opens upward when there is more room above the trigger than below —
-   the case in a short editor, where a long menu would otherwise clip. */
+
 .da-tb__menu--up {
   top: auto;
   bottom: calc(100% + 4px);
 }
 
-/* A scrollable menu should look scrollable: fade the bottom edge so a
-   clipped item reads as "more below" rather than as a cut-off menu. */
+
 .da-tb__menu {
   overscroll-behavior: contain;
   scrollbar-width: thin;
-  /* Firefox ignores the ::-webkit- rules above, so it needs the thumb colour
-     stated here or the scrollbar is left at the near-invisible default. */
+  
   scrollbar-color: var(--da-muted) transparent;
 }
 
@@ -491,11 +459,9 @@
     linear-gradient(to top left, transparent 46%, #ef4444 46%, #ef4444 54%, transparent 54%);
 }
 
-/* ------------------------------------------------------------ content -- */
 
-/* Scrolls independently of the toolbar, so the scrollbar starts below it.
-   `min-height: 0` is required or the flex item refuses to shrink and the
-   content overflows the editor instead of scrolling inside it. */
+
+
 .da-editor__scroll {
   flex: 1;
   min-height: 0;
@@ -525,7 +491,7 @@
   min-height: inherit;
 }
 
-/* Slate renders this once, on the first text node of an empty document. */
+
 .da-editor__content [data-slate-placeholder] {
   color: var(--da-faint);
   opacity: 1 !important;
@@ -537,7 +503,7 @@
   padding-bottom: 20px;
 }
 
-/* ------------------------------------------------------------- blocks -- */
+
 
 .da-p {
   margin: 0 0 2px;
@@ -545,7 +511,7 @@
   position: relative;
 }
 
-/* Cues the caret's own empty line, separately from the whole-doc placeholder. */
+
 .da-p--empty::before {
   content: 'Type something…';
   position: absolute;
@@ -565,7 +531,7 @@
   font-weight: 650;
   line-height: 1.3;
   letter-spacing: -0.01em;
-  /* Keeps headings clear of the sticky toolbar when scrolled into view. */
+  
   scroll-margin-top: 56px;
 }
 
@@ -731,8 +697,7 @@
   margin: 10px 0;
 }
 
-/* `inline-block` so the wrapper's `text-align` can move it: a block-level
-   figure fills the line and stays put whatever the alignment says. */
+
 .da-figure {
   margin: 0;
   display: inline-block;
@@ -811,17 +776,15 @@
   text-align: center;
 }
 
-/* ------------------------------------------------------------- inline -- */
 
-/* Its own token, not `--da-accent`: the accent is neutral black, and a link
-   that matches the body text is not recognisable as a link. This is document
-   content rather than chrome, so it keeps a real hue. */
+
+
 .da-link {
   color: var(--da-link);
   text-decoration: underline;
   text-underline-offset: 2px;
   cursor: pointer;
-  /* Anchors the hover preview. */
+  
   position: relative;
 }
 
@@ -853,7 +816,7 @@
   font-size: 0.82em;
 }
 
-/* --------------------------------------------------------- slash menu -- */
+
 
 .da-slash {
   position: absolute;
@@ -915,7 +878,7 @@
   border-color: color-mix(in srgb, var(--da-accent) 40%, transparent);
 }
 
-/* ------------------------------------------------------ link popover -- */
+
 
 .da-link-popover {
   position: absolute;
@@ -950,7 +913,7 @@
   color: var(--da-faint);
 }
 
-/* ------------------------------------------------------ toolbar extras -- */
+
 
 .da-tb__spacer {
   flex: 1;
@@ -996,14 +959,12 @@
   outline: none;
 }
 
-/* Pickers size themselves; the menu is just the surface around them. */
+
 .da-tb__menu--wide {
   min-width: 0;
   width: max-content;
   padding: 0;
-  /* `hidden`, not `auto`: these panels (emoji, colour) own an inner scroll
-     region, and a scrolling wrapper around it puts two scrollbars side by side.
-     The height cap still applies — the inner region absorbs it. */
+  
   max-width: 100vw;
   overflow: hidden;
 }
@@ -1021,18 +982,16 @@
   text-transform: uppercase;
 }
 
-/* -------------------------------------------------------------- tables -- */
+
 
 .da-table-wrap {
   margin: 10px 0;
   overflow-x: auto;
-  /* Anchors the column-resize handles, which are absolutely positioned over
-     the table's column boundaries. */
+  
   position: relative;
 }
 
-/* `separate` keeps each cell's borders its own, so a single side can be
-   hidden; `collapse` would let a neighbour's border show through instead. */
+
 .da-table {
   border-collapse: separate;
   border-spacing: 0;
@@ -1040,7 +999,7 @@
   table-layout: fixed;
 }
 
-/* Shared edges are drawn once, by the cell above or to the left. */
+
 .da-table .da-td:not(:first-child),
 .da-table .da-th:not(:first-child) {
   border-left-width: 0;
@@ -1055,7 +1014,7 @@
 .da-th {
   min-width: 60px;
   padding: 7px 10px;
-  /* Each side is set separately so individual borders can be hidden. */
+  
   border-top: 1px solid var(--da-border-strong);
   border-right: 1px solid var(--da-border-strong);
   border-bottom: 1px solid var(--da-border-strong);
@@ -1075,15 +1034,14 @@
   padding: 0;
 }
 
-/* --------------------------------------------------------------- media -- */
+
 
 .da-media-wrap {
   margin: 10px 0;
   position: relative;
 }
 
-/* Sits in the gutter left of the block rather than over it, so it never
-   covers content and does not shift the text when it appears. */
+
 .da-block-handle {
   position: absolute;
   top: 2px;
@@ -1173,7 +1131,7 @@
   font-size: 14px;
 }
 
-/* ------------------------------------------------------------ mentions -- */
+
 
 .da-date-wrap {
   position: relative;
@@ -1271,8 +1229,7 @@
   background: var(--da-surface-hover);
 }
 
-/* Days spilling in from the neighbouring months stay in the grid so the rows
-   keep their shape, but recede so the current month reads as the subject. */
+
 .da-datepicker__day[data-outside] {
   color: var(--da-faint);
 }
@@ -1399,7 +1356,7 @@
   white-space: nowrap;
 }
 
-/* -------------------------------------------------------- find/replace -- */
+
 
 .da-find {
   display: flex;
@@ -1479,8 +1436,7 @@
   cursor: not-allowed;
 }
 
-/* The same chevron as "next", turned: shipping one glyph keeps the pair
-   visually identical, which two separately drawn arrows would not be. */
+
 .da-find__up {
   transform: rotate(180deg);
 }
@@ -1512,8 +1468,7 @@
   border-radius: 2px;
 }
 
-/* The one the counter is pointing at, distinct from the rest so stepping
-   through results is visible without reading the "3 of 12". */
+
 .da-search-hit--active {
   background: #fb923c;
   box-shadow: 0 0 0 1px #ea760c;
@@ -1529,7 +1484,7 @@
   box-shadow: 0 0 0 1px #f59e0b;
 }
 
-/* ---------------------------------------------------------- word count -- */
+
 
 .da-wordcount {
   display: flex;
@@ -1546,7 +1501,7 @@
   color: var(--da-faint);
 }
 
-/* ------------------------------------------------------- link preview -- */
+
 
 .da-link-preview {
   position: absolute;
@@ -1577,7 +1532,7 @@
   flex-shrink: 0;
 }
 
-/* ------------------------------------------------- table column resize -- */
+
 
 .da-table-handles {
   position: absolute;
@@ -1615,11 +1570,9 @@
   opacity: 1;
 }
 
-/* -------------------------------------------------------------- dialog -- */
 
-/* Also matches `.da-editor.da-dialog__backdrop`, which a dialog rendered
-   outside the editor uses to pick up the theme tokens — hence the resets for
-   the border and sizing that class otherwise brings. */
+
+
 .da-dialog__backdrop {
   position: fixed;
   inset: 0;
@@ -1816,8 +1769,7 @@
   color: var(--da-accent-fg);
 }
 
-/* A real colour change rather than `opacity`, which washes the button out
-   against the backdrop instead of reading as a hover. */
+
 .da-dialog__btn--primary:hover:not(:disabled) {
   background: color-mix(in srgb, var(--da-accent) 82%, var(--da-bg));
   border-color: transparent;
@@ -1833,7 +1785,7 @@
   opacity: 0.5;
 }
 
-/* ------------------------------------------------------------ comments -- */
+
 
 .da-commented {
   background: color-mix(in srgb, #f59e0b 22%, transparent);
@@ -1841,7 +1793,7 @@
   cursor: pointer;
 }
 
-/* --------------------------------------------------------- extra heads -- */
+
 
 .da-h4,
 .da-h5,
@@ -1856,7 +1808,7 @@
 .da-h5 { font-size: 1em; margin-top: 12px; }
 .da-h6 { font-size: 0.92em; margin-top: 12px; color: var(--da-muted); }
 
-/* --------------------------------------------------------- split button -- */
+
 
 .da-tb__dropdown--split {
   display: inline-flex;
@@ -1882,14 +1834,13 @@
   background: transparent;
 }
 
-/* -------------------------------------------------------------- submenu -- */
+
 
 .da-tb__submenu {
   position: relative;
 }
 
-/* Submenus are fixed-positioned from JS, so a menu containing them scrolls
-   like any other instead of having to stay unclipped. */
+
 .da-tb__menu--sub {
   position: fixed;
   margin-left: 0;
@@ -1922,10 +1873,10 @@
   background: var(--da-border);
 }
 
-/* --------------------------------------------------------- color picker -- */
+
 
 .da-color {
-  /* 11 columns of 20px + 10 gaps of 4px + 12px padding each side. */
+  
   width: 284px;
   padding: 12px;
 }
@@ -1969,7 +1920,7 @@
   border-bottom: 1px solid var(--da-border);
 }
 
-/* One column per hue; rows run light to dark. */
+
 .da-color__grid {
   display: grid;
   grid-template-columns: repeat(11, 20px);
@@ -2119,10 +2070,10 @@
   flex-shrink: 0;
 }
 
-/* --------------------------------------------------- emoji (frimousse) -- */
+
 
 .da-emoji {
-  /* 8 columns of 34px, 10px list padding each side, 5px for the scrollbar. */
+  
   --da-emoji-size: 34px;
   --da-emoji-columns: 8;
 
@@ -2180,7 +2131,7 @@
   display: none;
 }
 
-/* Sits inline beside the search field rather than floating over the panel. */
+
 .da-emoji__skin {
   display: flex;
   align-items: center;
@@ -2263,7 +2214,7 @@
   font-size: 13px;
 }
 
-/* ----------------------------------------------------------- code block -- */
+
 
 .da-code-wrap {
   position: relative;
@@ -2416,7 +2367,7 @@
   background: transparent;
 }
 
-/* --------------------------------------------------------- syntax tokens -- */
+
 
 .da-token--comment,
 .da-token--prolog,
@@ -2523,7 +2474,7 @@
   color: #ffa657;
 }
 
-/* -------------------------------------------------------- media toolbar -- */
+
 
 .da-media-toolbar {
   position: absolute;
@@ -2585,7 +2536,7 @@
   border-color: var(--da-accent);
 }
 
-/* --------------------------------------------------------- link toolbar -- */
+
 
 .da-link-toolbar {
   position: absolute;
@@ -2663,7 +2614,7 @@
   border-color: var(--da-accent);
 }
 
-/* -------------------------------------------------------- table toolbar -- */
+
 
 .da-table-toolbar {
   position: absolute;
@@ -2682,7 +2633,7 @@
   position: relative;
 }
 
-/* Opens upward, since the toolbar sits at the bottom of the table. */
+
 .da-table-toolbar__panel {
   position: absolute;
   bottom: calc(100% + 6px);
@@ -2699,7 +2650,7 @@
   padding: 4px;
 }
 
-/* --------------------------------------------------- toggle & columns -- */
+
 
 .da-toggle {
   display: flex;

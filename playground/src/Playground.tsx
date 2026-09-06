@@ -1,12 +1,14 @@
 import { useRef, useState } from 'react';
 import {
   AlertDialog,
+  ArrowLeftIcon,
   DaEditor,
   type DaEditorHandle,
   type Mentionable,
   type Theme,
 } from '../../src';
 import { DEMO_CONTENT } from './demoContent';
+import type { Route } from './router';
 
 const MENTIONABLES: Mentionable[] = [
   { id: '1', name: 'Alice Chen', detail: 'alice@example.com' },
@@ -16,7 +18,7 @@ const MENTIONABLES: Mentionable[] = [
   { id: '5', name: 'Yuki Tanaka', detail: 'yuki@example.com' },
 ];
 
-export function Playground() {
+export function Playground({ navigate }: { navigate: (next: Route) => void }) {
   const ref = useRef<DaEditorHandle>(null);
   const [theme, setTheme] = useState<Theme>('light');
   const [notice, setNotice] = useState<string | null>(null);
@@ -29,11 +31,24 @@ export function Playground() {
         onToggleTheme={() =>
           setTheme((current) => (current === 'dark' ? 'light' : 'dark'))
         }
+        toolbarLeading={
+          <button
+            type="button"
+            className="da-tb__btn"
+            title="Back to home"
+            aria-label="Back to home"
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => navigate('/')}
+          >
+            <ArrowLeftIcon />
+          </button>
+        }
         defaultValue={DEMO_CONTENT}
         className="pg-editor-fill"
         minHeight="0"
         maxWidth="1100px"
         autoFocus
+        wordCount
         mentionables={MENTIONABLES}
         onAskAi={() => setNotice('Wire this to your own endpoint.')}
       />

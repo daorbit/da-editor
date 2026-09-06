@@ -132,7 +132,11 @@ export function useOverflowCollapse(
         ? overflowEl.getBoundingClientRect().width
         : OVERFLOW_RESERVE;
 
-      const available = outerWidth - padding - endWidth - overflowWidth - SEPARATOR_WIDTH;
+      const leadingEl = toolbarEl.querySelector<HTMLElement>('.da-tb__leading');
+      const leadingWidth = leadingEl ? leadingEl.getBoundingClientRect().width : 0;
+
+      const available =
+        outerWidth - padding - leadingWidth - endWidth - overflowWidth - SEPARATOR_WIDTH;
 
       let used = 0;
       let fit = 0;

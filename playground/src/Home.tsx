@@ -2,7 +2,6 @@ import { useCallback, useRef, useState } from 'react';
 import {
   DaEditor,
   MoonIcon,
-  SparklesIcon,
   type DaEditorHandle,
   type EditorValue,
   type Mentionable,
@@ -87,19 +86,80 @@ const PILLARS = [
 ];
 
 /* Everything else, as a dense scannable list rather than nine equal cards. */
-const CAPABILITIES: [string, string][] = [
-  ['Blocks', 'Headings, quotes, code, lists, to-dos, callouts, dividers, images, tables'],
-  ['Marks', 'Bold, italic, underline, strike, code, sub, super, kbd, colour, highlight'],
-  ['Tables', 'Insert, resize, add and remove rows and columns, contextual toolbar'],
-  ['Code', 'Prism highlighting across 20+ languages with a language picker'],
-  ['Media', 'Images with captions, alignment toolbar, and a pluggable upload handler'],
-  ['Emoji', 'Searchable picker, plus : shortcodes inline'],
-  ['Import', 'HTML, Markdown, and .docx through Mammoth'],
-  ['Export', 'HTML, Markdown, and Slate JSON — nothing locked in'],
-  ['Theming', 'Light, dark or system. Every colour is a CSS custom property'],
-  ['Toolbars', 'Fixed and floating, both fully composable from exported primitives'],
-  ['Keyboard', 'Full shortcut map, and Tab / Shift+Tab indent handling'],
-  ['Composable', 'Every menu, toolbar and primitive exported for your own assembly'],
+/** Every `DaEditor` prop, kept in step with the exported interface. */
+const PROPS: { name: string; type: string; def: string; body: string }[] = [
+  { name: 'defaultValue', type: 'EditorValue', def: '—', body: 'Initial document. Track updates with onChange.' },
+  { name: 'defaultHtml', type: 'string', def: '—', body: 'Initial document as HTML. Ignored when defaultValue is set.' },
+  { name: 'onChange', type: '(value) => void', def: '—', body: 'Fires on every document change.' },
+  { name: 'placeholder', type: 'string', def: "'Write something…'", body: 'Shown only while the document is empty.' },
+  { name: 'readOnly', type: 'boolean', def: 'false', body: 'Locks the document and hides the editing chrome.' },
+  { name: 'mode', type: "'editing' | 'viewing'", def: "'editing'", body: "'viewing' locks the document, like readOnly." },
+  { name: 'theme', type: "'light' | 'dark' | 'system'", def: "'light'", body: "'system' follows the OS setting and updates live." },
+  { name: 'onToggleTheme', type: '() => void', def: '—', body: 'Renders the theme toggle in the toolbar and fires on click.' },
+  { name: 'fixedToolbar', type: 'boolean', def: 'true', body: 'The toolbar pinned above the content.' },
+  { name: 'floatingToolbar', type: 'boolean', def: 'true', body: 'The toolbar that appears over a selection.' },
+  { name: 'slashMenu', type: 'boolean', def: 'true', body: 'The / block menu.' },
+  { name: 'autoformat', type: 'boolean', def: 'true', body: 'Markdown input rules while typing.' },
+  { name: 'wordCount', type: 'boolean', def: 'false', body: 'Words, characters and reading time, in a footer bar.' },
+  { name: 'mentionables', type: 'Mentionable[]', def: '—', body: 'Entries offered by the @ combobox. Omit to disable mentions.' },
+  { name: 'onAskAi', type: '() => void', def: '—', body: 'Renders the Ask AI button and binds Ctrl+J.' },
+  { name: 'onUpload', type: '(file, kind) => Promise<string>', def: '—', body: 'Uploads a file and returns its URL. Falls back to an object URL.' },
+  { name: 'onPickMedia', type: '(kind) => Promise<Picked | null>', def: '—', body: 'Opens your own media library instead of the built-in dialog.' },
+  { name: 'maxWidth', type: 'string', def: '—', body: 'Constrains the text column, like a document editor.' },
+  { name: 'minHeight', type: 'string', def: "'320px'", body: "Pass '0' to fill a flex parent instead." },
+  { name: 'maxHeight', type: 'string', def: '—', body: 'Caps the height; the document scrolls inside it.' },
+  { name: 'autoFocus', type: 'boolean', def: 'false', body: 'Focuses the document on mount.' },
+  { name: 'spellCheck', type: 'boolean', def: 'true', body: "The browser's native spell checking." },
+  { name: 'className', type: 'string', def: '—', body: 'Applied to the editor root.' },
+  { name: 'style', type: 'CSSProperties', def: '—', body: 'Applied to the editor root.' },
+];
+
+/** What each feature does and how it is reached. */
+const FEATURES: { name: string; how: string; body: string }[] = [
+  { name: 'Slash menu', how: 'Type /', body: 'Grouped and filterable block inserter. Arrow keys move, Enter inserts, Escape closes.' },
+  { name: 'Mentions', how: 'Type @', body: 'Combobox over the mentionables you pass. The editor handles matching, keyboard nav and insertion.' },
+  { name: 'Find & replace', how: 'Ctrl/Cmd+F', body: 'Live match count with every hit highlighted in the document. Case toggle, replace one, replace all.' },
+  { name: 'Markdown shortcuts', how: 'Type ## or - ', body: 'Input rules convert as you type. Pasting Markdown is parsed into real blocks too.' },
+  { name: 'Tables', how: 'Slash menu or toolbar', body: 'Drag a column border to resize. Add and remove rows and columns from the contextual toolbar.' },
+  { name: 'Images', how: 'Drop, paste or toolbar', body: 'Drag the side handles to resize, the gutter grip to reorder, and align left, centre or right.' },
+  { name: 'Uploads', how: 'Drag & drop or paste', body: 'Files and screenshots route through your onUpload handler. Without one they become local object URLs.' },
+  { name: 'Code blocks', how: 'Slash menu or ```', body: 'Prism highlighting across 20+ languages, with a language picker on the block.' },
+  { name: 'Import', how: 'Toolbar', body: 'HTML, Markdown and .docx via Mammoth — tables, lists and callouts survive the round trip.' },
+  { name: 'Export', how: 'Toolbar or ref', body: 'HTML, Markdown or Slate JSON. getHTML({ inlineStyles: true }) embeds the styling.' },
+  { name: 'Word count', how: 'wordCount prop', body: 'Words, characters and an estimated reading time, in a footer bar.' },
+  { name: 'Undo grouping', how: 'Ctrl+Z', body: 'Typing is grouped by word and by pause, so one undo never swallows a whole paragraph.' },
+];
+
+/** The ref handle, and the helpers worth knowing about. */
+const API: { name: string; sig: string; body: string }[] = [
+  { name: 'getValue', sig: '() => EditorValue', body: 'The document as Slate JSON.' },
+  { name: 'setValue', sig: '(value) => void', body: 'Replaces the document wholesale.' },
+  { name: 'getHTML', sig: '(options?) => string', body: 'Serialized HTML. Pass { inlineStyles: true } to embed the styling.' },
+  { name: 'getMarkdown', sig: '() => string', body: 'The document as Markdown.' },
+  { name: 'getText', sig: '() => string', body: 'Plain text, for search indexing or a summary.' },
+  { name: 'setHTML', sig: '(html) => void', body: 'Replaces the document from an HTML string.' },
+  { name: 'focus', sig: '() => void', body: 'Moves focus into the document.' },
+  { name: 'clear', sig: '() => void', body: 'Empties the document.' },
+  { name: 'editor', sig: 'DaEditor', body: 'The underlying Slate editor, for your own transforms.' },
+];
+
+/** The custom properties every colour in the editor resolves through. */
+const TOKENS: [string, string][] = [
+  ['--da-bg', 'Editor and menu background'],
+  ['--da-fg', 'Body text'],
+  ['--da-muted', 'Secondary text and carets'],
+  ['--da-faint', 'Disabled text and placeholders'],
+  ['--da-border', 'Hairlines and menu borders'],
+  ['--da-surface', 'Insets: inputs, code blocks, slash icons'],
+  ['--da-surface-hover', 'Hover fill on buttons and menu items'],
+  ['--da-accent', 'Active state; neutral by default'],
+  ['--da-accent-soft', 'Active background behind toolbar buttons'],
+  ['--da-tb-icon', 'Toolbar and menu icons'],
+  ['--da-link', 'Links in the document'],
+  ['--da-selection', 'Text selection'],
+  ['--da-radius', 'Corner radius for panels'],
+  ['--da-font', 'UI and document font stack'],
+  ['--da-mono', 'Code and monospace stack'],
 ];
 
 const INSTALL = 'npm install da-text-editor';
@@ -240,7 +300,16 @@ export function Home({ navigate, onToggleTheme, dark }: HomeProps) {
   return (
     <div className="pg-page">
       <header className="pg-nav">
-        <span className="pg-brand">da-text-editor</span>
+        <a className="pg-brand" href="#/">
+          <img
+            className="pg-brand__mark"
+            src="/da-editor-logo-512.png"
+            alt=""
+            width={26}
+            height={26}
+          />
+          da-text-editor
+        </a>
         <div className="pg-nav__actions">
           <a
             className="pg-navlink"
@@ -270,19 +339,22 @@ export function Home({ navigate, onToggleTheme, dark }: HomeProps) {
       </header>
 
       <section className="pg-hero">
-        <span className="pg-badge">
-          <SparklesIcon size={13} />
-          Built on Slate
-        </span>
+        <img
+          className="pg-hero__mark"
+          src="/da-editor-logo-512.png"
+          alt="da-text-editor"
+          width={76}
+          height={76}
+        />
         <h1 className="pg-hero__title">
-          A rich-text editor
+          Everything a rich-text editor
           <br />
-          you can ship on Monday.
+          needs. In one install.
         </h1>
         <p className="pg-hero__lead">
-          Tables, mentions, slash commands, Markdown shortcuts, code highlighting
-          and a full toolbar — in one install, 81&nbsp;KB, no plugin graph to
-          assemble.
+          Tables, mentions, slash commands, find &amp; replace, image and column
+          resizing, drag-and-drop uploads, Markdown shortcuts and a full toolbar —
+          working on the first render, with no plugin graph to assemble.
         </p>
 
         <div className="pg-hero__actions">
@@ -428,12 +500,92 @@ export function Home({ navigate, onToggleTheme, dark }: HomeProps) {
         </div>
       </section>
 
-      <section className="pg-section">
-        <h2 className="pg-h2">Everything in the box</h2>
+      <section className="pg-section" id="features">
+        <h2 className="pg-h2">Features</h2>
+        <p className="pg-lead">
+          Everything below is on by default. Nothing here is a plugin you install
+          separately or a peer dependency you resolve yourself.
+        </p>
+        <div className="pg-docs-table">
+          <div className="pg-docs-table__head pg-docs-table__row pg-docs-table__row--feat">
+            <span>Feature</span>
+            <span>Reached by</span>
+            <span>Detail</span>
+          </div>
+          {FEATURES.map((feature) => (
+            <div
+              className="pg-docs-table__row pg-docs-table__row--feat"
+              key={feature.name}
+            >
+              <span className="pg-docs-table__name">{feature.name}</span>
+              <span>
+                <code className="pg-code-inline">{feature.how}</code>
+              </span>
+              <span className="pg-docs-table__body">{feature.body}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="pg-section" id="props">
+        <h2 className="pg-h2">Props</h2>
+        <p className="pg-lead">
+          Every prop on <code className="pg-code-inline">&lt;DaEditor /&gt;</code>.
+          All of them are optional.
+        </p>
+        <div className="pg-docs-table">
+          <div className="pg-docs-table__head pg-docs-table__row">
+            <span>Prop</span>
+            <span>Type</span>
+            <span>Default</span>
+            <span>Detail</span>
+          </div>
+          {PROPS.map((prop) => (
+            <div className="pg-docs-table__row" key={prop.name}>
+              <span className="pg-docs-table__name">{prop.name}</span>
+              <span className="pg-docs-table__type">{prop.type}</span>
+              <span className="pg-docs-table__def">{prop.def}</span>
+              <span className="pg-docs-table__body">{prop.body}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="pg-section" id="api">
+        <h2 className="pg-h2">Ref API</h2>
+        <p className="pg-lead">
+          Pass a <code className="pg-code-inline">ref</code> to read and write the
+          document from outside.
+        </p>
+        <div className="pg-docs-table">
+          <div className="pg-docs-table__head pg-docs-table__row pg-docs-table__row--api">
+            <span>Method</span>
+            <span>Signature</span>
+            <span>Detail</span>
+          </div>
+          {API.map((entry) => (
+            <div className="pg-docs-table__row pg-docs-table__row--api" key={entry.name}>
+              <span className="pg-docs-table__name">{entry.name}</span>
+              <span className="pg-docs-table__type">{entry.sig}</span>
+              <span className="pg-docs-table__body">{entry.body}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="pg-section" id="theming">
+        <h2 className="pg-h2">Theming</h2>
+        <p className="pg-lead">
+          Every colour resolves through a custom property on{' '}
+          <code className="pg-code-inline">.da-editor</code>. Override any of them
+          in your own stylesheet — no build step, no theme object.
+        </p>
         <dl className="pg-caps">
-          {CAPABILITIES.map(([term, detail]) => (
-            <div className="pg-caps__row" key={term}>
-              <dt>{term}</dt>
+          {TOKENS.map(([token, detail]) => (
+            <div className="pg-caps__row" key={token}>
+              <dt>
+                <code className="pg-code-inline">{token}</code>
+              </dt>
               <dd>{detail}</dd>
             </div>
           ))}
