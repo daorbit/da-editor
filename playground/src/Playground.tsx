@@ -1,5 +1,11 @@
 import { useRef, useState } from 'react';
-import { DaEditor, type DaEditorHandle, type Mentionable, type Theme } from '../../src';
+import {
+  AlertDialog,
+  DaEditor,
+  type DaEditorHandle,
+  type Mentionable,
+  type Theme,
+} from '../../src';
 import { DEMO_CONTENT } from './demoContent';
 
 const MENTIONABLES: Mentionable[] = [
@@ -13,6 +19,7 @@ const MENTIONABLES: Mentionable[] = [
 export function Playground() {
   const ref = useRef<DaEditorHandle>(null);
   const [theme, setTheme] = useState<Theme>('light');
+  const [notice, setNotice] = useState<string | null>(null);
 
   return (
     <div className="pg-editor-page">
@@ -25,11 +32,20 @@ export function Playground() {
         defaultValue={DEMO_CONTENT}
         className="pg-editor-fill"
         minHeight="0"
-        maxWidth="820px"
+        maxWidth="1100px"
         autoFocus
         mentionables={MENTIONABLES}
-        onAskAi={() => window.alert('Ask AI — wire this to your own endpoint.')}
+        onAskAi={() => setNotice('Wire this to your own endpoint.')}
       />
+
+    
+      <div className="da-editor" data-theme={theme} style={{ display: 'contents' }}>
+        <AlertDialog
+          message={notice}
+          title="Ask AI"
+          onClose={() => setNotice(null)}
+        />
+      </div>
     </div>
   );
 }

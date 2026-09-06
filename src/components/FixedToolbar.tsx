@@ -2,7 +2,7 @@ import { Fragment, useRef, useState, type ReactNode } from 'react';
 import { Editor, Element as SlateElement } from 'slate';
 import { ReactEditor, useSlate } from 'slate-react';
 import {
-  AlignJustifyIcon,
+  LineHeightIcon,
   BulletedListIcon,
   CellIcon,
   ClearFormattingIcon,
@@ -464,7 +464,7 @@ export function FixedToolbar({
             ))
           }
         </ToolbarDropdown>
-        <ToolbarDropdown label="Line height" icon={<AlignJustifyIcon />}>
+        <ToolbarDropdown label="Line height" icon={<LineHeightIcon />}>
           {(close) =>
             LINE_HEIGHTS.map((value) => (
               <MenuItem
@@ -494,7 +494,7 @@ export function FixedToolbar({
             />
           ))}
         </SubMenu>
-        <SubMenu icon={<AlignJustifyIcon />} label="Line height">
+        <SubMenu icon={<LineHeightIcon />} label="Line height">
           {LINE_HEIGHTS.map((value) => (
             <MenuItem
               key={value}
@@ -800,12 +800,9 @@ export function FixedToolbar({
 
       </div>
 
-      {/* Pinned rather than inside the scrolling row: "More" is where every
-          collapsed group goes, so it is the one control that must never itself
-          be pushed out of view. In the row it was competing for the same space
-          as the groups it exists to hold. */}
+
       <div className="da-tb__overflow">
-        {visibleGroups.length > 0 && <ToolbarSeparator />}
+        <ToolbarSeparator />
 
         <ToolbarDropdown label="More" icon={<MoreIcon />}>
           {(close) => (

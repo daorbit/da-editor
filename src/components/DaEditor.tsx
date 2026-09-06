@@ -32,7 +32,7 @@ import {
   type SerializeHtmlOptions,
   serializeMarkdown,
 } from '../core/serialize';
-import { insertMedia } from '../core/media';
+import { insertFiles, insertMedia } from '../core/media';
 import { moveToCell } from '../core/tables';
 import {
   ELEMENT,
@@ -52,6 +52,10 @@ import { FloatingToolbar } from './FloatingToolbar';
 import { SlashMenu } from './SlashMenu';
 import { LinkPopover } from './LinkPopover';
 import { MentionCombobox } from './MentionCombobox';
+import { PromptDialog, type PromptRequest } from './PromptDialog';
+import { AlertDialog } from './AlertDialog';
+import { DialogContext, type DialogApi } from './dialogContext';
+import { applyBlockDrop, isBlockDrag } from './BlockDragHandle';
 import { MediaDialog } from './MediaDialog';
 import { TableToolbar } from './TableToolbar';
 import { MediaToolbar } from './MediaToolbar';
@@ -187,6 +191,17 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
   const [value, setValue] = useState<EditorValue>(initialValue);
   const [linkOpen, setLinkOpen] = useState(false);
   const [mediaKind, setMediaKind] = useState<MediaKind | null>(null);
+  const [promptRequest, setPromptRequest] = useState<PromptRequest | null>(null);
+  const [alert, setAlert] = useState<{ title: string; message: string } | null>(null);
+
+  const dialogs = useMemo<DialogApi>(
+    () => ({
+      prompt: setPromptRequest,
+      alert: (message, title) =>
+        setAlert({ title: title ?? 'Something went wrong', message }),
+    }),
+    [],
+  );
 
   /**
    * Opens the host's library when it has one, and the built-in dialog when it
@@ -278,8 +293,73 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
       replaceAll(parsed);
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : 'Could not read that file.';
-      window.alert(`Import failed: ${message}`);
+      setAlert({ title: 'Import failed', message });
     }
+  };
+
+  const [dropActive, setDropActive] = useState(false);
+
+ 
+  const isFileDrag = (event: React.DragEvent) =>
+    Array.from(event.dataTransfer.types).includes('Files');
+
+  const handleDragOver = (event: React.DragEvent) => {
+    if (locked) return;
+
+    // A block being reordered needs the drop allowed, but not the file-drop
+    // overlay — the target is a position in the document, not the whole editor.
+    if (isBlockDrag(event.dataTransfer)) {
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'move';
+      return;
+    }
+
+    if (!isFileDrag(event)) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'copy';
+    setDropActive(true);
+  };
+
+  const handleDragLeave = (event: React.DragEvent) => {
+    if (event.currentTarget.contains(event.relatedTarget as globalThis.Node)) return;
+    setDropActive(false);
+  };
+
+  const handleDrop = (event: React.DragEvent) => {
+    if (locked) return;
+
+    // A block being reordered by its grip, handled before files: this drag
+    // carries no files, so the file path below would ignore it.
+    if (isBlockDrag(event.dataTransfer)) {
+      const at = ReactEditor.findEventRange(editor, event);
+      if (applyBlockDrop(editor, event.dataTransfer, at ? { path: at.anchor.path } : null)) {
+        event.preventDefault();
+        setDropActive(false);
+        return;
+      }
+    }
+
+    const files = Array.from(event.dataTransfer.files);
+    if (files.length === 0) return;
+
+    event.preventDefault();
+    setDropActive(false);
+
+    const at = ReactEditor.findEventRange(editor, event);
+    if (at) Transforms.select(editor, at);
+
+    void insertFiles(editor, files, onUpload);
+  };
+
+  const handlePaste = (event: React.ClipboardEvent) => {
+    if (locked) return;
+    const files = Array.from(event.clipboardData.files);
+    if (files.length === 0) return;
+
+    // Screenshot pastes arrive as files with no useful text alternative, so
+    // they would otherwise land as nothing at all.
+    event.preventDefault();
+    void insertFiles(editor, files, onUpload);
   };
 
   const handleExport = (format: 'html' | 'markdown') => {
@@ -404,6 +484,7 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
       data-mode={mode}
       style={style}
     >
+      <DialogContext.Provider value={dialogs}>
       <Slate key={slateKey} editor={editor} initialValue={value} onChange={handleChange}>
         {fixedToolbar && !readOnly && (
           <FixedToolbar
@@ -422,7 +503,10 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
           // A `minHeight` of "0" lets the editor fill a flex parent instead.
           style={{ minHeight: minHeight === '0' ? undefined : minHeight, maxHeight }}
         >
-          <div className="da-editor__container" style={{ maxWidth }}>
+          <div
+            className={`da-editor__container${dropActive ? ' da-editor__container--dropping' : ''}`}
+            style={{ maxWidth }}
+          >
             <Editable
               className="da-editor__content"
               readOnly={locked}
@@ -434,6 +518,10 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
               renderLeaf={renderLeaf}
               decorate={decorateCode}
               onKeyDown={handleKeyDown}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              onPaste={handlePaste}
             />
 
             {floatingToolbar && !locked && (
@@ -466,7 +554,15 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
           onInsert={(kind, url, name) => insertMedia(editor, kind, url, { name })}
           onClose={() => setMediaKind(null)}
         />
+
+        <PromptDialog request={promptRequest} onClose={() => setPromptRequest(null)} />
+        <AlertDialog
+          message={alert?.message ?? null}
+          title={alert?.title}
+          onClose={() => setAlert(null)}
+        />
       </Slate>
+      </DialogContext.Provider>
     </div>
   );
 });

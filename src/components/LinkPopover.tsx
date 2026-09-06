@@ -63,7 +63,14 @@ export function LinkPopover({ open, onClose }: LinkPopoverProps) {
       top: rect.bottom - (base?.top ?? 0) + 8,
       left: Math.max(4, rect.left - (base?.left ?? 0)),
     });
-  }, [open, editor]);
+    // `editor` is deliberately not a dependency. `useSlate` returns a fresh
+    // object identity on every editor change, so including it would re-run this
+    // on each keystroke — clearing the input through `setUrl('')` and pinning
+    // the popover open by re-setting `position` after a close. This should fire
+    // on the open/close transition only; the editor it reads is the same
+    // instance throughout.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   // Separate from the effect above: the input does not exist until `position`
   // is set and the popover renders, so focusing there would find a null ref.
@@ -98,6 +105,9 @@ export function LinkPopover({ open, onClose }: LinkPopoverProps) {
     restore();
     wrapLink(editor, href);
     onClose();
+    // Focus goes back to the document, not the input that is being unmounted,
+    // so typing continues where the link was just inserted.
+    ReactEditor.focus(editor);
   };
 
   const remove = () => {

@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react';
+import { useRef, useState, type CSSProperties } from 'react';
 import { Element as SlateElement, Node, Transforms } from 'slate';
 import {
   ReactEditor,
@@ -9,6 +9,12 @@ import {
 import { ELEMENT } from '../core/types';
 import { isEditorEmpty } from '../core/transforms';
 import { CodeBlock } from './CodeBlock';
+import { useDialogs } from './dialogContext';
+import { DatePicker } from './DatePicker';
+import { BlockDragHandle } from './BlockDragHandle';
+
+/** Narrow enough to sit inline with text, wide enough to still grab a handle. */
+const MIN_IMAGE_WIDTH = 80;
 
 function blockStyle(element: RenderElementProps['element']): CSSProperties {
   return {
@@ -247,22 +253,99 @@ function Callout({ attributes, children, element }: RenderElementProps) {
 }
 
 function Image({ attributes, children, element }: RenderElementProps) {
+  const editor = useSlateStatic();
   const selected = useSelected();
   const url = 'url' in element ? element.url : '';
   const caption = 'caption' in element && element.caption ? element.caption : '';
   const width = 'width' in element ? element.width : undefined;
+  const imgRef = useRef<HTMLImageElement>(null);
+  const [dragWidth, setDragWidth] = useState<number | null>(null);
+
+  /**
+   * Pointer events rather than mouse events, so a resize works with touch and
+   * pen as well; capture keeps the drag alive when the pointer leaves the
+   * handle, which it does immediately on any real drag.
+   */
+  const startResize = (event: React.PointerEvent, edge: 'left' | 'right') => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const img = imgRef.current;
+    if (!img) return;
+
+    const startX = event.clientX;
+    const startWidth = img.getBoundingClientRect().width;
+    const container = img.closest<HTMLElement>('.da-editor__container');
+    const maxWidth = container ? container.clientWidth : Number.POSITIVE_INFINITY;
+
+    const handle = event.currentTarget as HTMLElement;
+    handle.setPointerCapture(event.pointerId);
+
+    const onMove = (move: PointerEvent) => {
+      const delta = move.clientX - startX;
+      // Dragging the left handle right shrinks the image, so its delta is
+      // inverted relative to the right handle's.
+      const next = startWidth + (edge === 'right' ? delta : -delta);
+      setDragWidth(Math.round(Math.min(Math.max(next, MIN_IMAGE_WIDTH), maxWidth)));
+    };
+
+    const onUp = () => {
+      handle.releasePointerCapture(event.pointerId);
+      handle.removeEventListener('pointermove', onMove);
+      handle.removeEventListener('pointerup', onUp);
+      handle.removeEventListener('pointercancel', onUp);
+
+      // Committed once at the end rather than on every move: a Slate
+      // transform per pointer event would flood the history with a hundred
+      // undo steps for one drag.
+      setDragWidth((finalWidth) => {
+        if (finalWidth !== null) {
+          Transforms.setNodes(
+            editor,
+            { width: finalWidth },
+            { at: ReactEditor.findPath(editor, element) },
+          );
+        }
+        return null;
+      });
+    };
+
+    handle.addEventListener('pointermove', onMove);
+    handle.addEventListener('pointerup', onUp);
+    handle.addEventListener('pointercancel', onUp);
+  };
+
+  const shownWidth = dragWidth ?? width;
 
   return (
-    <div {...attributes} className="da-media-wrap">
+    <div {...attributes} className="da-media-wrap" style={{ textAlign: element.align }}>
+      <BlockDragHandle element={element} />
       <div contentEditable={false}>
         <figure className="da-figure">
-          <img
-            src={url}
-            alt={caption}
-            width={width}
-            className={`da-image${selected ? ' da-media--selected' : ''}`}
-            draggable={false}
-          />
+          <span
+            className={`da-image-frame${selected ? ' da-image-frame--selected' : ''}`}
+            style={shownWidth ? { width: shownWidth } : undefined}
+          >
+            <img
+              ref={imgRef}
+              src={url}
+              alt={caption}
+              className={`da-image${selected ? ' da-media--selected' : ''}`}
+              draggable={false}
+            />
+            <span
+              className="da-image-handle da-image-handle--left"
+              role="separator"
+              aria-label="Resize image"
+              onPointerDown={(event) => startResize(event, 'left')}
+            />
+            <span
+              className="da-image-handle da-image-handle--right"
+              role="separator"
+              aria-label="Resize image"
+              onPointerDown={(event) => startResize(event, 'right')}
+            />
+          </span>
           {caption && <figcaption className="da-figcaption">{caption}</figcaption>}
         </figure>
       </div>
@@ -276,7 +359,8 @@ function Video({ attributes, children, element }: RenderElementProps) {
   const url = 'url' in element ? element.url : '';
 
   return (
-    <div {...attributes} className="da-media-wrap">
+    <div {...attributes} className="da-media-wrap" style={{ textAlign: element.align }}>
+      <BlockDragHandle element={element} />
       <div contentEditable={false}>
         {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
         <video
@@ -295,7 +379,8 @@ function Audio({ attributes, children, element }: RenderElementProps) {
   const url = 'url' in element ? element.url : '';
 
   return (
-    <div {...attributes} className="da-media-wrap">
+    <div {...attributes} className="da-media-wrap" style={{ textAlign: element.align }}>
+      <BlockDragHandle element={element} />
       <div contentEditable={false}>
         {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
         <audio
@@ -315,7 +400,8 @@ function FileAttachment({ attributes, children, element }: RenderElementProps) {
   const name = 'name' in element && element.name ? element.name : url.split('/').pop() || 'File';
 
   return (
-    <div {...attributes} className="da-media-wrap">
+    <div {...attributes} className="da-media-wrap" style={{ textAlign: element.align }}>
+      <BlockDragHandle element={element} />
       <div contentEditable={false}>
         <a
           href={url}
@@ -338,7 +424,8 @@ function Embed({ attributes, children, element }: RenderElementProps) {
   const url = 'url' in element ? element.url : '';
 
   return (
-    <div {...attributes} className="da-media-wrap">
+    <div {...attributes} className="da-media-wrap" style={{ textAlign: element.align }}>
+      <BlockDragHandle element={element} />
       <div contentEditable={false}>
         <div className={`da-embed${selected ? ' da-media--selected' : ''}`}>
           <iframe
@@ -394,7 +481,7 @@ function Link({ attributes, children, element }: RenderElementProps) {
   );
 }
 
-function TableOfContents({ attributes, children }: RenderElementProps) {
+function TableOfContents({ attributes, children, element }: RenderElementProps) {
   const editor = useSlateStatic();
   const selected = useSelected();
 
@@ -406,7 +493,8 @@ function TableOfContents({ attributes, children }: RenderElementProps) {
   );
 
   return (
-    <div {...attributes} className="da-media-wrap">
+    <div {...attributes} className="da-media-wrap" style={{ textAlign: element.align }}>
+      <BlockDragHandle element={element} />
       <div contentEditable={false}>
         <nav className={`da-toc${selected ? ' da-media--selected' : ''}`}>
           <div className="da-toc__title">Table of contents</div>
@@ -441,14 +529,27 @@ function Equation({ attributes, children, element }: RenderElementProps) {
   const selected = useSelected();
   const formula = 'formula' in element && element.formula ? element.formula : '';
 
+  const dialogs = useDialogs();
+
   const edit = () => {
-    const next = window.prompt('Equation (LaTeX)', formula);
-    if (next === null) return;
-    Transforms.setNodes(editor, { formula: next }, { at: ReactEditor.findPath(editor, element) });
+    dialogs.prompt({
+      title: 'Equation',
+      initialValue: formula,
+      placeholder: 'LaTeX, e.g. E = mc^2',
+      multiline: true,
+      onSubmit: (next) => {
+        Transforms.setNodes(
+          editor,
+          { formula: next },
+          { at: ReactEditor.findPath(editor, element) },
+        );
+      },
+    });
   };
 
   return (
-    <div {...attributes} className="da-media-wrap">
+    <div {...attributes} className="da-media-wrap" style={{ textAlign: element.align }}>
+      <BlockDragHandle element={element} />
       <div contentEditable={false}>
         <div
           className={`da-equation${selected ? ' da-media--selected' : ''}`}
@@ -468,6 +569,7 @@ function Equation({ attributes, children, element }: RenderElementProps) {
 function InlineEquation({ attributes, children, element }: RenderElementProps) {
   const editor = useSlateStatic();
   const selected = useSelected();
+  const dialogs = useDialogs();
   const formula = 'formula' in element && element.formula ? element.formula : '';
 
   return (
@@ -478,13 +580,18 @@ function InlineEquation({ attributes, children, element }: RenderElementProps) {
       role="button"
       tabIndex={0}
       onClick={() => {
-        const next = window.prompt('Inline equation (LaTeX)', formula);
-        if (next === null) return;
-        Transforms.setNodes(
-          editor,
-          { formula: next },
-          { at: ReactEditor.findPath(editor, element) },
-        );
+        dialogs.prompt({
+          title: 'Inline equation',
+          initialValue: formula,
+          placeholder: 'LaTeX, e.g. x^2 + y^2',
+          onSubmit: (next) => {
+            Transforms.setNodes(
+              editor,
+              { formula: next },
+              { at: ReactEditor.findPath(editor, element) },
+            );
+          },
+        });
       }}
       onKeyDown={() => undefined}
     >
@@ -495,7 +602,9 @@ function InlineEquation({ attributes, children, element }: RenderElementProps) {
 }
 
 function DateChip({ attributes, children, element }: RenderElementProps) {
+  const editor = useSlateStatic();
   const selected = useSelected();
+  const [open, setOpen] = useState(false);
   const iso = 'date' in element && element.date ? element.date : '';
   const label = iso
     ? new Date(iso).toLocaleDateString(undefined, {
@@ -506,12 +615,34 @@ function DateChip({ attributes, children, element }: RenderElementProps) {
     : 'Date';
 
   return (
-    <span
-      {...attributes}
-      contentEditable={false}
-      className={`da-date${selected ? ' da-mention--selected' : ''}`}
-    >
-      {label}
+    <span {...attributes} contentEditable={false} className="da-date-wrap">
+      <span
+        className={`da-date${selected ? ' da-mention--selected' : ''}`}
+        role="button"
+        tabIndex={0}
+        onClick={() => setOpen((value) => !value)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            setOpen((value) => !value);
+          }
+        }}
+      >
+        {label}
+      </span>
+      {open && (
+        <DatePicker
+          value={iso || undefined}
+          onSelect={(date) => {
+            Transforms.setNodes(
+              editor,
+              { date: date.toISOString() },
+              { at: ReactEditor.findPath(editor, element) },
+            );
+          }}
+          onClose={() => setOpen(false)}
+        />
+      )}
       {children}
     </span>
   );
@@ -520,6 +651,7 @@ function DateChip({ attributes, children, element }: RenderElementProps) {
 function Footnote({ attributes, children, element }: RenderElementProps) {
   const editor = useSlateStatic();
   const selected = useSelected();
+  const dialogs = useDialogs();
   const note = 'note' in element && element.note ? element.note : '';
 
   return (
@@ -531,9 +663,19 @@ function Footnote({ attributes, children, element }: RenderElementProps) {
       role="button"
       tabIndex={0}
       onClick={() => {
-        const next = window.prompt('Footnote', note);
-        if (next === null) return;
-        Transforms.setNodes(editor, { note: next }, { at: ReactEditor.findPath(editor, element) });
+        dialogs.prompt({
+          title: 'Footnote',
+          initialValue: note,
+          placeholder: 'Note text…',
+          multiline: true,
+          onSubmit: (next) => {
+            Transforms.setNodes(
+              editor,
+              { note: next },
+              { at: ReactEditor.findPath(editor, element) },
+            );
+          },
+        });
       }}
       onKeyDown={() => undefined}
     >

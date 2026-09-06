@@ -15,6 +15,12 @@ export { MentionCombobox } from './components/MentionCombobox';
 export type { MentionComboboxProps } from './components/MentionCombobox';
 export { MediaDialog } from './components/MediaDialog';
 export type { MediaDialogProps } from './components/MediaDialog';
+export { PromptDialog } from './components/PromptDialog';
+export type { PromptDialogProps, PromptRequest } from './components/PromptDialog';
+export { AlertDialog } from './components/AlertDialog';
+export type { AlertDialogProps } from './components/AlertDialog';
+export { DatePicker } from './components/DatePicker';
+export type { DatePickerProps } from './components/DatePicker';
 export { EmojiPicker } from './components/EmojiPicker';
 export type { EmojiPickerProps } from './components/EmojiPicker';
 export { CodeBlock } from './components/CodeBlock';
@@ -115,6 +121,8 @@ export {
 } from './core/tables';
 export {
   insertMedia,
+  insertFiles,
+  kindForFile,
   pickFile,
   resolveFileUrl,
   toEmbedUrl,

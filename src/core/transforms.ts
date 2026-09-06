@@ -12,6 +12,12 @@ const ALIGN_TYPES: ElementType[] = [
   ELEMENT.h5,
   ELEMENT.h6,
   ELEMENT.blockquote,
+
+  ELEMENT.image,
+  ELEMENT.video,
+  ELEMENT.audio,
+  ELEMENT.file,
+  ELEMENT.embed,
 ];
 
 /* ---------------------------------------------------------------- marks -- */
@@ -174,6 +180,11 @@ export function wrapLink(editor: DaEditor, url: string): void {
       url,
       children: [{ text: url }],
     });
+    // Followed by an empty text node, and the cursor placed in it: without a
+    // node after the link the cursor stays inside it, and everything typed next
+    // is swallowed into the link's own text.
+    Transforms.insertNodes(editor, { text: '' });
+    Transforms.collapse(editor, { edge: 'end' });
   } else {
     Transforms.wrapNodes(
       editor,

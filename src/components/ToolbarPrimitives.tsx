@@ -71,6 +71,10 @@ function findClipBoundsX(from: HTMLElement): { left: number; right: number } {
 }
 const SEPARATOR_WIDTH = 9;
 
+/* Preferred menu height. Kept in step with `.da-tb__menu`'s `max-height`, which
+   applies before this component has measured anything. */
+const MENU_MAX_HEIGHT = 320;
+
  
 
 export function useOverflowCollapse(
@@ -116,13 +120,19 @@ export function useOverflowCollapse(
       // boundary, to keep a group that does not quite fit.
       const outerWidth = boundsEl.getBoundingClientRect().width;
 
-      // The pinned cluster on the right is never collapsed, so its width is not
-      // space the groups can use.
+      // The pinned clusters on the right are never collapsed, so their width is
+      // not space the groups can use. Both are measured rather than assumed:
+      // the "More" cluster's real width depends on the host's toolbar padding
+      // and font, and a hardcoded reserve that is too small leaves the last
+      // group half-drawn under it.
       const endEl = toolbarEl.querySelector<HTMLElement>('.da-tb__end');
       const endWidth = endEl ? endEl.getBoundingClientRect().width : 0;
+      const overflowEl = toolbarEl.querySelector<HTMLElement>('.da-tb__overflow');
+      const overflowWidth = overflowEl
+        ? overflowEl.getBoundingClientRect().width
+        : OVERFLOW_RESERVE;
 
-      const available =
-        outerWidth - padding - endWidth - OVERFLOW_RESERVE - SEPARATOR_WIDTH;
+      const available = outerWidth - padding - endWidth - overflowWidth - SEPARATOR_WIDTH;
 
       let used = 0;
       let fit = 0;
@@ -142,13 +152,41 @@ export function useOverflowCollapse(
     };
 
     recalc();
+
+    /*
+     * Only the bounds element is observed, never the row that collapses.
+     *
+     * Observing the row is what made this fail: `recalc` sets state, React
+     * re-renders, the row's width changes, and that change re-notifies the
+     * observer from inside its own callback. The browser treats that as a
+     * resize loop — it logs "ResizeObserver loop completed with undelivered
+     * notifications" and *drops* the pending pass, leaving the count stale at
+     * whatever the interrupted pass had. Opening devtools forces a fresh layout
+     * from outside the loop, which delivers the dropped notification and makes
+     * the toolbar suddenly correct; that is why it only ever looked right with
+     * devtools open.
+     *
+     * The row is not needed as an input anyway. Group widths come from the
+     * measure row, which is `width: max-content` and so is unaffected by how
+     * many groups are currently folded — the result is a pure function of the
+     * available width, and one pass always settles it.
+     */
     const observer = new ResizeObserver(recalc);
-    // The editor is what changes on a window resize *and* when a side panel
-    // opens beside it; the row is what changes as groups fold away, which is
-    // how the loop settles.
     observer.observe(boundsEl);
-    observer.observe(rowEl);
-    return () => observer.disconnect();
+
+    // The first pass can run before the host's web font has loaded, which makes
+    // every button narrower than it will end up. Nothing resizes the editor
+    // afterwards, so without this the toolbar keeps a count measured against
+    // the fallback font for the life of the page.
+    let cancelled = false;
+    document.fonts?.ready.then(() => {
+      if (!cancelled) recalc();
+    });
+
+    return () => {
+      cancelled = true;
+      observer.disconnect();
+    };
     // Re-measure whenever the number of groups changes (props/state driven).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groupCount]);
@@ -302,7 +340,12 @@ export function ToolbarDropdown({
     const above = trigger.top - clip.top - GAP;
     // Only flip up when below is genuinely cramped and above is roomier.
     const up = below < Math.min(rect.height, 180) && above > below;
-    setPlacement({ up, maxHeight: Math.max(120, Math.floor(up ? above : below)) });
+    // The room available is a *ceiling*, not a target: in a full-height editor
+    // there may be 900px below the trigger, and a menu that grows to fill it is
+    // a list nobody can scan. `MENU_MAX_HEIGHT` is the preferred size, and the
+    // available space only ever shrinks it further.
+    const room = Math.max(120, Math.floor(up ? above : below));
+    setPlacement({ up, maxHeight: Math.min(MENU_MAX_HEIGHT, room) });
   }, [open]);
 
   useEffect(() => {

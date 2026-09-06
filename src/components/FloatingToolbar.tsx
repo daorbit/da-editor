@@ -129,7 +129,10 @@ export function FloatingToolbar({ onAskAi, onLink }: FloatingToolbarProps) {
       {onAskAi && (
         <>
           <ToolbarButton icon={<SparklesIcon />} label="Ask AI" onClick={onAskAi}>
-            <span className="da-tb__value">Ask AI</span>
+            {/* Not `da-tb__value`: that carries a fixed 78px width so a
+                changing dropdown label cannot reflow the toolbar, and this
+                label never changes — it only padded the button out. */}
+            <span className="da-tb__label">Ask AI</span>
           </ToolbarButton>
           <ToolbarSeparator />
         </>

@@ -46,6 +46,37 @@ export async function resolveFileUrl(
   return URL.createObjectURL(file);
 }
 
+/** The media kind a dropped or pasted file should become, from its MIME type. */
+export function kindForFile(file: File): MediaKind {
+  if (file.type.startsWith('image/')) return 'image';
+  if (file.type.startsWith('video/')) return 'video';
+  if (file.type.startsWith('audio/')) return 'audio';
+  return 'file';
+}
+
+/**
+ * Inserts dropped or pasted files, uploading each through the host's handler.
+ *
+ * Sequential rather than `Promise.all`: each insert moves the selection, and
+ * concurrent uploads would resolve in arbitrary order and interleave the nodes
+ * against the order the files were dropped in.
+ */
+export async function insertFiles(
+  editor: DaEditor,
+  files: readonly File[],
+  onUpload?: UploadHandler,
+): Promise<void> {
+  for (const file of files) {
+    const kind = kindForFile(file);
+    try {
+      const url = await resolveFileUrl(file, kind, onUpload);
+      insertMedia(editor, kind, url, kind === 'file' ? { name: file.name } : {});
+    } catch {
+      // One failed upload should not abandon the rest of the drop.
+    }
+  }
+}
+
 /** Opens the native file picker, which on mobile offers the device gallery. */
 export function pickFile(kind: MediaKind): Promise<File | null> {
   return new Promise((resolve) => {

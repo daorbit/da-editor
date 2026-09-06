@@ -13,6 +13,13 @@
   --da-accent-fg: #ffffff;
   --da-accent-soft: #eaeeff;
   --da-selection: #d5e0ff;
+  /* Every actionable icon — toolbar, menu items, slash menu, media and link
+     toolbars — sits at full black rather than the muted grey used for
+     secondary text: at 18px a glyph carries much less ink than a word, so the
+     same grey that reads as "secondary" on text reads as "disabled" on an
+     icon. Carets and search adornments stay muted on purpose: they label a
+     control rather than being one. */
+  --da-tb-icon: #000000;
   --da-shadow: 0 4px 16px rgba(16, 20, 30, 0.1), 0 1px 3px rgba(16, 20, 30, 0.07);
   --da-radius: 10px;
   --da-radius-sm: 6px;
@@ -53,6 +60,8 @@
   --da-accent-fg: #0f1115;
   --da-accent-soft: #232842;
   --da-selection: #2c3560;
+  /* Not pure white, which glares against the dark chrome. */
+  --da-tb-icon: #e6e8ec;
   --da-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 
@@ -107,7 +116,10 @@
   border: 2px solid transparent;
   border-radius: 8px;
   background-clip: padding-box;
-  background-color: var(--da-border-strong);
+  /* `--da-border-strong` is only a shade off the menu's own background and
+     reads as no scrollbar at all; the muted tone is the faintest that still
+     announces the list continues. */
+  background-color: var(--da-muted);
 }
 
 .da-tb__menu::-webkit-scrollbar-thumb:hover,
@@ -130,8 +142,8 @@
   display: flex;
   align-items: center;
   gap: 2px;
-  height: 50px;
-  min-height: 50px;
+  height: 42px;
+  min-height: 42px;
   min-width: 0;
   max-width: 100%;
   padding: 0 12px;
@@ -180,7 +192,9 @@
   display: flex;
   align-items: center;
   gap: 2px;
-  height: 44px;
+  /* Matches the real toolbar's height: groups are measured in this row, and a
+     different height changes how their contents lay out. */
+  height: 42px;
   width: max-content;
   max-width: none;
   flex-wrap: nowrap;
@@ -241,6 +255,27 @@
   flex-wrap: nowrap;
 }
 
+/* Denser than the fixed toolbar: this bar floats over the text it acts on, so
+   it should take as little of the document as it can. Overrides the 18px the
+   icon components render at, and tightens the buttons to match. */
+.da-tb--floating .da-tb__btn > svg,
+.da-tb--floating .da-tb__icon > svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* `:not(--step)` so the font-size steppers keep their own tighter metrics
+   rather than being padded back out to icon-button width. */
+.da-tb--floating .da-tb__btn:not(.da-tb__btn--step) {
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
+}
+
+.da-tb--floating .da-tb__btn--step {
+  height: 28px;
+}
+
 .da-tb__btn {
   display: inline-flex;
   align-items: center;
@@ -252,17 +287,17 @@
   border: none;
   border-radius: 7px;
   background: transparent;
-  /* Slightly recessed by default so active state reads as a real change. */
-  color: var(--da-muted);
+  color: var(--da-tb-icon);
   font: inherit;
   font-size: 13px;
   cursor: pointer;
   transition: background 0.13s ease, color 0.13s ease;
 }
 
+/* Only the background moves on hover. The icon is already at full strength,
+   so recolouring it to `--da-fg` here would make it *lighter* than at rest. */
 .da-tb__btn:hover:not(:disabled) {
   background: var(--da-surface-hover);
-  color: var(--da-fg);
 }
 
 .da-tb__btn:focus-visible {
@@ -306,6 +341,13 @@
   overflow: hidden;
   text-overflow: ellipsis;
   text-align: left;
+}
+
+/* A static button label: sized to its text, unlike `--value` which is pinned
+   to a fixed width because its content changes. */
+.da-tb__label {
+  font-size: 13px;
+  white-space: nowrap;
 }
 
 .da-tb__caret {
@@ -362,6 +404,9 @@
 .da-tb__menu {
   overscroll-behavior: contain;
   scrollbar-width: thin;
+  /* Firefox ignores the ::-webkit- rules above, so it needs the thumb colour
+     stated here or the scrollbar is left at the near-invisible default. */
+  scrollbar-color: var(--da-muted) transparent;
 }
 
 .da-tb__item {
@@ -390,7 +435,7 @@
 
 .da-tb__item-icon {
   display: inline-flex;
-  color: var(--da-muted);
+  color: var(--da-tb-icon);
   flex-shrink: 0;
 }
 
@@ -457,6 +502,17 @@
   position: relative;
   margin: 0 auto;
   padding: 20px 28px 60px;
+}
+
+.da-editor__container--dropping::after {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  z-index: 2;
+  border: 2px dashed var(--da-accent);
+  border-radius: var(--da-radius);
+  background: color-mix(in srgb, var(--da-accent) 6%, transparent);
+  pointer-events: none;
 }
 
 .da-editor__content {
@@ -670,8 +726,62 @@
   margin: 10px 0;
 }
 
+/* `inline-block` so the wrapper's `text-align` can move it: a block-level
+   figure fills the line and stays put whatever the alignment says. */
 .da-figure {
   margin: 0;
+  display: inline-block;
+  max-width: 100%;
+}
+
+.da-image-frame {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  line-height: 0;
+}
+
+.da-image-handle {
+  position: absolute;
+  top: 50%;
+  width: 16px;
+  height: 64px;
+  max-height: 60%;
+  transform: translateY(-50%);
+  cursor: ew-resize;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+  touch-action: none;
+}
+
+.da-image-handle::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 4px;
+  transform: translateX(-50%);
+  border-radius: 4px;
+  background: var(--da-fg);
+  box-shadow: 0 0 0 1px var(--da-bg);
+}
+
+.da-image-handle--left {
+  left: -16px;
+}
+
+.da-image-handle--right {
+  right: -16px;
+}
+
+.da-image-frame:hover .da-image-handle,
+.da-image-frame--selected .da-image-handle {
+  opacity: 0.75;
+}
+
+.da-image-handle:hover {
+  opacity: 1;
 }
 
 .da-image {
@@ -679,6 +789,7 @@
   height: auto;
   border-radius: var(--da-radius-sm);
   display: block;
+  width: 100%;
   outline: 2px dashed transparent;
   outline-offset: 4px;
   transition: outline-color 0.12s ease;
@@ -785,7 +896,7 @@
   border: 1px solid var(--da-border);
   border-radius: var(--da-radius-sm);
   background: var(--da-surface);
-  color: var(--da-muted);
+  color: var(--da-tb-icon);
   flex-shrink: 0;
 }
 
@@ -880,11 +991,11 @@
   min-width: 0;
   width: max-content;
   padding: 0;
-  /* Not `max-height: none` / `overflow: visible`: the placement code caps the
-     height to the room actually available, and a panel that ignores the cap
-     spills out of the editor instead of scrolling inside it. */
+  /* `hidden`, not `auto`: these panels (emoji, colour) own an inner scroll
+     region, and a scrolling wrapper around it puts two scrollbars side by side.
+     The height cap still applies — the inner region absorbs it. */
   max-width: 100vw;
-  overflow: auto;
+  overflow: hidden;
 }
 
 .da-tb__menu {
@@ -955,11 +1066,44 @@
 
 .da-media-wrap {
   margin: 10px 0;
+  position: relative;
+}
+
+/* Sits in the gutter left of the block rather than over it, so it never
+   covers content and does not shift the text when it appears. */
+.da-block-handle {
+  position: absolute;
+  top: 2px;
+  left: -26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 24px;
+  border-radius: 4px;
+  color: var(--da-faint);
+  cursor: grab;
+  opacity: 0;
+  transition: opacity 0.12s ease, background 0.12s ease;
+  user-select: none;
+}
+
+.da-media-wrap:hover .da-block-handle {
+  opacity: 1;
+}
+
+.da-block-handle:hover {
+  background: var(--da-surface-hover);
+  color: var(--da-fg);
+}
+
+.da-block-handle:active {
+  cursor: grabbing;
 }
 
 .da-video,
 .da-audio {
-  display: block;
+  display: inline-block;
   max-width: 100%;
   border-radius: var(--da-radius-sm);
   outline: 2px dashed transparent;
@@ -1017,6 +1161,141 @@
 }
 
 /* ------------------------------------------------------------ mentions -- */
+
+.da-date-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.da-date {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--da-surface-hover);
+  color: var(--da-fg);
+  font-size: 0.94em;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.da-date:hover {
+  background: var(--da-accent-soft);
+  color: var(--da-accent);
+}
+
+.da-datepicker {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 60;
+  width: 268px;
+  padding: 12px;
+  border: 1px solid var(--da-border);
+  border-radius: var(--da-radius);
+  background: var(--da-bg);
+  box-shadow: var(--da-shadow);
+  user-select: none;
+}
+
+.da-datepicker__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.da-datepicker__month {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.da-datepicker__nav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--da-muted);
+  cursor: pointer;
+}
+
+.da-datepicker__nav:hover {
+  background: var(--da-surface-hover);
+  color: var(--da-fg);
+}
+
+.da-datepicker__weekdays,
+.da-datepicker__grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.da-datepicker__weekday {
+  padding: 4px 0;
+  color: var(--da-faint);
+  font-size: 11.5px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.da-datepicker__day {
+  height: 32px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--da-fg);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.da-datepicker__day:hover {
+  background: var(--da-surface-hover);
+}
+
+/* Days spilling in from the neighbouring months stay in the grid so the rows
+   keep their shape, but recede so the current month reads as the subject. */
+.da-datepicker__day[data-outside] {
+  color: var(--da-faint);
+}
+
+.da-datepicker__day[data-today] {
+  font-weight: 700;
+}
+
+.da-datepicker__day[data-selected] {
+  background: var(--da-fg);
+  color: var(--da-bg);
+  font-weight: 600;
+}
+
+.da-datepicker__foot {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--da-border);
+  text-align: center;
+}
+
+.da-datepicker__today {
+  padding: 5px 12px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--da-accent);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.da-datepicker__today:hover {
+  background: var(--da-accent-soft);
+}
 
 .da-mention {
   display: inline-block;
@@ -1238,6 +1517,26 @@
 .da-dialog__input:focus {
   border-color: var(--da-accent);
   box-shadow: 0 0 0 3px var(--da-accent-soft);
+}
+
+.da-dialog__input--area {
+  min-height: 76px;
+  font-family: var(--da-mono);
+  font-size: 13px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.da-dialog--compact {
+  max-width: 380px;
+}
+
+.da-dialog__message {
+  margin: 0 0 4px;
+  color: var(--da-muted);
+  font-size: 13.5px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
 }
 
 .da-dialog__error {
@@ -2013,7 +2312,7 @@
 .da-media-toolbar__btn--icon {
   width: 28px;
   padding: 0;
-  color: var(--da-muted);
+  color: var(--da-tb-icon);
 }
 
 .da-media-toolbar__btn--icon:hover {
@@ -2091,7 +2390,7 @@
 .da-link-toolbar__btn--icon {
   width: 28px;
   padding: 0;
-  color: var(--da-muted);
+  color: var(--da-tb-icon);
 }
 
 .da-link-toolbar__btn--icon:hover {
