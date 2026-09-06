@@ -185,6 +185,16 @@
   z-index: -1;
 }
 
+/* Holds the overflow button, outside the row that collapses. Never shrinks:
+   everything the toolbar hides is reachable only through this. */
+.da-tb__overflow {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 100%;
+  flex-shrink: 0;
+}
+
 /* Pinned cluster keeps the theme and mode controls always reachable. */
 .da-tb__end {
   display: flex;

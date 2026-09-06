@@ -834,24 +834,29 @@ export function FixedToolbar({
           </Fragment>
         ))}
 
-        {/* Nothing to separate from when every group has collapsed away. */}
+      </div>
+
+      {/* Pinned rather than inside the scrolling row: "More" is where every
+          collapsed group goes, so it is the one control that must never itself
+          be pushed out of view. In the row it was competing for the same space
+          as the groups it exists to hold. */}
+      <div className="da-tb__overflow">
         {visibleGroups.length > 0 && <ToolbarSeparator />}
 
-      {/* Always-present overflow: groups collapsed for width, plus rarely used marks. */}
-      <ToolbarDropdown label="More" icon={<MoreIcon />}>
-        {(close) => (
-          <>
-            {overflowGroups.length > 0 && (
-              <>
-                {overflowGroups.map((group) => (
-                  <Fragment key={group.key}>{group.menu ?? group.inline}</Fragment>
-                ))}
-                <MenuSeparator />
-              </>
-            )}
-            {extraMenu(close)}
-          </>
-        )}
+        <ToolbarDropdown label="More" icon={<MoreIcon />}>
+          {(close) => (
+            <>
+              {overflowGroups.length > 0 && (
+                <>
+                  {overflowGroups.map((group) => (
+                    <Fragment key={group.key}>{group.menu ?? group.inline}</Fragment>
+                  ))}
+                  <MenuSeparator />
+                </>
+              )}
+              {extraMenu(close)}
+            </>
+          )}
         </ToolbarDropdown>
       </div>
 

@@ -53,16 +53,17 @@ export function useOverflowCollapse(
     const editorEl = toolbarEl.closest<HTMLElement>('.da-editor');
 
     /*
-     * The width to fit into.
+     * The width to fit into: the editor's own box.
      *
-     * Taken from the editor's *parent* rather than from the toolbar or the
-     * button row. Both of those are inside the toolbar's own layout, so while
-     * it is overflowing their width is the overflow — measuring either asks
-     * "does what I am showing fit inside itself?", which is always yes, and the
-     * toolbar never collapses. The parent is sized by the page around it, so it
-     * is the one box in the chain the toolbar's contents cannot inflate.
+     * Not the toolbar or the button row — both sit inside the toolbar's layout,
+     * so while it is overflowing their width *is* the overflow, and measuring
+     * either asks "does what I am showing fit inside itself?", which is always
+     * yes. And not the editor's parent either: when a side panel opens beside
+     * the editor the parent's width does not change, only the editor's share of
+     * it, so a ResizeObserver on the parent never fires and the toolbar stays
+     * wide. The editor is the element that actually changes in both cases.
      */
-    const boundsEl = editorEl?.parentElement ?? toolbarEl;
+    const boundsEl = editorEl ?? toolbarEl;
 
     const recalc = () => {
       const groups = Array.from(
@@ -74,25 +75,18 @@ export function useOverflowCollapse(
       const padding =
         parseFloat(style.paddingLeft || '0') + parseFloat(style.paddingRight || '0');
 
-      // The editor may be inset within its parent (a border, a margin), and
-      // that inset is not width the toolbar can use.
-      const outerWidth = boundsEl.clientWidth;
-      const editorInset = editorEl
-        ? Math.max(0, outerWidth - editorEl.getBoundingClientRect().width)
-        : 0;
+      // `getBoundingClientRect` rather than `clientWidth`: the latter is a
+      // rounded integer, and at a fractional width it rounds up — enough, at a
+      // boundary, to keep a group that does not quite fit.
+      const outerWidth = boundsEl.getBoundingClientRect().width;
 
       // The pinned cluster on the right is never collapsed, so its width is not
       // space the groups can use.
       const endEl = toolbarEl.querySelector<HTMLElement>('.da-tb__end');
-      const endWidth = endEl ? endEl.offsetWidth : 0;
+      const endWidth = endEl ? endEl.getBoundingClientRect().width : 0;
 
       const available =
-        outerWidth -
-        editorInset -
-        padding -
-        endWidth -
-        OVERFLOW_RESERVE -
-        SEPARATOR_WIDTH;
+        outerWidth - padding - endWidth - OVERFLOW_RESERVE - SEPARATOR_WIDTH;
 
       let used = 0;
       let fit = 0;
@@ -108,9 +102,9 @@ export function useOverflowCollapse(
 
     recalc();
     const observer = new ResizeObserver(recalc);
-    // The bounds element is what changes when the page resizes — a window
-    // resize, a side panel opening — and the row is what changes as groups fold
-    // away, which is how the loop settles.
+    // The editor is what changes on a window resize *and* when a side panel
+    // opens beside it; the row is what changes as groups fold away, which is
+    // how the loop settles.
     observer.observe(boundsEl);
     observer.observe(rowEl);
     return () => observer.disconnect();
