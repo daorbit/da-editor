@@ -1,6 +1,6 @@
 {
   "name": "da-text-editor",
-  "version": "0.1.14",
+  "version": "0.1.15",
   "description": "A React rich-text editor component.",
   "type": "module",
   "license": "MIT",
