@@ -23,6 +23,11 @@
   flex-direction: column;
   /* Lets the editor shrink inside a flex parent so its content area scrolls. */
   min-height: 0;
+  /* The toolbar is a nowrap row, so without this its min-content width sets the
+     editor's, and the whole editor grows past a narrow container instead of the
+     toolbar collapsing into its overflow menu. */
+  min-width: 0;
+  max-width: 100%;
   border: 1px solid var(--da-border);
   /* border-radius: var(--da-radius); */
   background: var(--da-bg);
@@ -127,6 +132,8 @@
   gap: 2px;
   height: 50px;
   min-height: 50px;
+  min-width: 0;
+  max-width: 100%;
   padding: 0 12px;
   border-bottom: 1px solid var(--da-border);
   background: var(--da-bg);
@@ -134,8 +141,7 @@
   top: 0;
   z-index: 5;
   flex-wrap: nowrap;
-  box-shadow: 0 1px 0 var(--da-border), 0 4px 8px -4px rgba(16, 20, 30, 0.12);
-  /* Must stay visible so dropdown menus are not clipped. */
+  /* box-shadow: 0 1px 0 var(--da-border), 0 4px 8px -4px rgba(16, 20, 30, 0.12); */
   overflow: visible;
 }
 
