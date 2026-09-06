@@ -127,6 +127,8 @@ export interface DaEditorProps {
   mentionables?: Mentionable[];
   /** Uploads a file picked from the device; falls back to a local object URL. */
   onUpload?: UploadHandler;
+  
+  onPickMedia?: (kind: MediaKind) => Promise<{ url: string; name?: string } | null>;
   /** Renders a light/dark toggle in the toolbar and fires on click. */
   onToggleTheme?: () => void;
   /** `'viewing'` locks the document, like `readOnly`. */
@@ -154,6 +156,7 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
     slashMenu = true,
     autoformat = true,
     onAskAi,
+    onPickMedia,
     mentionables,
     onUpload,
     onToggleTheme,
@@ -184,6 +187,21 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
   const [value, setValue] = useState<EditorValue>(initialValue);
   const [linkOpen, setLinkOpen] = useState(false);
   const [mediaKind, setMediaKind] = useState<MediaKind | null>(null);
+
+  /**
+   * Opens the host's library when it has one, and the built-in dialog when it
+   * does not — so the editor stays usable standalone without duplicating a
+   * picker the host does better.
+   */
+  const pickMedia = (kind: MediaKind) => {
+    if (!onPickMedia) {
+      setMediaKind(kind);
+      return;
+    }
+    void onPickMedia(kind).then((picked) => {
+      if (picked?.url) insertMedia(editor, kind, picked.url, { name: picked.name });
+    });
+  };
   // Bumped to remount <Slate> when the document is replaced wholesale.
   const [slateKey, setSlateKey] = useState(0);
   const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>(
@@ -391,7 +409,7 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
           <FixedToolbar
             onAskAi={onAskAi}
             onLink={() => setLinkOpen(true)}
-            onMedia={(kind) => setMediaKind(kind)}
+            onMedia={(kind) => pickMedia(kind)}
             onImport={handleImport}
             onExport={handleExport}
             onToggleTheme={onToggleTheme}
@@ -427,7 +445,7 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
             {slashMenu && !locked && (
               <SlashMenu
                 onAskAi={onAskAi}
-                onMedia={(kind) => setMediaKind(kind)}
+                onMedia={(kind) => pickMedia(kind)}
               />
             )}
             {mentionables?.length && !locked ? (
