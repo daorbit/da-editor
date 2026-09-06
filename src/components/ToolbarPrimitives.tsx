@@ -91,12 +91,17 @@ export function useOverflowCollapse(
       let used = 0;
       let fit = 0;
       for (const group of groups) {
-        const width = group.offsetWidth + (fit > 0 ? SEPARATOR_WIDTH : 0);
+        // `getBoundingClientRect` rather than `offsetWidth` for the same reason
+        // as the bounds above: `offsetWidth` rounds to an integer, and rounding
+        // down once per group accumulates into enough slack to keep a group
+        // that does not fit.
+        const width =
+          group.getBoundingClientRect().width + (fit > 0 ? SEPARATOR_WIDTH : 0);
         if (used + width > available) break;
         used += width;
         fit += 1;
       }
- 
+
       setVisibleCount(fit);
     };
 

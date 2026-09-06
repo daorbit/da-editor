@@ -141,6 +141,7 @@
   top: 0;
   z-index: 5;
   flex-wrap: nowrap;
+  isolation: isolate;
   /* box-shadow: 0 1px 0 var(--da-border), 0 4px 8px -4px rgba(16, 20, 30, 0.12); */
   overflow: visible;
 }
@@ -180,9 +181,17 @@
   align-items: center;
   gap: 2px;
   height: 44px;
+  width: max-content;
+  max-width: none;
+  flex-wrap: nowrap;
   visibility: hidden;
   pointer-events: none;
   z-index: -1;
+}
+
+.da-tb__measure > [data-tb-group] {
+  flex: 0 0 auto;
+  min-width: max-content;
 }
 
 /* Holds the overflow button, outside the row that collapses. Never shrinks:

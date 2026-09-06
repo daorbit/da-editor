@@ -28,9 +28,6 @@ export function LinkPopover({ open, onClose }: LinkPopoverProps) {
     savedSelection.current = editor.selection;
     setUrl('');
 
-    const el = ref.current;
-    if (!el) return;
-
     let rect: DOMRect | null = null;
     const domSelection = window.getSelection();
     if (domSelection && domSelection.rangeCount > 0) {
@@ -47,16 +44,32 @@ export function LinkPopover({ open, onClose }: LinkPopoverProps) {
     }
     if (!rect) return;
 
-    const container = el.offsetParent as HTMLElement | null;
+    // Resolved from the editor rather than the popover's own `offsetParent`:
+    // the popover is not in the DOM yet on the render that opens it, so its ref
+    // is still null here and reading the offset parent off it would leave
+    // `position` unset — and an unset position is what keeps it from ever
+    // rendering, so it would never open at all.
+    let container: HTMLElement | null = null;
+    try {
+      container = ReactEditor.toDOMNode(editor, editor).closest<HTMLElement>(
+        '.da-editor__container',
+      );
+    } catch {
+      container = null;
+    }
     const base = container?.getBoundingClientRect();
 
     setPosition({
       top: rect.bottom - (base?.top ?? 0) + 8,
       left: Math.max(4, rect.left - (base?.left ?? 0)),
     });
-
-    inputRef.current?.focus();
   }, [open, editor]);
+
+  // Separate from the effect above: the input does not exist until `position`
+  // is set and the popover renders, so focusing there would find a null ref.
+  useEffect(() => {
+    if (open && position) inputRef.current?.focus();
+  }, [open, position]);
 
   useEffect(() => {
     if (!open) return;
