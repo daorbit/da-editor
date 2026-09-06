@@ -50,6 +50,19 @@ export function useOverflowCollapse(
     if (!rowEl || !measureEl) return;
 
     const toolbarEl = rowEl.closest<HTMLElement>('.da-tb--fixed') ?? rowEl;
+    const editorEl = toolbarEl.closest<HTMLElement>('.da-editor');
+
+    /*
+     * The width to fit into.
+     *
+     * Taken from the editor's *parent* rather than from the toolbar or the
+     * button row. Both of those are inside the toolbar's own layout, so while
+     * it is overflowing their width is the overflow — measuring either asks
+     * "does what I am showing fit inside itself?", which is always yes, and the
+     * toolbar never collapses. The parent is sized by the page around it, so it
+     * is the one box in the chain the toolbar's contents cannot inflate.
+     */
+    const boundsEl = editorEl?.parentElement ?? toolbarEl;
 
     const recalc = () => {
       const groups = Array.from(
@@ -61,14 +74,25 @@ export function useOverflowCollapse(
       const padding =
         parseFloat(style.paddingLeft || '0') + parseFloat(style.paddingRight || '0');
 
+      // The editor may be inset within its parent (a border, a margin), and
+      // that inset is not width the toolbar can use.
+      const outerWidth = boundsEl.clientWidth;
+      const editorInset = editorEl
+        ? Math.max(0, outerWidth - editorEl.getBoundingClientRect().width)
+        : 0;
+
       // The pinned cluster on the right is never collapsed, so its width is not
       // space the groups can use.
       const endEl = toolbarEl.querySelector<HTMLElement>('.da-tb__end');
       const endWidth = endEl ? endEl.offsetWidth : 0;
 
- 
       const available =
-        toolbarEl.clientWidth - padding - endWidth - OVERFLOW_RESERVE - SEPARATOR_WIDTH;
+        outerWidth -
+        editorInset -
+        padding -
+        endWidth -
+        OVERFLOW_RESERVE -
+        SEPARATOR_WIDTH;
 
       let used = 0;
       let fit = 0;
@@ -84,8 +108,10 @@ export function useOverflowCollapse(
 
     recalc();
     const observer = new ResizeObserver(recalc);
- 
-    observer.observe(toolbarEl);
+    // The bounds element is what changes when the page resizes — a window
+    // resize, a side panel opening — and the row is what changes as groups fold
+    // away, which is how the loop settles.
+    observer.observe(boundsEl);
     observer.observe(rowEl);
     return () => observer.disconnect();
     // Re-measure whenever the number of groups changes (props/state driven).

@@ -145,12 +145,19 @@
   overflow: visible;
 }
 
-/* Tools shrink to fit rather than scrolling, which would clip open menus. */
+/* Tools shrink to fit rather than scrolling, which would clip open menus.
+
+   `width: 0` with `flex: 1` rather than `flex: 1` alone: a flex item's base
+   size is its content, so a nowrap row of buttons sets its own width and the
+   toolbar grows to hold it. Starting from zero and growing into the space
+   that is left makes the row a consequence of the toolbar's width rather than
+   the cause of it. */
 .da-tb__scroll {
   display: flex;
   align-items: center;
   gap: 2px;
-  flex: 1;
+  flex: 1 1 0;
+  width: 0;
   min-width: 0;
   height: 100%;
   /* Popovers are positioned against this row, so it cannot clip its children.
