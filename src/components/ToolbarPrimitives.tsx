@@ -36,6 +36,7 @@ function findClipBounds(from: HTMLElement): { top: number; bottom: number } {
 const SEPARATOR_WIDTH = 9;
 
  
+
 export function useOverflowCollapse(
   availableRef: RefObject<HTMLDivElement | null>,
   measureRef: RefObject<HTMLDivElement | null>,
@@ -44,9 +45,11 @@ export function useOverflowCollapse(
   const [visibleCount, setVisibleCount] = useState(groupCount);
 
   useLayoutEffect(() => {
-    const availableEl = availableRef.current;
+    const rowEl = availableRef.current;
     const measureEl = measureRef.current;
-    if (!availableEl || !measureEl) return;
+    if (!rowEl || !measureEl) return;
+
+    const toolbarEl = rowEl.closest<HTMLElement>('.da-tb--fixed') ?? rowEl;
 
     const recalc = () => {
       const groups = Array.from(
@@ -54,10 +57,19 @@ export function useOverflowCollapse(
       );
       if (groups.length === 0) return;
 
-      // The "More" button is preceded by a separator whenever any group is
-      // shown, so that separator has to be reserved too — without it the row is
-      // one separator too wide and spills past the toolbar at boundary widths.
-      const available = availableEl.clientWidth - OVERFLOW_RESERVE - SEPARATOR_WIDTH;
+      const style = getComputedStyle(toolbarEl);
+      const padding =
+        parseFloat(style.paddingLeft || '0') + parseFloat(style.paddingRight || '0');
+
+      // The pinned cluster on the right is never collapsed, so its width is not
+      // space the groups can use.
+      const endEl = toolbarEl.querySelector<HTMLElement>('.da-tb__end');
+      const endWidth = endEl ? endEl.offsetWidth : 0;
+
+ 
+      const available =
+        toolbarEl.clientWidth - padding - endWidth - OVERFLOW_RESERVE - SEPARATOR_WIDTH;
+
       let used = 0;
       let fit = 0;
       for (const group of groups) {
@@ -66,15 +78,15 @@ export function useOverflowCollapse(
         used += width;
         fit += 1;
       }
-      // No floor: on a narrow screen even the first group may not fit, and
-      // forcing it to show pushes it past the overflow button rather than
-      // collapsing it. Every group stays reachable through "More" either way.
+ 
       setVisibleCount(fit);
     };
 
     recalc();
     const observer = new ResizeObserver(recalc);
-    observer.observe(availableEl);
+ 
+    observer.observe(toolbarEl);
+    observer.observe(rowEl);
     return () => observer.disconnect();
     // Re-measure whenever the number of groups changes (props/state driven).
     // eslint-disable-next-line react-hooks/exhaustive-deps
