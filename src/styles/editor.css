@@ -147,7 +147,14 @@
   flex: 1;
   min-width: 0;
   height: 100%;
+  /* Popovers are positioned against this row, so it cannot clip its children.
+     The overflow collapse keeps the row inside its width instead; the button
+     row itself may not grow past it, whatever measurement lag there is. */
   overflow: visible;
+}
+
+.da-tb__scroll > * {
+  min-width: 0;
 }
 
 /* Off-screen, full-width render of every group used only to measure widths
@@ -241,8 +248,11 @@
   cursor: not-allowed;
 }
 
-/* Value-bearing dropdowns keep a stable width as their label changes. */
-.da-tb__btn--dropdown {
+/* Value-bearing dropdowns keep a stable width as their label changes, so their
+   contents are pinned left rather than recentring on every edit. An icon-only
+   dropdown has nothing to keep stable and stays centred like a plain button —
+   left-aligning it leaves the fill sitting off-centre behind the icon. */
+.da-tb__btn--dropdown:has(.da-tb__value) {
   justify-content: flex-start;
 }
 

@@ -834,7 +834,8 @@ export function FixedToolbar({
           </Fragment>
         ))}
 
-        <ToolbarSeparator />
+        {/* Nothing to separate from when every group has collapsed away. */}
+        {visibleGroups.length > 0 && <ToolbarSeparator />}
 
       {/* Always-present overflow: groups collapsed for width, plus rarely used marks. */}
       <ToolbarDropdown label="More" icon={<MoreIcon />}>

@@ -54,7 +54,10 @@ export function useOverflowCollapse(
       );
       if (groups.length === 0) return;
 
-      const available = availableEl.clientWidth - OVERFLOW_RESERVE;
+      // The "More" button is preceded by a separator whenever any group is
+      // shown, so that separator has to be reserved too — without it the row is
+      // one separator too wide and spills past the toolbar at boundary widths.
+      const available = availableEl.clientWidth - OVERFLOW_RESERVE - SEPARATOR_WIDTH;
       let used = 0;
       let fit = 0;
       for (const group of groups) {
@@ -63,7 +66,10 @@ export function useOverflowCollapse(
         used += width;
         fit += 1;
       }
-      setVisibleCount(Math.max(1, fit));
+      // No floor: on a narrow screen even the first group may not fit, and
+      // forcing it to show pushes it past the overflow button rather than
+      // collapsing it. Every group stays reachable through "More" either way.
+      setVisibleCount(fit);
     };
 
     recalc();
