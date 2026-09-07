@@ -72,7 +72,7 @@
     "wysiwyg"
   ],
   "dependencies": {
-    "da-frame-set": "^0.1.1",
+    "da-frame-set": "^0.1.2",
     "frimousse": "^0.3.0",
     "is-hotkey": "^0.2.0",
     "mammoth": "^1.12.2",

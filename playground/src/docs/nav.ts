@@ -24,6 +24,7 @@ export const DOC_NAV: DocGroup[] = [
       { slug: 'props', title: 'Props' },
       { slug: 'ref-api', title: 'Ref API' },
       { slug: 'features', title: 'Features' },
+      { slug: 'shortcuts', title: 'Keyboard shortcuts' },
       { slug: 'theming', title: 'Theming' },
     ],
   },

@@ -137,6 +137,12 @@ export interface DaEditorProps {
   slashMenu?: boolean;
   /** Enable the `:name` inline emoji combobox. */
   emoji?: boolean;
+  /**
+   * Accent style for active affordances (toolbar state, slash icon, focus
+   * ring, drop indicator). `'neutral'` (default) uses the flat `--da-accent`
+   * token; `'gradient'` uses `--da-accent-gradient`, which you can override.
+   */
+  accent?: 'neutral' | 'gradient';
   /** Enable Markdown input rules while typing. */
   autoformat?: boolean;
   /** Renders the Ask AI affordances and fires when one is used. */
@@ -174,6 +180,7 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
     floatingToolbar = true,
     slashMenu = true,
     emoji = true,
+    accent = 'neutral',
     autoformat = true,
     onAskAi,
     onPickMedia,
@@ -588,11 +595,23 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
 
   return (
     <div
-      className={`da-editor${locked ? ' da-editor--readonly' : ''}${className ? ` ${className}` : ''}`}
+      className={`da-editor${locked ? ' da-editor--readonly' : ''}${accent === 'gradient' ? ' da-editor--gradient' : ''}${className ? ` ${className}` : ''}`}
       data-theme={resolvedTheme}
       data-mode={mode}
       style={style}
     >
+      {accent === 'gradient' && (
+        // Referenced by `fill: url(#da-accent-grad)` on active toolbar icons.
+        <svg width="0" height="0" aria-hidden focusable="false" style={{ position: 'absolute' }}>
+          <defs>
+            <linearGradient id="da-accent-grad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="#6d5efc" />
+              <stop offset="45%" stopColor="#d857c6" />
+              <stop offset="100%" stopColor="#ff8a5c" />
+            </linearGradient>
+          </defs>
+        </svg>
+      )}
       <DialogContext.Provider value={dialogs}>
       <Slate key={slateKey} editor={editor} initialValue={value} onChange={handleChange}>
         {fixedToolbar && !readOnly && (

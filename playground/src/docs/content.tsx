@@ -16,6 +16,8 @@ export const PROPS: { name: string; type: string; def: string; body: string }[] 
   { name: 'fixedToolbar', type: 'boolean', def: 'true', body: 'The toolbar pinned above the content.' },
   { name: 'floatingToolbar', type: 'boolean', def: 'true', body: 'The toolbar that appears over a selection.' },
   { name: 'slashMenu', type: 'boolean', def: 'true', body: 'The / block menu.' },
+  { name: 'emoji', type: 'boolean', def: 'true', body: 'The :name inline emoji combobox.' },
+  { name: 'accent', type: "'neutral' | 'gradient'", def: "'neutral'", body: 'Accent for active affordances. gradient uses --da-accent-gradient.' },
   { name: 'autoformat', type: 'boolean', def: 'true', body: 'Markdown input rules while typing.' },
   { name: 'wordCount', type: 'boolean', def: 'false', body: 'Words, characters and reading time, in a footer bar.' },
   { name: 'mentionables', type: 'Mentionable[]', def: '—', body: 'Entries offered by the @ combobox. Omit to disable mentions.' },
@@ -33,8 +35,11 @@ export const PROPS: { name: string; type: string; def: string; body: string }[] 
 
 /** What each feature does and how it is reached. */
 export const FEATURES: { name: string; how: string; body: string }[] = [
-  { name: 'Slash menu', how: 'Type /', body: 'Grouped and filterable block inserter. Arrow keys move, Enter inserts, Escape closes.' },
+  { name: 'Slash menu', how: 'Type /', body: 'Grouped, filterable block inserter with a Recent band. Arrow keys move, Enter inserts, Escape closes.' },
   { name: 'Mentions', how: 'Type @', body: 'Combobox over the mentionables you pass. The editor handles matching, keyboard nav and insertion.' },
+  { name: 'Emoji', how: 'Type :name', body: 'Inline combobox after two letters — :fire becomes 🔥. Toggle with the emoji prop.' },
+  { name: 'Drag handle', how: 'Hover any block', body: 'A gutter grip on every block — paragraph, heading, list, callout, code, media. Drag to reorder; a line shows the drop point.' },
+  { name: 'Block placeholders', how: 'Empty line', body: 'The empty block under the caret names itself — “Heading 1”, “Empty quote”, “Type / for commands”.' },
   { name: 'Find & replace', how: 'Ctrl/Cmd+F', body: 'Live match count with every hit highlighted in the document. Case toggle, replace one, replace all.' },
   { name: 'Markdown shortcuts', how: 'Type ## or - ', body: 'Input rules convert as you type. Pasting Markdown is parsed into real blocks too.' },
   { name: 'Tables', how: 'Slash menu or toolbar', body: 'Drag a column border to resize. Add and remove rows and columns from the contextual toolbar.' },
@@ -165,3 +170,52 @@ async function askAi() {
 />`,
   },
 ] as const;
+
+/** Keyboard shortcuts, grouped. `Mod` is Ctrl on Windows/Linux, Cmd on macOS. */
+export const SHORTCUTS: { group: string; rows: [string, string][] }[] = [
+  {
+    group: 'Marks',
+    rows: [
+      ['Mod + B', 'Bold'],
+      ['Mod + I', 'Italic'],
+      ['Mod + U', 'Underline'],
+      ['Mod + Shift + X', 'Strikethrough'],
+      ['Mod + E', 'Inline code'],
+      ['Mod + \\', 'Clear all marks'],
+    ],
+  },
+  {
+    group: 'Blocks',
+    rows: [
+      ['Mod + Alt + 0', 'Turn into paragraph'],
+      ['Mod + Alt + 1', 'Turn into Heading 1'],
+      ['Mod + Alt + 2', 'Turn into Heading 2'],
+      ['Mod + Alt + 3', 'Turn into Heading 3'],
+      ['Mod + Shift + .', 'Turn into quote'],
+      ['Mod + Shift + 7', 'Numbered list'],
+      ['Mod + Shift + 8', 'Bulleted list'],
+      ['Mod + Shift + 9', 'To-do list'],
+      ['Tab / Shift + Tab', 'Indent / outdent (or move between table cells)'],
+      ['Mod + Enter', 'Exit a code block'],
+    ],
+  },
+  {
+    group: 'Tools',
+    rows: [
+      ['Mod + F', 'Find & replace'],
+      ['Mod + K', 'Add or edit a link'],
+      ['Mod + J', 'Ask AI (when onAskAi is set)'],
+      ['Mod + Z', 'Undo'],
+      ['Mod + Shift + Z', 'Redo'],
+    ],
+  },
+  {
+    group: 'Triggers',
+    rows: [
+      ['/', 'Block menu on an empty line'],
+      ['@', 'Mention combobox (needs mentionables)'],
+      [':name', 'Emoji combobox — two or more letters (needs emoji)'],
+      ['## , - , > , ```', 'Markdown shortcuts while typing (needs autoformat)'],
+    ],
+  },
+];

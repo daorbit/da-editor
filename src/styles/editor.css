@@ -15,6 +15,9 @@
   --da-accent-soft: #ededed;
   --da-selection: #e2e2e2;
   --da-link: #2b62d9;
+  /* Opt-in via the `accent="gradient"` prop (adds `.da-editor--gradient`).
+     Consumers can override this one value to rebrand the accent. */
+  --da-accent-gradient: linear-gradient(120deg, #6d5efc, #d857c6 45%, #ff8a5c);
   
   --da-tb-icon: #000000;
   --da-shadow: 0 4px 16px rgba(16, 20, 30, 0.1), 0 1px 3px rgba(16, 20, 30, 0.07);
@@ -290,6 +293,75 @@
 .da-tb__btn--active {
   background: var(--da-accent-soft);
   color: var(--da-accent);
+}
+
+/* -------------------------------------------------- gradient accent (opt-in) --
+ * Enabled by <DaEditor accent="gradient" />. Colour is confined to affordances
+ * that signal state — active toolbar buttons, the slash icon, the focus ring,
+ * the caret and the selection — never body text or a surface behind editable
+ * content.
+ */
+.da-editor--gradient .da-tb__btn--active {
+  background: var(--da-accent-gradient);
+  border-color: transparent;
+  color: #fff;
+}
+
+.da-editor--gradient .da-tb__btn--active > svg {
+  fill: currentColor;
+  stroke: currentColor;
+}
+
+/* Gradient caret and selection wash inside the document. */
+.da-editor--gradient .da-editor__content {
+  caret-color: #6d5efc;
+}
+
+.da-editor--gradient .da-editor__content ::selection {
+  background: color-mix(in srgb, #6d5efc 22%, transparent);
+}
+
+.da-editor--gradient .da-editor__content ::-moz-selection {
+  background: color-mix(in srgb, #6d5efc 22%, transparent);
+}
+
+/* A hairline gradient strip under the fixed toolbar. */
+.da-editor--gradient .da-tb--fixed::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--da-accent-gradient);
+}
+
+.da-editor--gradient .da-slash__item--active .da-slash__icon {
+  color: #fff;
+  border-color: transparent;
+  background: var(--da-accent-gradient);
+}
+
+.da-editor--gradient .da-tb__btn:focus-visible,
+.da-editor--gradient .da-editable:focus-visible {
+  outline-color: transparent;
+  border-radius: 6px;
+  box-shadow: 0 0 0 2px transparent;
+  background:
+    linear-gradient(var(--da-bg), var(--da-bg)) padding-box,
+    var(--da-accent-gradient) border-box;
+}
+
+.da-editor--gradient .da-editor__container--dropping::after {
+  border-color: transparent;
+  background:
+    linear-gradient(color-mix(in srgb, var(--da-bg) 92%, transparent), color-mix(in srgb, var(--da-bg) 92%, transparent)) padding-box,
+    var(--da-accent-gradient) border-box;
+}
+
+.da-editor--gradient .da-drop-line,
+.da-editor--gradient .da-drop-line::before {
+  background: var(--da-accent-gradient);
 }
 
 .da-tb__btn:disabled {

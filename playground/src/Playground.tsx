@@ -48,6 +48,7 @@ export function Playground({ navigate }: { navigate: (to: string) => void }) {
         maxWidth="1100px"
         autoFocus
         wordCount
+        accent="gradient"
         preview={true}
         mentionables={MENTIONABLES}
         onAskAi={() => setNotice('Wire this to your own endpoint.')}

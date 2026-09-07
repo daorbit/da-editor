@@ -7,6 +7,7 @@ import {
   FeaturesTable,
   Inline,
   PropsTable,
+  ShortcutsTable,
   TokensList,
 } from './primitives';
 import { HOOKS, INSTALL, USAGE } from './content';
@@ -104,9 +105,25 @@ const ref = useRef<DaEditorHandle>(null);
     <>
       <DocLead>
         Everything below is on by default — no separate plugin to install, no
-        peer dependency to resolve.
+        peer dependency to resolve. The <Inline>emoji</Inline> combobox and
+        Markdown input rules have a matching boolean prop if you want them off.
       </DocLead>
       <FeaturesTable />
+      <p>
+        Every trigger and hotkey is listed on the{' '}
+        <Link to="/docs/shortcuts">Keyboard shortcuts</Link> page.
+      </p>
+    </>
+  ),
+
+  shortcuts: () => (
+    <>
+      <DocLead>
+        <Inline>Mod</Inline> is <Inline>Ctrl</Inline> on Windows and Linux,{' '}
+        <Inline>Cmd</Inline> on macOS. Trigger keys fire while typing; the rest
+        work whenever the document has focus.
+      </DocLead>
+      <ShortcutsTable />
     </>
   ),
 
@@ -122,6 +139,16 @@ const ref = useRef<DaEditorHandle>(null);
   --da-radius: 12px;
 }`}</DocCode>
       <TokensList />
+      <p>
+        Passing <Inline>accent="gradient"</Inline> switches active affordances —
+        toolbar state, the slash icon, the focus ring, the drop indicator — to a
+        gradient. Override it with <Inline>--da-accent-gradient</Inline>:
+      </p>
+      <DocCode>{`<DaEditor accent="gradient" />
+
+.da-editor {
+  --da-accent-gradient: linear-gradient(120deg, #6d5efc, #ff8a5c);
+}`}</DocCode>
     </>
   ),
 

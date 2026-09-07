@@ -254,6 +254,37 @@
   margin-top: 8px;
 }
 
+/* Keyboard shortcuts page. */
+.doc-keys + .doc-keys {
+  margin-top: 28px;
+}
+
+.doc-table__row--keys {
+  grid-template-columns: 200px 1fr;
+  align-items: center;
+}
+
+.doc-kbd {
+  justify-self: start;
+  padding: 3px 9px;
+  border: 1px solid var(--pg-border);
+  border-bottom-width: 2px;
+  border-radius: 6px;
+  background: var(--pg-bg);
+  color: var(--pg-fg);
+  font-family: var(--pg-mono);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .doc-table__row--keys {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+}
+
 .doc-inline {
   padding: 2px 6px;
   border: 1px solid var(--pg-border);

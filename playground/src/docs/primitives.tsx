@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { PROPS, FEATURES, API, TOKENS } from './content';
+import { PROPS, FEATURES, API, TOKENS, SHORTCUTS } from './content';
 
 export function DocLead({ children }: { children: ReactNode }) {
   return <p className="doc-lead">{children}</p>;
@@ -98,5 +98,25 @@ export function TokensList() {
         </div>
       ))}
     </dl>
+  );
+}
+
+export function ShortcutsTable() {
+  return (
+    <>
+      {SHORTCUTS.map((section) => (
+        <div key={section.group} className="doc-keys">
+          <h3 className="doc-h3">{section.group}</h3>
+          <div className="doc-table">
+            {section.rows.map(([keys, what]) => (
+              <div className="doc-table__row doc-table__row--keys" key={keys}>
+                <kbd className="doc-kbd">{keys}</kbd>
+                <span className="doc-table__body">{what}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </>
   );
 }
