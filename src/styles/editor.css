@@ -513,9 +513,47 @@
 
 
 .da-p--empty::before {
-  content: 'Type something…';
+  content: attr(data-ph);
   position: absolute;
   color: var(--da-faint);
+  pointer-events: none;
+  user-select: none;
+}
+
+/*
+ * Per-block placeholder. Rendered only when the block is empty and holds the
+ * caret (the renderer adds `data-ph` under those conditions). `position` is set
+ * on the host so the hint overlays the empty line rather than pushing it.
+ */
+.da-h1[data-ph],
+.da-h2[data-ph],
+.da-h3[data-ph],
+.da-h4[data-ph],
+.da-h5[data-ph],
+.da-h6[data-ph],
+.da-blockquote[data-ph],
+.da-li[data-ph],
+.da-todo__text[data-ph],
+.da-callout__body[data-ph] {
+  position: relative;
+}
+
+.da-h1[data-ph]::before,
+.da-h2[data-ph]::before,
+.da-h3[data-ph]::before,
+.da-h4[data-ph]::before,
+.da-h5[data-ph]::before,
+.da-h6[data-ph]::before,
+.da-blockquote[data-ph]::before,
+.da-li[data-ph]::before,
+.da-todo__text[data-ph]::before,
+.da-callout__body[data-ph]::before {
+  content: attr(data-ph);
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--da-faint);
+  font-weight: inherit;
   pointer-events: none;
   user-select: none;
 }
@@ -840,6 +878,24 @@
   text-transform: uppercase;
 }
 
+.da-slash--in {
+  animation: da-slash-in 0.13s ease-out;
+  transform-origin: top left;
+}
+
+@keyframes da-slash-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .da-slash--in {
+    animation: none;
+  }
+}
+
 .da-slash__item {
   display: flex;
   align-items: center;
@@ -858,6 +914,23 @@
 
 .da-slash__item--active {
   background: var(--da-surface-hover);
+}
+
+.da-slash__label {
+  flex: 1;
+  min-width: 0;
+}
+
+.da-slash__hint {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border: 1px solid var(--da-border);
+  border-radius: 4px;
+  background: var(--da-bg);
+  color: var(--da-faint);
+  font-family: var(--da-mono);
+  font-size: 11px;
+  line-height: 1.4;
 }
 
 .da-slash__icon {
@@ -1039,6 +1112,64 @@
 .da-media-wrap {
   margin: 10px 0;
   position: relative;
+}
+
+/* Text blocks that carry a gutter drag grip. The handle is absolutely
+   positioned into the left margin and only painted while the block is hovered. */
+.da-draggable {
+  position: relative;
+}
+
+.da-draggable:hover > .da-block-handle {
+  opacity: 1;
+}
+
+/* The row being dragged: dimmed in place so the ghost reads as the thing that
+   moved. */
+.da-dragging {
+  opacity: 0.4;
+}
+
+/* Off-screen clone the browser snapshots for the drag image. */
+.da-drag-ghost {
+  position: fixed;
+  top: -9999px;
+  left: -9999px;
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--da-border);
+  border-radius: var(--da-radius-sm);
+  background: var(--da-bg);
+  box-shadow: var(--da-shadow);
+  pointer-events: none;
+}
+
+.da-drag-ghost .da-block-handle {
+  display: none;
+}
+
+/* Horizontal line marking where the dragged block will land. */
+.da-drop-line {
+  position: absolute;
+  left: 28px;
+  right: 28px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--da-accent);
+  z-index: 3;
+  pointer-events: none;
+  transform: translateY(-1px);
+}
+
+.da-drop-line::before {
+  content: '';
+  position: absolute;
+  left: -3px;
+  top: -2px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--da-accent);
 }
 
 
@@ -1354,6 +1485,61 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Inline `:name` emoji combobox — same silhouette as the mention menu. */
+.da-emoji-menu {
+  position: absolute;
+  z-index: 40;
+  width: 240px;
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 4px;
+  border: 1px solid var(--da-border);
+  border-radius: var(--da-radius-sm);
+  background: var(--da-bg);
+  box-shadow: var(--da-shadow);
+}
+
+.da-emoji-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  border-radius: var(--da-radius-sm);
+  background: transparent;
+  color: var(--da-fg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.da-emoji-menu__item--active {
+  background: var(--da-surface-hover);
+}
+
+.da-emoji-menu__glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  font-size: 18px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.da-emoji-menu__name {
+  font-size: 13px;
+  color: var(--da-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.da-emoji-menu__item--active .da-emoji-menu__name {
+  color: var(--da-fg);
 }
 
 

@@ -3,6 +3,7 @@ import { Node, Transforms } from 'slate';
 import { ReactEditor, useSelected, useSlateStatic, type RenderElementProps } from 'slate-react';
 import { CheckIcon, DuplicateIcon, SearchIcon } from '../icons';
 import { LANGUAGES } from '../core/highlight';
+import { BlockDragHandle } from './BlockDragHandle';
 
 export function CodeBlock({ attributes, children, element }: RenderElementProps) {
   const editor = useSlateStatic();
@@ -57,8 +58,9 @@ export function CodeBlock({ attributes, children, element }: RenderElementProps)
   return (
     <div
       {...attributes}
-      className={`da-code-wrap${selected ? ' da-code-wrap--selected' : ''}`}
+      className={`da-code-wrap da-draggable${selected ? ' da-code-wrap--selected' : ''}`}
     >
+      <BlockDragHandle element={element} />
       <div className="da-code__bar" contentEditable={false}>
         <div className="da-code__lang" ref={menuRef}>
           <button

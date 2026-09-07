@@ -57,10 +57,11 @@ import { FloatingToolbar } from './FloatingToolbar';
 import { SlashMenu } from './SlashMenu';
 import { LinkPopover } from './LinkPopover';
 import { MentionCombobox } from './MentionCombobox';
+import { EmojiCombobox } from './EmojiCombobox';
 import { PromptDialog, type PromptRequest } from './PromptDialog';
 import { AlertDialog } from './AlertDialog';
 import { DialogContext, type DialogApi } from './dialogContext';
-import { applyBlockDrop, isBlockDrag } from './BlockDragHandle';
+import { applyBlockDrop, isBlockDrag, rowUnderPointer } from './BlockDragHandle';
 import { MediaDialog } from './MediaDialog';
 import { PreviewPane } from './PreviewPane';
 import { TableToolbar } from './TableToolbar';
@@ -134,6 +135,8 @@ export interface DaEditorProps {
   floatingToolbar?: boolean;
   /** Enable the `/` block menu. */
   slashMenu?: boolean;
+  /** Enable the `:name` inline emoji combobox. */
+  emoji?: boolean;
   /** Enable Markdown input rules while typing. */
   autoformat?: boolean;
   /** Renders the Ask AI affordances and fires when one is used. */
@@ -170,6 +173,7 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
     fixedToolbar = true,
     floatingToolbar = true,
     slashMenu = true,
+    emoji = true,
     autoformat = true,
     onAskAi,
     onPickMedia,
@@ -325,8 +329,11 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
   };
 
   const [dropActive, setDropActive] = useState(false);
+  // Pixel position (relative to the container) of the block drop indicator, or
+  // null when no block is being dragged over a valid target.
+  const [dropLine, setDropLine] = useState<number | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
- 
   const isFileDrag = (event: React.DragEvent) =>
     Array.from(event.dataTransfer.types).includes('Files');
 
@@ -338,6 +345,14 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
     if (isBlockDrag(event.dataTransfer)) {
       event.preventDefault();
       event.dataTransfer.dropEffect = 'move';
+      const target = rowUnderPointer(event.clientX, event.clientY);
+      const base = containerRef.current?.getBoundingClientRect();
+      if (target && base) {
+        const y = target.after ? target.rect.bottom : target.rect.top;
+        setDropLine(y - base.top);
+      } else {
+        setDropLine(null);
+      }
       return;
     }
 
@@ -350,6 +365,7 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
   const handleDragLeave = (event: React.DragEvent) => {
     if (event.currentTarget.contains(event.relatedTarget as globalThis.Node)) return;
     setDropActive(false);
+    setDropLine(null);
   };
 
   const handleDrop = (event: React.DragEvent) => {
@@ -362,8 +378,10 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
       if (applyBlockDrop(editor, event.dataTransfer, at ? { path: at.anchor.path } : null)) {
         event.preventDefault();
         setDropActive(false);
+        setDropLine(null);
         return;
       }
+      setDropLine(null);
     }
 
     const files = Array.from(event.dataTransfer.files);
@@ -620,9 +638,17 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
           }}
         >
           <div
+            ref={containerRef}
             className={`da-editor__container${dropActive ? ' da-editor__container--dropping' : ''}`}
             style={{ maxWidth }}
           >
+            {dropLine !== null && (
+              <div
+                className="da-drop-line"
+                style={{ top: dropLine }}
+                aria-hidden
+              />
+            )}
             <Editable
               className="da-editor__content"
               readOnly={locked}
@@ -655,6 +681,7 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
             {mentionables?.length && !locked ? (
               <MentionCombobox mentionables={mentionables} />
             ) : null}
+            {emoji && !locked && <EmojiCombobox />}
             {!locked && <TableToolbar />}
             {!locked && <MediaToolbar />}
             {!locked && !linkOpen && <LinkToolbar />}

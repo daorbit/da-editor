@@ -17,6 +17,34 @@ import { BlockDragHandle } from './BlockDragHandle';
 /** Narrow enough to sit inline with text, wide enough to still grab a handle. */
 const MIN_IMAGE_WIDTH = 80;
 
+/** Hint shown on an empty block while the caret sits in it. */
+const BLOCK_PLACEHOLDERS: Partial<Record<string, string>> = {
+  [ELEMENT.h1]: 'Heading 1',
+  [ELEMENT.h2]: 'Heading 2',
+  [ELEMENT.h3]: 'Heading 3',
+  [ELEMENT.h4]: 'Heading 4',
+  [ELEMENT.h5]: 'Heading 5',
+  [ELEMENT.h6]: 'Heading 6',
+  [ELEMENT.blockquote]: 'Empty quote',
+  [ELEMENT.listItem]: 'List item',
+  [ELEMENT.todoListItem]: 'To-do',
+  [ELEMENT.callout]: 'Type a note…',
+};
+
+/**
+ * A `data-ph` attribute for the current block when it is empty and holds the
+ * caret, so the stylesheet can render the hint through `::before`. The caret
+ * check keeps the hint off every other blank line in the document.
+ */
+function usePlaceholder(element: RenderElementProps['element']): { 'data-ph': string } | undefined {
+  const selected = useSelected();
+  if (!selected) return undefined;
+  const ph = BLOCK_PLACEHOLDERS[element.type];
+  if (!ph) return undefined;
+  if (Node.string(element) !== '' || element.children.length !== 1) return undefined;
+  return { 'data-ph': ph };
+}
+
 /** Below this a column cannot hold a word, and its handle becomes unhittable. */
 const MIN_COLUMN_WIDTH = 48;
 
@@ -51,23 +79,27 @@ function cellStyle(element: RenderElementProps['element']): CSSProperties {
 export function ElementRenderer(props: RenderElementProps) {
   const { attributes, children, element } = props;
   const style = blockStyle(element);
+  // Runs for every block; only returns an attribute for the ones that take a
+  // placeholder and are currently empty under the caret.
+  const ph = usePlaceholder(element);
 
   switch (element.type) {
     case ELEMENT.h1:
-      return <h1 {...attributes} style={style} className="da-h1">{children}</h1>;
+      return <h1 {...attributes} {...ph} style={style} className="da-h1 da-draggable"><BlockDragHandle element={element} />{children}</h1>;
     case ELEMENT.h2:
-      return <h2 {...attributes} style={style} className="da-h2">{children}</h2>;
+      return <h2 {...attributes} {...ph} style={style} className="da-h2 da-draggable"><BlockDragHandle element={element} />{children}</h2>;
     case ELEMENT.h3:
-      return <h3 {...attributes} style={style} className="da-h3">{children}</h3>;
+      return <h3 {...attributes} {...ph} style={style} className="da-h3 da-draggable"><BlockDragHandle element={element} />{children}</h3>;
     case ELEMENT.h4:
-      return <h4 {...attributes} style={style} className="da-h4">{children}</h4>;
+      return <h4 {...attributes} {...ph} style={style} className="da-h4 da-draggable"><BlockDragHandle element={element} />{children}</h4>;
     case ELEMENT.h5:
-      return <h5 {...attributes} style={style} className="da-h5">{children}</h5>;
+      return <h5 {...attributes} {...ph} style={style} className="da-h5 da-draggable"><BlockDragHandle element={element} />{children}</h5>;
     case ELEMENT.h6:
-      return <h6 {...attributes} style={style} className="da-h6">{children}</h6>;
+      return <h6 {...attributes} {...ph} style={style} className="da-h6 da-draggable"><BlockDragHandle element={element} />{children}</h6>;
     case ELEMENT.blockquote:
       return (
-        <blockquote {...attributes} style={style} className="da-blockquote">
+        <blockquote {...attributes} {...ph} style={style} className="da-blockquote da-draggable">
+          <BlockDragHandle element={element} />
           {children}
         </blockquote>
       );
@@ -94,13 +126,18 @@ export function ElementRenderer(props: RenderElementProps) {
         </ol>
       );
     case ELEMENT.listItem:
-      return <li {...attributes} style={style} className="da-li">{children}</li>;
+      return <li {...attributes} {...ph} style={style} className="da-li">{children}</li>;
     case ELEMENT.todoListItem:
       return <TodoItem {...props} />;
     case ELEMENT.toggleList:
       return <ToggleItem {...props} />;
     case ELEMENT.columns:
-      return <div {...attributes} className="da-columns">{children}</div>;
+      return (
+        <div {...attributes} className="da-columns da-draggable">
+          <BlockDragHandle element={element} />
+          {children}
+        </div>
+      );
     case ELEMENT.column:
       return <div {...attributes} className="da-column">{children}</div>;
     case ELEMENT.divider:
@@ -153,8 +190,9 @@ export function ElementRenderer(props: RenderElementProps) {
 }
 
 /**
- * Shows a "Type something…" hint on the paragraph the cursor currently sits
- * in, so an empty line under the caret is never mistaken for no line at all.
+ * Shows a hint on the paragraph the cursor currently sits in, so an empty line
+ * under the caret is never mistaken for no line at all. The document-level
+ * placeholder covers the very first empty line; this covers every one after.
  */
 function EmptyLineParagraph({ attributes, children, element, style }: RenderElementProps & {
   style: CSSProperties;
@@ -170,9 +208,11 @@ function EmptyLineParagraph({ attributes, children, element, style }: RenderElem
   return (
     <p
       {...attributes}
+      {...(isEmpty ? { 'data-ph': "Type '/' for commands" } : {})}
       style={style}
-      className={`da-p${isEmpty ? ' da-p--empty' : ''}`}
+      className={`da-p da-draggable${isEmpty ? ' da-p--empty' : ''}`}
     >
+      <BlockDragHandle element={element} />
       {children}
     </p>
   );
@@ -180,14 +220,16 @@ function EmptyLineParagraph({ attributes, children, element, style }: RenderElem
 
 function TodoItem({ attributes, children, element }: RenderElementProps) {
   const editor = useSlateStatic();
+  const ph = usePlaceholder(element);
   const checked = 'checked' in element ? Boolean(element.checked) : false;
 
   return (
     <div
       {...attributes}
-      className={`da-todo${checked ? ' da-todo--checked' : ''}`}
+      className={`da-todo da-draggable${checked ? ' da-todo--checked' : ''}`}
       style={blockStyle(element)}
     >
+      <BlockDragHandle element={element} />
       <span contentEditable={false} className="da-todo__box">
         <input
           type="checkbox"
@@ -198,7 +240,7 @@ function TodoItem({ attributes, children, element }: RenderElementProps) {
           }}
         />
       </span>
-      <span className="da-todo__text">{children}</span>
+      <span className="da-todo__text" {...ph}>{children}</span>
     </div>
   );
 }
@@ -208,7 +250,8 @@ function ToggleItem({ attributes, children, element }: RenderElementProps) {
   const open = 'open' in element ? element.open !== false : true;
 
   return (
-    <div {...attributes} className="da-toggle" style={blockStyle(element)}>
+    <div {...attributes} className="da-toggle da-draggable" style={blockStyle(element)}>
+      <BlockDragHandle element={element} />
       <button
         type="button"
         contentEditable={false}
@@ -243,15 +286,17 @@ function Divider({ attributes, children }: RenderElementProps) {
 }
 
 function Callout({ attributes, children, element }: RenderElementProps) {
+  const ph = usePlaceholder(element);
   const variant = 'variant' in element && element.variant ? element.variant : 'info';
   const emoji = 'emoji' in element && element.emoji ? element.emoji : '💡';
 
   return (
-    <div {...attributes} className={`da-callout da-callout--${variant}`}>
+    <div {...attributes} className={`da-callout da-draggable da-callout--${variant}`}>
+      <BlockDragHandle element={element} />
       <span contentEditable={false} className="da-callout__icon">
         {emoji}
       </span>
-      <div className="da-callout__body">{children}</div>
+      <div className="da-callout__body" {...ph}>{children}</div>
     </div>
   );
 }

@@ -34,7 +34,17 @@ function blockItem(type: ElementType, label: string, group: string, icon: React.
   };
 }
 
-const GROUPS = ['AI', 'Basic blocks', 'Lists', 'Advanced', 'Media'] as const;
+const GROUPS = ['Recent', 'AI', 'Basic blocks', 'Lists', 'Advanced', 'Media'] as const;
+
+/** Item keys picked this session, most recent first. Not persisted. */
+const recentKeys: string[] = [];
+
+function rememberRecent(key: string) {
+  const at = recentKeys.indexOf(key);
+  if (at !== -1) recentKeys.splice(at, 1);
+  recentKeys.unshift(key);
+  recentKeys.length = Math.min(recentKeys.length, 3);
+}
 
 function buildItems(
   onAskAi?: () => void,
@@ -136,7 +146,14 @@ export function SlashMenu({ onAskAi, onMedia }: SlashMenuProps) {
 
   const items = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return allItems;
+    if (!q) {
+      // A "Recent" band above the full list, built from this session's picks.
+      const recent = recentKeys
+        .map((key) => allItems.find((item) => item.key === key))
+        .filter((item): item is SlashItem => Boolean(item))
+        .map((item) => ({ ...item, key: `recent-${item.key}`, group: 'Recent' }));
+      return [...recent, ...allItems];
+    }
     return allItems.filter(
       (item) =>
         item.label.toLowerCase().includes(q) ||
@@ -203,6 +220,7 @@ export function SlashMenu({ onAskAi, onMedia }: SlashMenuProps) {
     if (target) Transforms.select(editor, target);
     Transforms.delete(editor);
     item.run(editor);
+    rememberRecent(item.key.replace(/^recent-/, ''));
     setTarget(null);
     ReactEditor.focus(editor);
   };
@@ -244,7 +262,7 @@ export function SlashMenu({ onAskAi, onMedia }: SlashMenuProps) {
   return (
     <div
       ref={ref}
-      className="da-slash"
+      className="da-slash da-slash--in"
       role="listbox"
       aria-label="Insert block"
       style={{ top: position.top, left: position.left }}
@@ -276,6 +294,9 @@ export function SlashMenu({ onAskAi, onMedia }: SlashMenuProps) {
               >
                 <span className="da-slash__icon">{item.icon}</span>
                 <span className="da-slash__label">{item.label}</span>
+                {itemIndex === index && (
+                  <kbd className="da-slash__hint">↵</kbd>
+                )}
               </button>
             );
           }),

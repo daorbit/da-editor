@@ -49,6 +49,7 @@ export type { SearchMatch, SearchOptions } from './core/search';
 export { withUndoGrouping } from './core/withUndoGrouping';
 export { EmojiPicker } from './components/EmojiPicker';
 export type { EmojiPickerProps } from './components/EmojiPicker';
+export { EmojiCombobox } from './components/EmojiCombobox';
 export { CodeBlock } from './components/CodeBlock';
 export { TableToolbar } from './components/TableToolbar';
 export { MediaToolbar } from './components/MediaToolbar';

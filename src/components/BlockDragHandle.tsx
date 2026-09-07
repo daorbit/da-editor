@@ -10,13 +10,7 @@ export interface BlockDragHandleProps {
   element: RenderElementProps['element'];
 }
 
-/**
- * Grip for reordering a block by dragging it.
- *
- * The path is read at drop time rather than captured on drag start: the drag
- * itself does not change the document, but anything else in the session may
- * have, and a stale path would move the wrong node.
- */
+ 
 export function BlockDragHandle({ element }: BlockDragHandleProps) {
   const editor = useSlateStatic();
 
@@ -32,6 +26,24 @@ export function BlockDragHandle({ element }: BlockDragHandleProps) {
         const path = ReactEditor.findPath(editor, element);
         event.dataTransfer.setData(DRAG_TYPE, JSON.stringify(path));
         event.dataTransfer.effectAllowed = 'move';
+
+        const row = (event.currentTarget.closest('.da-draggable, .da-media-wrap') ??
+          event.currentTarget.parentElement) as HTMLElement | null;
+        if (row) {
+          const rect = row.getBoundingClientRect();
+          const ghost = row.cloneNode(true) as HTMLElement;
+          ghost.classList.add('da-drag-ghost');
+          ghost.style.width = `${rect.width}px`;
+          document.body.appendChild(ghost);
+          event.dataTransfer.setDragImage(ghost, event.clientX - rect.left, 16);
+          // The element only needs to live for the browser's snapshot.
+          window.setTimeout(() => ghost.remove(), 0);
+          row.classList.add('da-dragging');
+        }
+      }}
+      onDragEnd={(event) => {
+        const row = event.currentTarget.closest('.da-draggable, .da-media-wrap') as HTMLElement | null;
+        row?.classList.remove('da-dragging');
       }}
     >
       <DragHandleIcon size={16} />
@@ -44,11 +56,44 @@ export function isBlockDrag(dataTransfer: DataTransfer): boolean {
   return Array.from(dataTransfer.types).includes(DRAG_TYPE);
 }
 
+ 
 /**
- * Moves the dragged block to the drop point.
- *
- * The target path is trimmed to its top level so a block always lands between
- * blocks, never inside the text of the one it was dropped onto.
+ * The top-level block row under the pointer, and whether the drop should land
+ * before or after it. Drives the drop indicator; the move itself still resolves
+ * through Slate's own `findEventRange` so behaviour matches a text drop.
+ */
+export function rowUnderPointer(
+  clientX: number,
+  clientY: number,
+): { index: number; after: boolean; rect: DOMRect } | null {
+  const content = document.querySelector('.da-editor__content');
+  if (!content) return null;
+  const rows = Array.from(content.children) as HTMLElement[];
+  if (rows.length === 0) return null;
+
+  let row =
+    (document.elementFromPoint(clientX, clientY) as HTMLElement | null)?.closest(
+      '.da-editor__content > *',
+    ) as HTMLElement | null;
+
+  if (!row) {
+    row =
+      rows.find((el) => {
+        const r = el.getBoundingClientRect();
+        return clientY >= r.top && clientY <= r.bottom;
+      }) ?? (clientY < rows[0].getBoundingClientRect().top ? rows[0] : rows[rows.length - 1]);
+  }
+
+  const index = rows.indexOf(row);
+  if (index === -1) return null;
+  const rect = row.getBoundingClientRect();
+  const after = clientY > rect.top + rect.height / 2;
+  return { index, after, rect };
+}
+
+/**
+ * Moves the dragged block to `at` (a Slate point from `findEventRange`),
+ * trimmed to its top level so a block always lands between blocks.
  */
 export function applyBlockDrop(
   editor: ReturnType<typeof useSlateStatic>,
