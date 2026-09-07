@@ -14,7 +14,6 @@ import { DEVICE_ORDER, DEVICE_SPECS, DeviceFrame, frameSize, type DeviceId } fro
 
 export interface PreviewPaneProps {
   onClose: () => void;
-  /** The document to render — the editor's live value, so edits show as typed. */
   value: EditorValue;
   title?: string;
 }
@@ -34,16 +33,14 @@ export function PreviewPane({ onClose, value, title = 'Preview' }: PreviewPanePr
   const { ref: stageRef, scale, measured } = useFitScale({
     contentWidth: size.width,
     contentHeight: size.height,
-    padding: { x: 32, y: 32 },
+    // Mirrors `.da-preview__stage`'s padding on both axes.
+    padding: { x: 24, y: 24 },
   });
 
-  // Inline styles so the preview stands on its own, exactly as published HTML
-  // does wherever the editor's stylesheet is not loaded.
+ 
   const html = useMemo(() => serializeHtml(value, { inlineStyles: true }), [value]);
 
   useEffect(() => {
-    // Escape leaves fullscreen before it closes the preview, so an expanded
-    // preview does not vanish in one keystroke.
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
       if (fullscreen) setFullscreen(false);
