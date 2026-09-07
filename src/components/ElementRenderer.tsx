@@ -8,6 +8,7 @@ import {
 } from 'slate-react';
 import { ELEMENT } from '../core/types';
 import { isEditorEmpty } from '../core/transforms';
+import { formatDate } from '../core/serialize';
 import { CodeBlock } from './CodeBlock';
 import { useDialogs } from './dialogContext';
 import { DatePicker } from './DatePicker';
@@ -685,13 +686,7 @@ function DateChip({ attributes, children, element }: RenderElementProps) {
   const selected = useSelected();
   const [open, setOpen] = useState(false);
   const iso = 'date' in element && element.date ? element.date : '';
-  const label = iso
-    ? new Date(iso).toLocaleDateString(undefined, {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-      })
-    : 'Date';
+  const label = iso ? formatDate(iso) : 'Date';
 
   return (
     <span {...attributes} contentEditable={false} className="da-date-wrap">

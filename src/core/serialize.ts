@@ -63,6 +63,21 @@ function safeCss(value: string): string {
   return escapeHtml(trimmed);
 }
 
+/**
+ * A stored date as the reader sees it. Shared with the editor's own date chip
+ * so the document reads the same in the editor, the preview and the saved HTML.
+ */
+export function formatDate(iso: string): string {
+  if (!iso) return '';
+  const parsed = new Date(iso);
+  if (Number.isNaN(parsed.getTime())) return iso;
+  return parsed.toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
 function serializeLeaf(node: Text): string {
   let html = escapeHtml(node.text);
   if (html === '') return '';
@@ -302,8 +317,12 @@ function serializeNode(node: Node): string {
       return `<span class="da-inline-equation" data-inline-equation="${formula}"${s('inlineEquation')}>${formula}</span>`;
     }
     case ELEMENT.date: {
-      const iso = 'date' in node ? escapeHtml(String(node.date)) : '';
-      return `<time class="da-date" datetime="${iso}"${s('time')}>${iso}</time>`;
+      const raw = 'date' in node ? String(node.date) : '';
+      const iso = escapeHtml(raw);
+      // The machine-readable value belongs in `datetime`; the text has to be
+      // the same label the editor renders, or a date reads as a raw timestamp
+      // everywhere the document is published.
+      return `<time class="da-date" datetime="${iso}"${s('time')}>${escapeHtml(formatDate(raw))}</time>`;
     }
     case ELEMENT.footnote: {
       const note = 'note' in node ? escapeHtml(String(node.note)) : '';

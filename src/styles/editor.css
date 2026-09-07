@@ -2755,23 +2755,37 @@
   outline: none;
 }
 
+/*
+ * The preview chrome deliberately stays dark in both themes: it is the shell
+ * around a device mock, not part of the document, and a light shell makes the
+ * white page inside it disappear. The stage tint follows the theme so the
+ * boundary is still visible in light mode.
+ */
 .da-preview {
   display: flex;
   flex: 1;
   flex-direction: column;
   min-width: 0;
   border-left: 1px solid var(--da-border);
-  background-color: #0f1115;
+  background-color: #15171c;
+}
+
+/* Lifted out of the split to cover the viewport. */
+.da-preview--fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  border-left: 0;
 }
 
 .da-preview__topbar {
   display: flex;
   flex-shrink: 0;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   padding: 8px 10px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  background-color: #16181d;
+  background-color: #1c1f26;
   color: #e6e8ec;
 }
 
@@ -2789,38 +2803,21 @@
   display: flex;
   flex-shrink: 0;
   gap: 2px;
+  margin-right: 4px;
   padding: 2px;
   border-radius: 8px;
   background-color: rgba(255, 255, 255, 0.07);
 }
 
-.da-preview__device {
-  padding: 4px 10px;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  color: #b6bac2;
-  cursor: pointer;
-  font: inherit;
-  font-size: 12px;
-}
-
-.da-preview__device:hover {
-  color: #e6e8ec;
-}
-
-.da-preview__device--active {
-  background-color: rgba(255, 255, 255, 0.14);
-  color: #ffffff;
-}
-
-.da-preview__close {
+.da-preview__device,
+.da-preview__action {
   display: flex;
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  width: 26px;
+  width: 28px;
   height: 26px;
+  padding: 0;
   border: 0;
   border-radius: 6px;
   background: transparent;
@@ -2828,9 +2825,22 @@
   cursor: pointer;
 }
 
-.da-preview__close:hover {
+.da-preview__device:hover,
+.da-preview__action:hover {
   background-color: rgba(255, 255, 255, 0.1);
   color: #ffffff;
+}
+
+.da-preview__device--active,
+.da-preview__device--active:hover {
+  background-color: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+}
+
+.da-preview__device:focus-visible,
+.da-preview__action:focus-visible {
+  outline: 2px solid #7aa2ff;
+  outline-offset: -2px;
 }
 
 /* Centres the frame and gives the fit measurement something to size against. */

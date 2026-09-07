@@ -17,7 +17,9 @@ export interface DeviceSpec {
 // Bezels mirror the padding in the stylesheet — a value that disagrees becomes
 // dead space inside the measured frame.
 export const DEVICE_SPECS: Record<DeviceId, DeviceSpec> = {
-  desktop: { id: 'desktop', label: 'Desktop', width: 1152, height: 720, bezel: 9, chromeBelow: 14 },
+  // Narrower than a real laptop's 1280 so the mock does not dominate a split
+  // pane; still wide enough that a desktop layout renders as a desktop layout.
+  desktop: { id: 'desktop', label: 'Desktop', width: 1024, height: 640, bezel: 9, chromeBelow: 14 },
   tablet: { id: 'tablet', label: 'Tablet', width: 834, height: 1120, bezel: 10, chromeBelow: 0 },
   mobile: { id: 'mobile', label: 'Mobile', width: 402, height: 874, bezel: 10, chromeBelow: 0 },
 };

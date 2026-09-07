@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CloseIcon } from '../icons';
+import {
+  CloseIcon,
+  CollapseIcon,
+  ExpandIcon,
+  MonitorIcon,
+  PhoneIcon,
+  TabletIcon,
+} from '../icons';
 import { serializeHtml } from '../core/serialize';
 import { useFitScale } from '../core/useFitScale';
 import type { EditorValue } from '../core/types';
@@ -12,18 +19,16 @@ export interface PreviewPaneProps {
   title?: string;
 }
 
-/**
- * A live preview beside the editor, rendered from the same `serializeHtml`
- * output a save produces — so what the preview shows and what gets stored
- * cannot drift apart.
- *
- * The page renders inside a hardware frame at the device's true CSS width and
- * is then scaled to fit the pane, rather than being squeezed into whatever
- * width the pane has: a phone layout has to stay a phone layout to be worth
- * trusting, at any divider position.
- */
+ 
+const DEVICE_ICONS: Record<DeviceId, typeof MonitorIcon> = {
+  desktop: MonitorIcon,
+  tablet: TabletIcon,
+  mobile: PhoneIcon,
+};
+
 export function PreviewPane({ onClose, value, title = 'Preview' }: PreviewPaneProps) {
   const [device, setDevice] = useState<DeviceId>('desktop');
+  const [fullscreen, setFullscreen] = useState(false);
 
   const size = frameSize(device);
   const { ref: stageRef, scale, measured } = useFitScale({
@@ -37,35 +42,69 @@ export function PreviewPane({ onClose, value, title = 'Preview' }: PreviewPanePr
   const html = useMemo(() => serializeHtml(value, { inlineStyles: true }), [value]);
 
   useEffect(() => {
+    // Escape leaves fullscreen before it closes the preview, so an expanded
+    // preview does not vanish in one keystroke.
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
+      if (event.key !== 'Escape') return;
+      if (fullscreen) setFullscreen(false);
+      else onClose();
     };
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, [onClose]);
+  }, [onClose, fullscreen]);
+
+  useEffect(() => {
+    if (!fullscreen) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [fullscreen]);
 
   return (
-    <div className="da-preview" role="region" aria-label={title}>
+    <div
+      className={`da-preview${fullscreen ? ' da-preview--fullscreen' : ''}`}
+      role="region"
+      aria-label={title}
+    >
       <div className="da-preview__topbar">
         <span className="da-preview__title">{title}</span>
 
         <div className="da-preview__devices" role="group" aria-label="Preview device">
-          {DEVICE_ORDER.map((id) => (
-            <button
-              key={id}
-              type="button"
-              className={`da-preview__device${device === id ? ' da-preview__device--active' : ''}`}
-              aria-pressed={device === id}
-              onClick={() => setDevice(id)}
-            >
-              {DEVICE_SPECS[id].label}
-            </button>
-          ))}
+          {DEVICE_ORDER.map((id) => {
+            const DeviceIcon = DEVICE_ICONS[id];
+            return (
+              <button
+                key={id}
+                type="button"
+                className={`da-preview__device${device === id ? ' da-preview__device--active' : ''}`}
+                aria-pressed={device === id}
+                title={DEVICE_SPECS[id].label}
+                aria-label={DEVICE_SPECS[id].label}
+                onClick={() => setDevice(id)}
+              >
+                <DeviceIcon size={16} />
+              </button>
+            );
+          })}
         </div>
 
         <button
           type="button"
-          className="da-preview__close"
+          className="da-preview__action"
+          title={fullscreen ? 'Exit full screen' : 'Full screen'}
+          aria-label={fullscreen ? 'Exit full screen' : 'Full screen'}
+          aria-pressed={fullscreen}
+          onClick={() => setFullscreen((current) => !current)}
+        >
+          {fullscreen ? <CollapseIcon size={16} /> : <ExpandIcon size={16} />}
+        </button>
+
+        <button
+          type="button"
+          className="da-preview__action"
+          title="Close preview"
           aria-label="Close preview"
           onClick={onClose}
         >
@@ -73,14 +112,10 @@ export function PreviewPane({ onClose, value, title = 'Preview' }: PreviewPanePr
         </button>
       </div>
 
-      {/* The frame is laid out from the first render so the stage has something
-          to size against, and stays unpainted until that fit is measured. */}
       <div className="da-preview__stage" ref={stageRef}>
         <DeviceFrame device={device} scale={scale} hidden={!measured}>
           <div
             className="da-preview__page"
-            // The HTML comes from this editor's own serializer, which drops
-            // executable URL schemes and escapes text as it writes.
             dangerouslySetInnerHTML={{ __html: html }}
           />
         </DeviceFrame>
