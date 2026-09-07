@@ -3124,6 +3124,18 @@
   line-height: 1.6;
 }
 
+ 
+.da-preview .dfs__screen {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.da-preview .dfs__screen::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
+}
+
 .da-preview__page img,
 .da-preview__page video {
   max-width: 100%;
