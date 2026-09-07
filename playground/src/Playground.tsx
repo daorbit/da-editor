@@ -49,6 +49,7 @@ export function Playground({ navigate }: { navigate: (next: Route) => void }) {
         maxWidth="1100px"
         autoFocus
         wordCount
+        preview={true}
         mentionables={MENTIONABLES}
         onAskAi={() => setNotice('Wire this to your own endpoint.')}
       />

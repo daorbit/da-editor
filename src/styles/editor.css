@@ -2705,18 +2705,62 @@
   }
 }
 
-/* --------------------------------------------------------------- preview -- */
-
-/*
- * Full-screen preview. Portalled to the body, so it sits above the host page
- * rather than inside the editor's own stacking context.
- */
-.da-preview {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
+ 
+.da-editor__split {
   display: flex;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+
+.da-editor__split > .da-editor__scroll {
+  flex: 1;
+  min-width: 0;
+}
+
+.da-editor__split--previewing > .da-editor__scroll {
+  flex-grow: 0;
+  flex-shrink: 0;
+}
+
+/* A thin visual line with a wider grab area around it, so the divider is easy
+   to hit without drawing a heavy bar down the middle of the editor. */
+.da-editor__divider {
+  position: relative;
+  flex: 0 0 auto;
+  width: 9px;
+  margin: 0 -4px;
+  background: transparent;
+  cursor: col-resize;
+  touch-action: none;
+  z-index: 2;
+}
+
+.da-editor__divider::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 4px;
+  width: 1px;
+  background-color: var(--da-border);
+}
+
+.da-editor__divider:hover::before,
+.da-editor__divider:focus-visible::before {
+  background-color: var(--da-accent);
+}
+
+.da-editor__divider:focus-visible {
+  outline: none;
+}
+
+.da-preview {
+  display: flex;
+  flex: 1;
   flex-direction: column;
+  min-width: 0;
+  border-left: 1px solid var(--da-border);
   background-color: #0f1115;
 }
 
@@ -2724,8 +2768,8 @@
   display: flex;
   flex-shrink: 0;
   align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
+  gap: 10px;
+  padding: 8px 10px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   background-color: #16181d;
   color: #e6e8ec;
@@ -2735,7 +2779,7 @@
   flex: 1;
   min-width: 0;
   overflow: hidden;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2743,6 +2787,7 @@
 
 .da-preview__devices {
   display: flex;
+  flex-shrink: 0;
   gap: 2px;
   padding: 2px;
   border-radius: 8px;
@@ -2750,7 +2795,7 @@
 }
 
 .da-preview__device {
-  padding: 5px 12px;
+  padding: 4px 10px;
   border: 0;
   border-radius: 6px;
   background: transparent;
@@ -2771,10 +2816,11 @@
 
 .da-preview__close {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: 26px;
+  height: 26px;
   border: 0;
   border-radius: 6px;
   background: transparent;
@@ -2795,7 +2841,7 @@
   justify-content: center;
   min-height: 0;
   overflow: hidden;
-  padding: 32px;
+  padding: 16px;
 }
 
 /* The document itself, on the device's screen. Serialized HTML carries its own
@@ -2820,6 +2866,27 @@
 .da-preview__page table {
   width: 100%;
   border-collapse: collapse;
+}
+
+/* Too narrow to show an editor and a device mock at once. */
+@media (max-width: 900px) {
+  .da-editor__split--previewing {
+    flex-direction: column;
+  }
+
+  .da-editor__split--previewing > .da-editor__scroll {
+    flex-basis: auto !important;
+  }
+
+  .da-editor__divider {
+    display: none;
+  }
+
+  .da-preview {
+    border-left: 0;
+    border-top: 1px solid var(--da-border);
+    min-height: 320px;
+  }
 }
 
 /* ---------------------------------------------------------- device mocks -- */
