@@ -947,6 +947,20 @@ a.pg-btn {
   font-size: 13.5px;
 }
 
+.pg-feedback {
+  border: 1px solid var(--pg-border);
+  border-radius: var(--pg-radius, 12px);
+  background: var(--pg-surface);
+  overflow: hidden;
+}
+
+.pg-feedback__frame {
+  display: block;
+  width: 100%;
+  height: 640px;
+  border: 0;
+}
+
 .pg-footer {
   display: flex;
   align-items: center;

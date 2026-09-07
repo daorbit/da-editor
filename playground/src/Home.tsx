@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   DaEditor,
   MoonIcon,
@@ -257,14 +257,32 @@ export interface HomeProps {
   dark: boolean;
 }
 
+const FEEDBACK_FORM_SRC = 'https://forms.daorbit.in/form/6a9e9287282c134d26c0f753/view';
+
 export function Home({ navigate, onToggleTheme, dark }: HomeProps) {
   const editorRef = useRef<DaEditorHandle>(null);
+  const feedbackFrameRef = useRef<HTMLIFrameElement>(null);
   const [copied, setCopied] = useState(false);
   const [tab, setTab] = useState<OutputTab>('html');
   const [output, setOutput] = useState('');
   const [hook, setHook] = useState<(typeof HOOKS)[number]['id']>('ai');
 
   const activeHook = HOOKS.find((h) => h.id === hook) ?? HOOKS[0];
+
+  /* The feedback form is an iframe that posts its own height so the frame can
+     grow with its content instead of scrolling inside a fixed box. */
+  useEffect(() => {
+    function onMessage(event: MessageEvent) {
+      if (new URL(FEEDBACK_FORM_SRC).origin !== event.origin) return;
+      const data = event.data as { type?: string; height?: number };
+      if (data?.type !== 'da-forms:height' || typeof data.height !== 'number') return;
+      if (feedbackFrameRef.current) {
+        feedbackFrameRef.current.style.height = `${data.height}px`;
+      }
+    }
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, []);
 
   /* Reading through the ref on every change is what makes the output panel
      feel live — it is the same API a consumer would use. */
@@ -590,6 +608,23 @@ export function Home({ navigate, onToggleTheme, dark }: HomeProps) {
             </div>
           ))}
         </dl>
+      </section>
+
+      <section className="pg-section" id="feedback">
+        <h2 className="pg-h2">Feedback</h2>
+        <p className="pg-lead">
+          Found a bug, want a prop, or using it in something? Tell us here — it
+          goes straight to the maintainers.
+        </p>
+        <div className="pg-feedback">
+          <iframe
+            ref={feedbackFrameRef}
+            className="pg-feedback__frame"
+            src={FEEDBACK_FORM_SRC}
+            title="Feedback form"
+            loading="lazy"
+          />
+        </div>
       </section>
 
       <footer className="pg-footer">
