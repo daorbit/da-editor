@@ -3,11 +3,13 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import dts from 'vite-plugin-dts';
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   plugins: [
     react(),
     dts({ include: ['src'], rollupTypes: true }),
   ],
+
+  publicDir: command === 'build' ? false : 'public',
   build: {
     lib: {
       entry: resolve(__dirname, 'src/index.ts'),
@@ -44,4 +46,4 @@ export default defineConfig({
     },
     sourcemap: false,
   },
-});
+}));
