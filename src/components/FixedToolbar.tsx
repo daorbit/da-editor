@@ -1,6 +1,5 @@
 import { Fragment, useRef, useState, type ReactNode } from 'react';
-import { Editor, Element as SlateElement } from 'slate';
-import { ReactEditor, useSlate } from 'slate-react';
+import { useSlate } from 'slate-react';
 import {
   LineHeightIcon,
   BulletedListIcon,
@@ -16,6 +15,7 @@ import {
   IndentIcon,
   LetterCaseIcon,
   LinkIcon,
+  EyeIcon,
   MoonIcon,
   MoreIcon,
   NumberedListIcon,
@@ -55,11 +55,10 @@ import { ColorPicker } from './ColorPicker';
 import {
   BULLET_STYLES,
   clearMarks,
-  DEFAULT_FONT_SIZE,
   FONT_FAMILIES,
   getAlign,
   getBlockType,
-  getFontSize,
+  getEffectiveFontSize,
   getLineHeight,
   getListStyle,
   getMarkValue,
@@ -90,27 +89,6 @@ import {
 } from '../core/tables';
 import { ELEMENT, MARK, type DaEditor, type MediaKind } from '../core/types';
 
-/**
- * The `fontSize` mark, or — when unset — the selection's actual rendered
- * size (e.g. a heading's CSS-driven size), so the stepper always shows what
- * the user sees rather than a stale default.
- */
-function getEffectiveFontSize(editor: DaEditor): number {
-  const marked = getFontSize(editor);
-  if (marked !== null) return marked;
-
-  try {
-    const [node] = Editor.nodes(editor, {
-      match: (n) => SlateElement.isElement(n) && Editor.isBlock(editor, n),
-    });
-    if (!node) return DEFAULT_FONT_SIZE;
-    const dom = ReactEditor.toDOMNode(editor, node[0]);
-    const computed = Number.parseFloat(getComputedStyle(dom).fontSize);
-    return Number.isFinite(computed) ? Math.round(computed) : DEFAULT_FONT_SIZE;
-  } catch {
-    return DEFAULT_FONT_SIZE;
-  }
-}
 
 export interface FixedToolbarProps {
   /** Rendered at the start of the toolbar, before the editor's own controls. */
@@ -122,6 +100,8 @@ export interface FixedToolbarProps {
   onExport?: (format: 'html' | 'markdown') => void;
   onToggleTheme?: () => void;
   isDark?: boolean;
+  /** Renders the preview button; omitted when the host has not enabled it. */
+  onPreview?: () => void;
 }
 
 export function FixedToolbar({
@@ -133,6 +113,7 @@ export function FixedToolbar({
   onExport,
   onToggleTheme,
   isDark,
+  onPreview,
 }: FixedToolbarProps) {
   const editor = useSlate() as DaEditor;
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -833,6 +814,10 @@ export function FixedToolbar({
 
       {/* Pinned right cluster, never scrolled away. */}
       <div className="da-tb__end">
+      {onPreview && (
+        <ToolbarButton icon={<EyeIcon />} label="Preview" onClick={onPreview} />
+      )}
+
       {onToggleTheme && (
         <ToolbarButton
           icon={isDark ? <SunIcon /> : <MoonIcon />}

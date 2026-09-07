@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Editor, Element as SlateElement, Range } from 'slate';
+import { Editor, Range } from 'slate';
 import { ReactEditor, useSlate } from 'slate-react';
 import { LinkIcon, MoreIcon, SparklesIcon } from '../icons';
 import {
@@ -12,9 +12,8 @@ import {
 import { MenuItem, ToolbarButton, ToolbarDropdown, ToolbarSeparator } from './ToolbarPrimitives';
 import {
   clearMarks,
-  DEFAULT_FONT_SIZE,
   getBlockType,
-  getFontSize,
+  getEffectiveFontSize,
   isMarkActive,
   replaceBlock,
   setFontSize,
@@ -27,28 +26,6 @@ import { ELEMENT, MARK, type DaEditor } from '../core/types';
 export interface FloatingToolbarProps {
   onAskAi?: () => void;
   onLink?: () => void;
-}
-
-/**
- * The `fontSize` mark, or — when unset — the selection's actual rendered
- * size (e.g. a heading's CSS-driven size), so the stepper always shows what
- * the user sees rather than a stale default.
- */
-function getEffectiveFontSize(editor: DaEditor): number {
-  const marked = getFontSize(editor);
-  if (marked !== null) return marked;
-
-  try {
-    const [node] = Editor.nodes(editor, {
-      match: (n) => SlateElement.isElement(n) && Editor.isBlock(editor, n),
-    });
-    if (!node) return DEFAULT_FONT_SIZE;
-    const dom = ReactEditor.toDOMNode(editor, node[0]);
-    const computed = Number.parseFloat(getComputedStyle(dom).fontSize);
-    return Number.isFinite(computed) ? Math.round(computed) : DEFAULT_FONT_SIZE;
-  } catch {
-    return DEFAULT_FONT_SIZE;
-  }
 }
 
 interface Position {

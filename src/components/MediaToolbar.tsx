@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Element as SlateElement, Transforms } from 'slate';
 import { ReactEditor, useSlate } from 'slate-react';
 import { CheckIcon, CloseIcon, TrashIcon } from '../icons';
 import { ELEMENT, type DaEditor } from '../core/types';
+import { useDismissOnOutside, useEditorFocused } from '../core/useDismiss';
 
 const MEDIA_TYPES = [
   ELEMENT.image,
@@ -23,13 +24,31 @@ export function MediaToolbar() {
   const [editing, setEditing] = useState<EditingField>(null);
   const [draft, setDraft] = useState('');
 
-  const [entry] = Array.from(
+  const focused = useEditorFocused(editor);
+  const [match] = Array.from(
     editor.nodes({
       match: (n) =>
         SlateElement.isElement(n) &&
         (MEDIA_TYPES as readonly string[]).includes(n.type),
     }),
   );
+  const [dismissed, setDismissed] = useState(false);
+  // The toolbar follows the selection, but must also close on a click that
+  // leaves the editor entirely or lands outside it while editing.
+  const entry = dismissed || !focused ? undefined : match;
+
+  const dismiss = useCallback(() => {
+    setEditing(null);
+    setDismissed(true);
+  }, []);
+
+  useDismissOnOutside(ref, Boolean(entry), dismiss);
+
+  // Selecting a different media block re-opens the toolbar after a dismissal.
+  const key = match ? JSON.stringify(match[1]) : null;
+  useEffect(() => {
+    setDismissed(false);
+  }, [key]);
 
   // Leaving the media block closes editing so it reopens clean next time.
   useEffect(() => {

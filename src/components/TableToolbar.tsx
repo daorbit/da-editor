@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ReactEditor, useSlate } from 'slate-react';
 import type { ReactNode } from 'react';
 import {
@@ -28,6 +28,7 @@ import {
 } from '../core/tables';
 import { ColorPicker } from './ColorPicker';
 import type { DaEditor } from '../core/types';
+import { useDismissOnOutside, useEditorFocused } from '../core/useDismiss';
 
 /** Floating controls anchored under the table containing the selection. */
 export function TableToolbar() {
@@ -36,8 +37,30 @@ export function TableToolbar() {
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
   const [menu, setMenu] = useState<'color' | 'borders' | null>(null);
 
-  const entry = getTable(editor);
+  const focused = useEditorFocused(editor);
+  const match = getTable(editor);
+  const [dismissed, setDismissed] = useState(false);
+  // Slate keeps the selection after a blur, so focus decides visibility too.
+  const entry = dismissed || !focused ? undefined : match;
   const inTable = Boolean(entry);
+
+  const dismiss = useCallback(() => {
+    setMenu(null);
+    setDismissed(true);
+  }, []);
+
+  useDismissOnOutside(ref, inTable, dismiss);
+
+  // Moving into a different table re-opens the toolbar after a dismissal.
+  const key = match ? JSON.stringify(match[1]) : null;
+  useEffect(() => {
+    setDismissed(false);
+  }, [key]);
+
+  // A closed toolbar must not leave a submenu open behind it.
+  useEffect(() => {
+    if (!inTable) setMenu(null);
+  }, [inTable]);
 
   useEffect(() => {
     const el = ref.current;

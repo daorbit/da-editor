@@ -316,11 +316,11 @@ function serializeNode(node: Node): string {
       // Regenerated from the headings on render; nothing to persist.
       return '';
     case ELEMENT.toggleList: {
-      const [summary, ...rest] = node.children;
-      const head = summary ? serializeNode(summary) : '';
-      const body = rest.map(serializeNode).join('');
+      // The editor models a toggle as one block of inline children, so the
+      // whole thing is the summary. Splitting a body out here would not
+      // survive the round-trip: `<summary>` is not a block on the way back in.
       const open = 'open' in node && node.open === false ? '' : ' open';
-      return `<details class="da-toggle"${open}${attrs}><summary${s('summary')}>${head}</summary><div class="da-toggle__body">${body}</div></details>`;
+      return `<details class="da-toggle"${open}${attrs}><summary${s('summary')}>${children}</summary></details>`;
     }
     case ELEMENT.columns:
       return `<div class="da-columns" data-columns="${node.children.length}"${attrs}>${children}</div>`;

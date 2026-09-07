@@ -1,4 +1,5 @@
 import { Editor, Element as SlateElement, Node, Range, Transforms } from 'slate';
+import { ReactEditor } from 'slate-react';
 import { ELEMENT, type Align, type DaEditor, type ElementType, type MarkType } from './types';
 
 export const LIST_TYPES: ElementType[] = [ELEMENT.bulletedList, ELEMENT.numberedList];
@@ -207,9 +208,7 @@ export function insertImage(editor: DaEditor, url: string): void {
   Transforms.insertNodes(editor, { type: ELEMENT.paragraph, children: [{ text: '' }] });
 }
 
-/* --------------------------------------------------------------- blocks -- */
-
-/** Replaces the current (empty) block with a fresh block of `type`. */
+ 
 export function replaceBlock(editor: DaEditor, type: ElementType): void {
   if (LIST_TYPES.includes(type)) {
     toggleBlock(editor, type);
@@ -275,9 +274,7 @@ export function insertColumns(editor: DaEditor, count = 3): void {
   Transforms.insertNodes(editor, { type: ELEMENT.paragraph, children: [{ text: '' }] });
 }
 
-/* ------------------------------------------------------ advanced blocks -- */
 
-/** Inserts a table-of-contents placeholder, rendered from the headings. */
 export function insertTableOfContents(editor: DaEditor): void {
   Transforms.insertNodes(editor, {
     type: ELEMENT.tableOfContents,
@@ -323,7 +320,6 @@ export function insertFootnote(editor: DaEditor, note = ''): void {
   Transforms.move(editor);
 }
 
-/* ----------------------------------------------------------- typography -- */
 
 export const FONT_SIZES = [12, 14, 16, 18, 20, 24, 30, 36, 48, 60, 72];
 
@@ -337,15 +333,31 @@ export const FONT_FAMILIES = [
 
 export const LINE_HEIGHTS = [1, 1.15, 1.5, 1.75, 2];
 
-/** The editor's base font-size (`.da-editor` in the stylesheet), used when
- *  no explicit `fontSize` mark and no DOM measurement is available. */
+ 
 export const DEFAULT_FONT_SIZE = 15;
 
-/** The `fontSize` mark on the current selection, or `null` when unset — a
- *  heading's larger size, for instance, comes from CSS, not a mark. */
+ 
 export function getFontSize(editor: DaEditor): number | null {
   const value = Editor.marks(editor)?.fontSize;
   return typeof value === 'number' ? value : null;
+}
+
+ 
+export function getEffectiveFontSize(editor: DaEditor): number {
+  const marked = getFontSize(editor);
+  if (marked !== null) return marked;
+
+  try {
+    const [node] = Editor.nodes(editor, {
+      match: (n) => SlateElement.isElement(n) && Editor.isBlock(editor, n),
+    });
+    if (!node) return DEFAULT_FONT_SIZE;
+    const dom = ReactEditor.toDOMNode(editor, node[0]);
+    const computed = Number.parseFloat(getComputedStyle(dom).fontSize);
+    return Number.isFinite(computed) ? Math.round(computed) : DEFAULT_FONT_SIZE;
+  } catch {
+    return DEFAULT_FONT_SIZE;
+  }
 }
 
 export function setFontSize(editor: DaEditor, size: number): void {
@@ -357,9 +369,17 @@ export function setFontSize(editor: DaEditor, size: number): void {
   Editor.addMark(editor, 'fontSize', clamped);
 }
 
-/** Steps the font size to the next or previous value in `FONT_SIZES`. */
+ 
 export function stepFontSize(editor: DaEditor, delta: 1 | -1): void {
-  setFontSize(editor, (getFontSize(editor) ?? DEFAULT_FONT_SIZE) + delta * 2);
+  const current = getEffectiveFontSize(editor);
+  const sorted = [...FONT_SIZES].sort((a, b) => a - b);
+
+  const next =
+    delta === 1
+      ? sorted.find((size) => size > current)
+      : [...sorted].reverse().find((size) => size < current);
+
+  setFontSize(editor, next ?? current + delta * 2);
 }
 
 export function setLineHeight(editor: DaEditor, lineHeight: number): void {
@@ -386,7 +406,6 @@ export function getLineHeight(editor: DaEditor): number {
   return SlateElement.isElement(node) && node.lineHeight ? node.lineHeight : 1.65;
 }
 
-/* -------------------------------------------------------------- mention -- */
 
 export function insertMention(editor: DaEditor, id: string, name: string): void {
   Transforms.insertNodes(editor, {
@@ -396,7 +415,6 @@ export function insertMention(editor: DaEditor, id: string, name: string): void 
     children: [{ text: '' }],
   });
   Transforms.move(editor);
-  // A trailing space keeps typing natural after the chip.
   Transforms.insertText(editor, ' ');
 }
 

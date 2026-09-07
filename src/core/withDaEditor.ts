@@ -41,6 +41,12 @@ const EXIT_ON_ENTER: ElementType[] = [ELEMENT.h1, ELEMENT.h2, ELEMENT.h3];
 
 const URL_PATTERN = /^https?:\/\/[^\s]+$/i;
 
+/**
+ * Word and web pages ship megabytes of markup on the clipboard. Parsing that
+ * synchronously freezes the editor, so past this size the plain-text path wins.
+ */
+const MAX_PASTE_HTML = 500_000;
+
  
 function looksLikeMarkdown(text: string): boolean {
   const MARKERS = [
@@ -153,16 +159,22 @@ export function withDaEditor(editor: DaEditor): DaEditor {
   };
 
   editor.insertData = (data) => {
+    // A copy from this editor carries Slate's own fragment. Re-parsing its
+    // HTML would flatten voids and custom nodes, so let Slate handle it.
+    if (data.getData('application/x-slate-fragment')) {
+      insertData(data);
+      return;
+    }
+
     const text = data.getData('text/plain');
 
-    if (text && URL_PATTERN.test(text.trim())) {
+    if (text && URL_PATTERN.test(text.trim()) && editor.selection) {
       wrapLink(editor, text.trim());
       return;
     }
 
- 
     const html = data.getData('text/html');
-    if (html) {
+    if (html && html.length <= MAX_PASTE_HTML) {
       try {
         const fragment = parseWordHtml(html);
         if (fragment.length) {

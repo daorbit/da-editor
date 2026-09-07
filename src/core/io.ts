@@ -250,14 +250,29 @@ function parseInline(text: string): Descendant[] {
  * "Save as Web Page", stripping its namespaced markup.
  */
 export function parseWordHtml(html: string): EditorValue {
-  const cleaned = html
-    // Word wraps content in conditional comments and o:/w: namespaced tags.
-    .replace(/<!--[\s\S]*?-->/g, '')
-    .replace(/<\/?(?:o|w|m|v):[^>]*>/g, '')
-    .replace(/<(style|script)[\s\S]*?<\/\1>/gi, '')
-    .replace(/\sclass="Mso[^"]*"/g, '');
+  if (typeof document === 'undefined') return deserializeHtml(html);
 
-  return deserializeHtml(cleaned);
+  // Regexes over the raw markup are quadratic on the megabyte-scale HTML Word
+  // and web pages put on the clipboard, so the strip runs over a parsed DOM.
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+
+  doc.body.querySelectorAll('style, script').forEach((node) => node.remove());
+
+  const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_COMMENT);
+  const comments: Comment[] = [];
+  while (walker.nextNode()) comments.push(walker.currentNode as Comment);
+  comments.forEach((node) => node.remove());
+
+  doc.body.querySelectorAll('*').forEach((el) => {
+    // Word emits o:/w:/m:/v: namespaced wrappers around real content.
+    if (el.tagName.includes(':')) {
+      el.replaceWith(...Array.from(el.childNodes));
+      return;
+    }
+    if (el.getAttribute('class')?.startsWith('Mso')) el.removeAttribute('class');
+  });
+
+  return deserializeHtml(doc.body.innerHTML);
 }
 
 export function parseHtmlFile(html: string): EditorValue {

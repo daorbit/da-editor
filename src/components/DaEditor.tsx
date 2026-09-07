@@ -4,6 +4,7 @@ import {
   useEffect,
   useImperativeHandle,
   useMemo,
+  useRef,
   useState,
   type CSSProperties,
   type KeyboardEvent,
@@ -61,6 +62,7 @@ import { AlertDialog } from './AlertDialog';
 import { DialogContext, type DialogApi } from './dialogContext';
 import { applyBlockDrop, isBlockDrag } from './BlockDragHandle';
 import { MediaDialog } from './MediaDialog';
+import { PreviewPane } from './PreviewPane';
 import { TableToolbar } from './TableToolbar';
 import { MediaToolbar } from './MediaToolbar';
 import { LinkToolbar } from './LinkToolbar';
@@ -93,6 +95,10 @@ const BLOCK_HOTKEYS: Record<string, (typeof ELEMENT)[keyof typeof ELEMENT]> = {
   'mod+shift+8': ELEMENT.bulletedList,
   'mod+shift+9': ELEMENT.todoListItem,
 };
+
+/** How far the split divider can travel, as the editor's share of the width. */
+const MIN_SPLIT = 25;
+const MAX_SPLIT = 75;
 
 export interface DaEditorHandle {
   /** The underlying Slate editor. */
@@ -138,22 +144,19 @@ export interface DaEditorProps {
   onUpload?: UploadHandler;
   
   onPickMedia?: (kind: MediaKind) => Promise<{ url: string; name?: string } | null>;
-  /** Renders a light/dark toggle in the toolbar and fires on click. */
   onToggleTheme?: () => void;
-  /** `'viewing'` locks the document, like `readOnly`. */
   mode?: EditorMode;
   className?: string;
   style?: CSSProperties;
   minHeight?: string;
   maxHeight?: string;
-  /** Constrain the text column, like a document editor. */
   maxWidth?: string;
-  /** Shows a word, character and reading-time counter below the document. */
   wordCount?: boolean;
-  /** Rendered at the start of the fixed toolbar, before the editor's controls. */
   toolbarLeading?: ReactNode;
   autoFocus?: boolean;
   spellCheck?: boolean;
+  preview?: boolean;
+  previewTitle?: string;
 }
 
 export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEditor(
@@ -183,6 +186,8 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
     toolbarLeading,
     autoFocus = false,
     spellCheck = true,
+    preview = false,
+    previewTitle,
   },
   ref,
 ) {
@@ -206,6 +211,10 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
   const [linkOpen, setLinkOpen] = useState(false);
   const [mediaKind, setMediaKind] = useState<MediaKind | null>(null);
   const [findOpen, setFindOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  /** The editor's share of the split, as a percentage. */
+  const [previewSplit, setPreviewSplit] = useState(50);
+  const splitRef = useRef<HTMLDivElement>(null);
   const [findQuery, setFindQuery] = useState('');
   const [findCaseSensitive, setFindCaseSensitive] = useState(false);
   const [findIndex, setFindIndex] = useState(0);
@@ -380,6 +389,41 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
     void insertFiles(editor, files, onUpload);
   };
 
+ 
+  const startResize = (event: React.PointerEvent<HTMLDivElement>) => {
+    const split = splitRef.current;
+    if (!split) return;
+
+    event.preventDefault();
+    const handle = event.currentTarget;
+    handle.setPointerCapture(event.pointerId);
+
+    const onMove = (move: PointerEvent) => {
+      const rect = split.getBoundingClientRect();
+      if (rect.width === 0) return;
+      const percent = ((move.clientX - rect.left) / rect.width) * 100;
+      setPreviewSplit(Math.min(MAX_SPLIT, Math.max(MIN_SPLIT, percent)));
+    };
+
+    const onUp = () => {
+      handle.releasePointerCapture(event.pointerId);
+      handle.removeEventListener('pointermove', onMove);
+      handle.removeEventListener('pointerup', onUp);
+      handle.removeEventListener('pointercancel', onUp);
+    };
+
+    handle.addEventListener('pointermove', onMove);
+    handle.addEventListener('pointerup', onUp);
+    handle.addEventListener('pointercancel', onUp);
+  };
+
+  const handleDividerKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const step = event.key === 'ArrowLeft' ? -2 : event.key === 'ArrowRight' ? 2 : 0;
+    if (!step) return;
+    event.preventDefault();
+    setPreviewSplit((current) => Math.min(MAX_SPLIT, Math.max(MIN_SPLIT, current + step)));
+  };
+
   const handleExport = (format: 'html' | 'markdown') => {
     const current = editor.children as EditorValue;
     if (format === 'markdown') exportMarkdown(current);
@@ -543,6 +587,7 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
             onExport={handleExport}
             onToggleTheme={onToggleTheme}
             isDark={resolvedTheme === 'dark'}
+            onPreview={preview ? () => setPreviewOpen(true) : undefined}
           />
         )}
 
@@ -560,9 +605,19 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
         )}
 
         <div
+          ref={splitRef}
+          className={`da-editor__split${previewOpen ? ' da-editor__split--previewing' : ''}`}
+        >
+        <div
           className="da-editor__scroll"
           // A `minHeight` of "0" lets the editor fill a flex parent instead.
-          style={{ minHeight: minHeight === '0' ? undefined : minHeight, maxHeight }}
+          style={{
+            minHeight: minHeight === '0' ? undefined : minHeight,
+            maxHeight,
+            // The pane takes the rest; without a basis the editor keeps its
+            // full intrinsic width and pushes the preview off the edge.
+            flexBasis: previewOpen ? `${previewSplit}%` : undefined,
+          }}
         >
           <div
             className={`da-editor__container${dropActive ? ' da-editor__container--dropping' : ''}`}
@@ -607,6 +662,29 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
               <LinkPopover open={linkOpen} onClose={() => setLinkOpen(false)} />
             )}
           </div>
+        </div>
+
+        {previewOpen && (
+          <>
+            <div
+              className="da-editor__divider"
+              role="separator"
+              aria-orientation="vertical"
+              aria-label="Resize preview"
+              aria-valuenow={Math.round(previewSplit)}
+              aria-valuemin={MIN_SPLIT}
+              aria-valuemax={MAX_SPLIT}
+              tabIndex={0}
+              onPointerDown={startResize}
+              onKeyDown={handleDividerKeyDown}
+            />
+            <PreviewPane
+              onClose={() => setPreviewOpen(false)}
+              value={value as EditorValue}
+              title={previewTitle}
+            />
+          </>
+        )}
         </div>
 
         {wordCount && <WordCount />}

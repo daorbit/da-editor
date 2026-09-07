@@ -15,6 +15,10 @@ export { MentionCombobox } from './components/MentionCombobox';
 export type { MentionComboboxProps } from './components/MentionCombobox';
 export { MediaDialog } from './components/MediaDialog';
 export type { MediaDialogProps } from './components/MediaDialog';
+export { PreviewModal } from './components/PreviewModal';
+export type { PreviewModalProps } from './components/PreviewModal';
+export { DeviceFrame, DEVICE_ORDER, DEVICE_SPECS, frameSize } from './components/DeviceFrame';
+export type { DeviceId, DeviceSpec } from './components/DeviceFrame';
 export { PromptDialog } from './components/PromptDialog';
 export type { PromptDialogProps, PromptRequest } from './components/PromptDialog';
 export { AlertDialog } from './components/AlertDialog';
@@ -104,6 +108,7 @@ export {
   insertMention,
   insertEmoji,
   isEditorEmpty,
+  getEffectiveFontSize,
   getFontSize,
   setFontSize,
   stepFontSize,

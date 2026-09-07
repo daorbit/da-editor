@@ -537,3 +537,25 @@ describe('serializeHtml element coverage', () => {
     expect(html).not.toMatch(/<p[^>]*>\s*<p/);
   });
 });
+
+describe('toggle and todo round-trip', () => {
+  it('keeps a toggle list through a save and reload', () => {
+    const value = [
+      { type: ELEMENT.toggleList, open: false, children: [{ text: 'Why Slate' }] },
+    ] as unknown as EditorValue;
+
+    const back = deserializeHtml(serializeHtml(value));
+
+    expect(back).toEqual(value);
+  });
+
+  it('keeps a checked todo item through a save and reload', () => {
+    const value = [
+      { type: ELEMENT.todoListItem, checked: true, children: [{ text: 'Shipped' }] },
+    ] as unknown as EditorValue;
+
+    const back = deserializeHtml(serializeHtml(value));
+
+    expect(back).toEqual(value);
+  });
+});
