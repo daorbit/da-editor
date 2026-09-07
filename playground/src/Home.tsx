@@ -198,7 +198,7 @@ export function Home({ navigate, onToggleTheme, dark }: HomeProps) {
           height={76}
         />
         <h1 className="pg-hero__title">
-          Everything a rich-text editor
+          Everything a <em>rich-text editor</em>
           <br />
           needs. In one install.
         </h1>

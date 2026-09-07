@@ -28,12 +28,22 @@
 }
 
 /* Home and docs drop the blue accent for a monochrome black/white scheme;
-   the playground editor keeps the default blue. */
+   the playground editor keeps the default blue. Colour returns only as soft
+   ambient gradients — never as a flat fill on a control. */
 .pg-page,
 .docs {
   --pg-accent: #0d0d0d;
   --pg-accent-fg: #ffffff;
   --pg-accent-soft: #f0f0ee;
+  --pg-bg: #fbfbf9;
+
+  /* Gradient palette — muted, high-lightness, safe behind text. */
+  --pg-g1: #c9f0e4;
+  --pg-g2: #f6d9c9;
+  --pg-g3: #d6e2f6;
+  --pg-g4: #ece0f6;
+  --pg-grad-brand: linear-gradient(120deg, #6d5efc, #d857c6 45%, #ff8a5c);
+  --pg-grad-line: linear-gradient(90deg, transparent, var(--pg-border) 20%, var(--pg-border) 80%, transparent);
 }
 
 :root[data-pg-theme='dark'] .pg-page,
@@ -41,6 +51,50 @@
   --pg-accent: #f2f2f0;
   --pg-accent-fg: #0d0d0d;
   --pg-accent-soft: #22262e;
+  --pg-bg: #0d0f13;
+
+  --pg-g1: #163b34;
+  --pg-g2: #3a2a22;
+  --pg-g3: #1c2740;
+  --pg-g4: #2a2140;
+  --pg-grad-brand: linear-gradient(120deg, #8b7dff, #e878d4 45%, #ffa579);
+}
+
+/* Ambient wash behind the hero. Pinned to the viewport so it spans the full
+   width regardless of the centred content column, and faded out well before
+   the fold so it never fights the text below it. */
+.pg-page::before,
+.docs::before {
+  content: '';
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: 70vh;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(50% 60% at 12% -5%, var(--pg-g1) 0%, transparent 60%),
+    radial-gradient(45% 55% at 88% 0%, var(--pg-g2) 0%, transparent 62%),
+    radial-gradient(60% 70% at 50% -10%, var(--pg-g3) 0%, transparent 65%),
+    radial-gradient(35% 50% at 75% 25%, var(--pg-g4) 0%, transparent 70%);
+  filter: blur(40px) saturate(120%);
+  opacity: 0.55;
+  mask-image: linear-gradient(#000 30%, transparent 92%);
+}
+
+:root[data-pg-theme='dark'] .pg-page::before,
+:root[data-pg-theme='dark'] .docs::before {
+  opacity: 0.4;
+}
+
+.pg-page,
+.docs {
+  position: relative;
+}
+
+.pg-page > *,
+.docs > * {
+  position: relative;
+  z-index: 1;
 }
 
 * {
@@ -204,9 +258,15 @@ a.pg-btn {
 }
 
 .pg-page {
-  max-width: 1100px;
+  max-width: 1160px;
   margin: 0 auto;
-  padding-bottom: 20px;
+  padding: 0 24px 20px;
+}
+
+@media (max-width: 640px) {
+  .pg-page {
+    padding-inline: 16px;
+  }
 }
 
 .pg-navlink {
@@ -258,7 +318,7 @@ a.pg-btn {
 }
 
 .pg-hero {
-  padding: 56px 24px 40px;
+  padding: 56px 0 40px;
   text-align: center;
 }
 
@@ -286,8 +346,17 @@ a.pg-btn {
   font-size: clamp(36px, 6vw, 60px);
   font-weight: 700;
   line-height: 1.06;
-  
   letter-spacing: -0.038em;
+}
+
+/* One phrase in the headline carries the brand gradient. */
+.pg-hero__title em,
+.pg-grad-text {
+  font-style: inherit;
+  background: var(--pg-grad-brand);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .pg-hero__lead {
@@ -348,7 +417,7 @@ a.pg-btn {
 }
 
 .pg-demo {
-  padding: 8px 24px 12px;
+  padding: 8px 0 12px;
 }
 
 .pg-demo__shell {
@@ -445,7 +514,7 @@ a.pg-btn {
 }
 
 .pg-section {
-  padding: 52px 24px;
+  padding: 52px 0;
 }
 
 .pg-h2 {
@@ -507,23 +576,43 @@ a.pg-btn {
 }
 
 .pg-feat {
+  position: relative;
   display: flex;
   flex-direction: column;
   padding: 20px;
   border: 1px solid var(--pg-border);
   border-radius: 14px;
   background: var(--pg-surface);
-  transition: border-color 0.14s ease, transform 0.14s ease, box-shadow 0.14s ease;
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
+}
+
+/* A gradient hairline that fades in on the card edge at hover. */
+.pg-feat::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: var(--pg-grad-brand);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.16s ease;
+  pointer-events: none;
 }
 
 .pg-feat:hover {
-  border-color: var(--pg-accent);
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px -12px rgba(16, 18, 22, 0.22);
+  box-shadow: 0 10px 30px -14px rgba(94, 76, 240, 0.28);
+}
+
+.pg-feat:hover::after {
+  opacity: 0.7;
 }
 
 :root[data-pg-theme='dark'] .pg-feat:hover {
-  box-shadow: 0 8px 24px -12px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 10px 30px -14px rgba(0, 0, 0, 0.7);
 }
 
 .pg-feat__icon {
@@ -535,7 +624,10 @@ a.pg-btn {
   margin-bottom: 14px;
   border: 1px solid var(--pg-border);
   border-radius: 10px;
-  background: var(--pg-bg);
+  background:
+    linear-gradient(var(--pg-bg), var(--pg-bg)) padding-box,
+    var(--pg-grad-brand) border-box;
+  border-color: transparent;
   color: var(--pg-accent);
 }
 
