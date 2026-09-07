@@ -1,14 +1,13 @@
 import { useRef, useState } from 'react';
+import { ArrowLeft } from 'lucide-react';
 import {
   AlertDialog,
-  ArrowLeftIcon,
   DaEditor,
   type DaEditorHandle,
   type Mentionable,
   type Theme,
 } from '../../src';
 import { DEMO_CONTENT } from './demoContent';
-import type { Route } from './router';
 
 const MENTIONABLES: Mentionable[] = [
   { id: '1', name: 'Alice Chen', detail: 'alice@example.com' },
@@ -18,7 +17,7 @@ const MENTIONABLES: Mentionable[] = [
   { id: '5', name: 'Yuki Tanaka', detail: 'yuki@example.com' },
 ];
 
-export function Playground({ navigate }: { navigate: (next: Route) => void }) {
+export function Playground({ navigate }: { navigate: (to: string) => void }) {
   const ref = useRef<DaEditorHandle>(null);
   const [theme, setTheme] = useState<Theme>('light');
   const [notice, setNotice] = useState<string | null>(null);
@@ -40,7 +39,7 @@ export function Playground({ navigate }: { navigate: (next: Route) => void }) {
             onMouseDown={(event) => event.preventDefault()}
             onClick={() => navigate('/')}
           >
-            <ArrowLeftIcon />
+            <ArrowLeft size={16} />
           </button>
         }
         defaultValue={DEMO_CONTENT}

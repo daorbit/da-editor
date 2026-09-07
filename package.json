@@ -45,8 +45,10 @@
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",
     "jsdom": "^29.1.1",
+    "lucide-react": "^1.42.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-router-dom": "^7.18.3",
     "typescript": "^5.7.2",
     "vite": "^6.0.5",
     "vite-plugin-dts": "^4.4.0",
@@ -70,6 +72,7 @@
     "wysiwyg"
   ],
   "dependencies": {
+    "da-frame-set": "^0.1.1",
     "frimousse": "^0.3.0",
     "is-hotkey": "^0.2.0",
     "mammoth": "^1.12.2",

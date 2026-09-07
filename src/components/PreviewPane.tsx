@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
+  DeviceFrame,
+  frameSize,
+  getDevice,
+  useFitScale,
+  type DeviceId,
+} from 'da-frame-set';
+import {
   CloseIcon,
   CollapseIcon,
   ExpandIcon,
@@ -8,9 +15,7 @@ import {
   TabletIcon,
 } from '../icons';
 import { serializeHtml } from '../core/serialize';
-import { useFitScale } from '../core/useFitScale';
 import type { EditorValue } from '../core/types';
-import { DEVICE_ORDER, DEVICE_SPECS, DeviceFrame, frameSize, type DeviceId } from './DeviceFrame';
 
 export interface PreviewPaneProps {
   onClose: () => void;
@@ -18,18 +23,19 @@ export interface PreviewPaneProps {
   title?: string;
 }
 
- 
-const DEVICE_ICONS: Record<DeviceId, typeof MonitorIcon> = {
-  desktop: MonitorIcon,
-  tablet: TabletIcon,
-  mobile: PhoneIcon,
-};
+/* The three viewports the preview offers, labelled by the layout the content
+   falls into rather than by a product name. Each id is a da-frame-set device. */
+const PREVIEW_DEVICES: { id: DeviceId; label: string; icon: typeof MonitorIcon }[] = [
+  { id: 'macbook-pro-16', label: 'Desktop', icon: MonitorIcon },
+  { id: 'ipad-air', label: 'Tablet', icon: TabletIcon },
+  { id: 'iphone-pro', label: 'Mobile', icon: PhoneIcon },
+];
 
 export function PreviewPane({ onClose, value, title = 'Preview' }: PreviewPaneProps) {
-  const [device, setDevice] = useState<DeviceId>('desktop');
+  const [device, setDevice] = useState<DeviceId>('macbook-pro-16');
   const [fullscreen, setFullscreen] = useState(false);
 
-  const size = frameSize(device);
+  const size = frameSize(getDevice(device));
   const { ref: stageRef, scale, measured } = useFitScale({
     contentWidth: size.width,
     contentHeight: size.height,
@@ -37,7 +43,6 @@ export function PreviewPane({ onClose, value, title = 'Preview' }: PreviewPanePr
     padding: { x: 24, y: 24 },
   });
 
- 
   const html = useMemo(() => serializeHtml(value, { inlineStyles: true }), [value]);
 
   useEffect(() => {
@@ -69,22 +74,19 @@ export function PreviewPane({ onClose, value, title = 'Preview' }: PreviewPanePr
         <span className="da-preview__title">{title}</span>
 
         <div className="da-preview__devices" role="group" aria-label="Preview device">
-          {DEVICE_ORDER.map((id) => {
-            const DeviceIcon = DEVICE_ICONS[id];
-            return (
-              <button
-                key={id}
-                type="button"
-                className={`da-preview__device${device === id ? ' da-preview__device--active' : ''}`}
-                aria-pressed={device === id}
-                title={DEVICE_SPECS[id].label}
-                aria-label={DEVICE_SPECS[id].label}
-                onClick={() => setDevice(id)}
-              >
-                <DeviceIcon size={16} />
-              </button>
-            );
-          })}
+          {PREVIEW_DEVICES.map(({ id, label, icon: DeviceIcon }) => (
+            <button
+              key={id}
+              type="button"
+              className={`da-preview__device${device === id ? ' da-preview__device--active' : ''}`}
+              aria-pressed={device === id}
+              title={label}
+              aria-label={label}
+              onClick={() => setDevice(id)}
+            >
+              <DeviceIcon size={16} />
+            </button>
+          ))}
         </div>
 
         <button

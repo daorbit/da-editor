@@ -27,6 +27,22 @@
   --pg-accent-soft: #1e2440;
 }
 
+/* Home and docs drop the blue accent for a monochrome black/white scheme;
+   the playground editor keeps the default blue. */
+.pg-page,
+.docs {
+  --pg-accent: #0d0d0d;
+  --pg-accent-fg: #ffffff;
+  --pg-accent-soft: #f0f0ee;
+}
+
+:root[data-pg-theme='dark'] .pg-page,
+:root[data-pg-theme='dark'] .docs {
+  --pg-accent: #f2f2f0;
+  --pg-accent-fg: #0d0d0d;
+  --pg-accent-soft: #22262e;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -76,13 +92,26 @@ body {
 }
 
 .pg-nav {
+  position: sticky;
+  top: 14px;
+  z-index: 40;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  max-width: 1040px;
-  margin: 0 auto;
-  padding: 20px 24px;
+  width: calc(100% - 32px);
+  max-width: 760px;
+  margin: 14px auto 0;
+  padding: 8px 10px 8px 16px;
+  border: 1px solid var(--pg-border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--pg-bg) 82%, transparent);
+  backdrop-filter: saturate(180%) blur(10px);
+  box-shadow: 0 1px 2px rgba(16, 18, 22, 0.04), 0 12px 28px -14px rgba(16, 18, 22, 0.18);
+}
+
+:root[data-pg-theme='dark'] .pg-nav {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 28px -14px rgba(0, 0, 0, 0.6);
 }
 
 .pg-nav--bar {
@@ -161,14 +190,17 @@ a.pg-btn {
   padding: 0;
   border: none;
   background: none;
-  color: var(--pg-accent);
+  color: var(--pg-fg);
   font: inherit;
   font-size: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--pg-faint);
   cursor: pointer;
 }
 
 .pg-link:hover {
-  text-decoration: underline;
+  text-decoration-color: currentColor;
 }
 
 .pg-page {
@@ -178,15 +210,28 @@ a.pg-btn {
 }
 
 .pg-navlink {
-  padding: 8px 10px;
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 11px;
+  border-radius: 999px;
   color: var(--pg-muted);
   font-size: 13.5px;
   font-weight: 500;
   text-decoration: none;
+  transition: color 0.12s ease, background 0.12s ease;
 }
 
 .pg-navlink:hover {
   color: var(--pg-fg);
+  background: var(--pg-surface-hover);
+}
+
+.pg-navlink--icon {
+  padding: 7px;
+}
+
+.pg-nav__actions .pg-btn--icon {
+  border-radius: 999px;
 }
 
 .pg-stats {
@@ -314,6 +359,10 @@ a.pg-btn {
   background: var(--pg-bg);
   overflow: hidden;
   box-shadow: 0 1px 2px rgba(16, 18, 22, 0.04), 0 18px 44px -18px rgba(16, 18, 22, 0.2);
+}
+
+.pg-demo__shell--solo {
+  grid-template-columns: 1fr;
 }
 
 :root[data-pg-theme='dark'] .pg-demo__shell {
@@ -449,6 +498,85 @@ a.pg-btn {
   color: var(--pg-muted);
   font-size: 13.5px;
   line-height: 1.62;
+}
+
+.pg-feat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 14px;
+}
+
+.pg-feat {
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  border: 1px solid var(--pg-border);
+  border-radius: 14px;
+  background: var(--pg-surface);
+  transition: border-color 0.14s ease, transform 0.14s ease, box-shadow 0.14s ease;
+}
+
+.pg-feat:hover {
+  border-color: var(--pg-accent);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px -12px rgba(16, 18, 22, 0.22);
+}
+
+:root[data-pg-theme='dark'] .pg-feat:hover {
+  box-shadow: 0 8px 24px -12px rgba(0, 0, 0, 0.6);
+}
+
+.pg-feat__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  margin-bottom: 14px;
+  border: 1px solid var(--pg-border);
+  border-radius: 10px;
+  background: var(--pg-bg);
+  color: var(--pg-accent);
+}
+
+.pg-feat__title {
+  margin: 0 0 6px;
+  font-size: 15px;
+  font-weight: 620;
+  letter-spacing: -0.016em;
+}
+
+.pg-feat__body {
+  margin: 0 0 14px;
+  color: var(--pg-muted);
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+
+.pg-feat__how {
+  align-self: flex-start;
+  margin-top: auto;
+  padding: 3px 8px;
+  border: 1px solid var(--pg-border);
+  border-radius: 6px;
+  background: var(--pg-bg);
+  color: var(--pg-faint);
+  font-family: var(--pg-mono);
+  font-size: 11px;
+}
+
+.pg-feat-cta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-top: 28px;
+}
+
+.pg-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
 
 .pg-mini {

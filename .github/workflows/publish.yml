@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      # Only release when shipped code actually changes.
+ 
       - 'src/**'
       - 'package.json'
       - 'package-lock.json'
@@ -21,8 +21,7 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    # Skip commits made by this workflow, or the version bump push
-    # would trigger another run in an endless loop.
+ 
     if: "!contains(github.event.head_commit.message, '[skip ci]')"
     permissions:
       contents: write

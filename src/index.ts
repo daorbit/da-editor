@@ -1,3 +1,4 @@
+import 'da-frame-set/styles.css';
 import './styles/editor.css';
 
 /* Components */
@@ -17,8 +18,22 @@ export { MediaDialog } from './components/MediaDialog';
 export type { MediaDialogProps } from './components/MediaDialog';
 export { PreviewPane } from './components/PreviewPane';
 export type { PreviewPaneProps } from './components/PreviewPane';
-export { DeviceFrame, DEVICE_ORDER, DEVICE_SPECS, frameSize } from './components/DeviceFrame';
-export type { DeviceId, DeviceSpec } from './components/DeviceFrame';
+export {
+  DeviceFrame,
+  DEVICE_IDS,
+  DEVICES,
+  getDevice,
+  devicesInFamily,
+  frameSize,
+  useFitScale,
+} from 'da-frame-set';
+export type {
+  DeviceFrameProps,
+  DeviceId,
+  DeviceSpec,
+  ChassisKind,
+  CameraKind,
+} from 'da-frame-set';
 export { PromptDialog } from './components/PromptDialog';
 export type { PromptDialogProps, PromptRequest } from './components/PromptDialog';
 export { AlertDialog } from './components/AlertDialog';
