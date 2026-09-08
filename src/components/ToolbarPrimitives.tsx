@@ -69,7 +69,9 @@ function findClipBoundsX(from: HTMLElement): { left: number; right: number } {
   }
   return { left: 0, right: window.innerWidth };
 }
-const SEPARATOR_WIDTH = 9;
+/* Fallback only, for the first pass before a separator exists to measure:
+   1px rule plus its 6px margins. */
+const SEPARATOR_WIDTH = 13;
 
 /* Preferred menu height. Kept in step with `.da-tb__menu`'s `max-height`, which
    applies before this component has measured anything. */
@@ -92,17 +94,7 @@ export function useOverflowCollapse(
     const toolbarEl = rowEl.closest<HTMLElement>('.da-tb--fixed') ?? rowEl;
     const editorEl = toolbarEl.closest<HTMLElement>('.da-editor');
 
-    /*
-     * The width to fit into: the editor's own box.
-     *
-     * Not the toolbar or the button row — both sit inside the toolbar's layout,
-     * so while it is overflowing their width *is* the overflow, and measuring
-     * either asks "does what I am showing fit inside itself?", which is always
-     * yes. And not the editor's parent either: when a side panel opens beside
-     * the editor the parent's width does not change, only the editor's share of
-     * it, so a ResizeObserver on the parent never fires and the toolbar stays
-     * wide. The editor is the element that actually changes in both cases.
-     */
+ 
     const boundsEl = editorEl ?? toolbarEl;
 
     const recalc = () => {
@@ -115,34 +107,60 @@ export function useOverflowCollapse(
       const padding =
         parseFloat(style.paddingLeft || '0') + parseFloat(style.paddingRight || '0');
       const rowGap = parseFloat(style.columnGap || style.gap || '0');
-      const inFlowChildren = Array.from(toolbarEl.children).filter(
-        (child) => !child.classList.contains('da-tb__measure'),
-      ).length;
-      const rowGapTotal = rowGap * Math.max(0, inFlowChildren - 1);
 
       const outerWidth = boundsEl.getBoundingClientRect().width;
-      const endEl = toolbarEl.querySelector<HTMLElement>('.da-tb__end');
-      const endWidth = endEl ? endEl.getBoundingClientRect().width : 0;
-      const overflowEl = toolbarEl.querySelector<HTMLElement>('.da-tb__overflow');
-      const overflowWidth = overflowEl
-        ? overflowEl.getBoundingClientRect().width
-        : OVERFLOW_RESERVE;
+ 
+      const naturalWidth = (selector: string, fallback = 0) => {
+        const el = toolbarEl.querySelector<HTMLElement>(selector);
+        if (!el) return fallback;
+        const rect = el.getBoundingClientRect().width;
+        return Math.max(rect, el.scrollWidth);
+      };
 
-      const leadingEl = toolbarEl.querySelector<HTMLElement>('.da-tb__leading');
-      const leadingWidth = leadingEl ? leadingEl.getBoundingClientRect().width : 0;
+      const endWidth = naturalWidth('.da-tb__end');
+      const overflowWidth = naturalWidth('.da-tb__overflow', OVERFLOW_RESERVE);
+      const leadingWidth = naturalWidth('.da-tb__leading');
 
+      // One gap per in-flow sibling boundary. The measure row is absolutely
+      // positioned and out of flow, so it takes no gap; `.da-tb__leading` only
+      // exists when the host passed leading content.
+      const gapCount = leadingWidth > 0 ? 3 : 2;
+      const rowGapTotal = rowGap * gapCount;
+
+      // No separator reserve here: the one before "More" lives *inside*
+      // `.da-tb__overflow` and is already part of `overflowWidth`.
       const available =
-        outerWidth - padding - rowGapTotal - leadingWidth - endWidth - overflowWidth - SEPARATOR_WIDTH;
+        outerWidth - padding - rowGapTotal - leadingWidth - endWidth - overflowWidth;
+
+      /*
+       * What one group costs beyond its own width: the separator drawn before
+       * it, plus the row's flex gap on either side of that separator.
+       *
+       * Measured rather than assumed. A hardcoded guess is wrong by a few px per
+       * group and there are a dozen groups, so the error compounds into enough
+       * slack to admit a group that does not fit.
+       */
+      const rowStyle = getComputedStyle(rowEl);
+      const scrollGap = parseFloat(rowStyle.columnGap || rowStyle.gap || '0');
+      const sepEl = rowEl.querySelector<HTMLElement>('.da-tb__sep');
+      let separatorCost = SEPARATOR_WIDTH;
+      if (sepEl) {
+        const sepStyle = getComputedStyle(sepEl);
+        separatorCost =
+          sepEl.getBoundingClientRect().width +
+          parseFloat(sepStyle.marginLeft || '0') +
+          parseFloat(sepStyle.marginRight || '0');
+      }
+      const perGroupCost = separatorCost + scrollGap * 2;
 
       let used = 0;
       let fit = 0;
       for (const group of groups) {
-        // `getBoundingClientRect` rather than `offsetWidth` for the same reason
-        // as the bounds above: `offsetWidth` rounds to an integer, and rounding
-        // down once per group accumulates into enough slack to keep a group
-        // that does not fit.
+        // `getBoundingClientRect` rather than `offsetWidth`: the latter rounds
+        // to an integer, and rounding down once per group accumulates into
+        // enough slack to keep a group that does not fit.
         const width =
-          group.getBoundingClientRect().width + (fit > 0 ? SEPARATOR_WIDTH : 0);
+          group.getBoundingClientRect().width + (fit > 0 ? perGroupCost : 0);
         if (used + width > available) break;
         used += width;
         fit += 1;
@@ -153,26 +171,15 @@ export function useOverflowCollapse(
 
     recalc();
 
-    /*
-     * Only the bounds element is observed, never the row that collapses.
-     *
-     * Observing the row is what made this fail: `recalc` sets state, React
-     * re-renders, the row's width changes, and that change re-notifies the
-     * observer from inside its own callback. The browser treats that as a
-     * resize loop — it logs "ResizeObserver loop completed with undelivered
-     * notifications" and *drops* the pending pass, leaving the count stale at
-     * whatever the interrupted pass had. Opening devtools forces a fresh layout
-     * from outside the loop, which delivers the dropped notification and makes
-     * the toolbar suddenly correct; that is why it only ever looked right with
-     * devtools open.
-     *
-     * The row is not needed as an input anyway. Group widths come from the
-     * measure row, which is `width: max-content` and so is unaffected by how
-     * many groups are currently folded — the result is a pure function of the
-     * available width, and one pass always settles it.
-     */
+ 
     const observer = new ResizeObserver(recalc);
     observer.observe(boundsEl);
+
+ 
+    for (const selector of ['.da-tb__end', '.da-tb__overflow', '.da-tb__leading']) {
+      const el = toolbarEl.querySelector<HTMLElement>(selector);
+      if (el) observer.observe(el);
+    }
 
     // The first pass can run before the host's web font has loaded, which makes
     // every button narrower than it will end up. Nothing resizes the editor

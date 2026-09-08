@@ -9,16 +9,24 @@
   --da-border-strong: #d0d4da;
   --da-surface: #f7f8fa;
   --da-surface-hover: #eef0f3;
-  
+
   --da-accent: #111111;
   --da-accent-fg: #ffffff;
   --da-accent-soft: #ededed;
   --da-selection: #e2e2e2;
-  --da-link: #2b62d9;
-  /* Opt-in via the `accent="gradient"` prop (adds `.da-editor--gradient`).
-     Consumers can override this one value to rebrand the accent. */
+
+
+  --da-content-accent: #3b5bfd;
+  --da-content-accent-soft: #eaeeff;
+  --da-callout-info-border: #c2cdfe;
+  --da-link: #3b5bfd;
+
+
+  --da-scrollbar-thumb: #b3b9c2;
+  --da-scrollbar-thumb-hover: #8b929d;
+
   --da-accent-gradient: linear-gradient(120deg, #6d5efc, #d857c6 45%, #ff8a5c);
-  
+
   --da-tb-icon: #000000;
   --da-shadow: 0 4px 16px rgba(16, 20, 30, 0.1), 0 1px 3px rgba(16, 20, 30, 0.07);
   --da-radius: 10px;
@@ -28,20 +36,20 @@
 
   display: flex;
   flex-direction: column;
-  
+
   min-height: 0;
-  
+
   min-width: 0;
   max-width: 100%;
   border: 1px solid var(--da-border);
-  
+
   background: var(--da-bg);
   color: var(--da-fg);
   font-family: var(--da-font);
   font-size: 15px;
   line-height: 1.65;
   position: relative;
-  
+
   overflow: visible;
 }
 
@@ -58,8 +66,15 @@
   --da-accent-fg: #16181d;
   --da-accent-soft: #2e323b;
   --da-selection: #3a3f49;
+
+  --da-content-accent: #7aa2f7;
+  --da-content-accent-soft: #23304a;
+  --da-callout-info-border: #35507e;
   --da-link: #7aa2f7;
-  
+
+  --da-scrollbar-thumb: #4a505b;
+  --da-scrollbar-thumb-hover: #6b727f;
+
   --da-tb-icon: #e6e8ec;
   --da-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.4);
 }
@@ -70,15 +85,22 @@
 
 
 
+
 .da-editor,
 .da-editor * {
+  color-scheme: light;
   scrollbar-width: thin;
-  scrollbar-color: var(--da-border-strong) transparent;
+  scrollbar-color: var(--da-scrollbar-thumb) transparent;
+}
+
+.da-editor[data-theme='dark'],
+.da-editor[data-theme='dark'] * {
+  color-scheme: dark;
 }
 
 .da-editor ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 12px;
+  height: 12px;
 }
 
 .da-editor ::-webkit-scrollbar-track,
@@ -87,16 +109,24 @@
 }
 
 .da-editor ::-webkit-scrollbar-thumb {
-  border: 2px solid transparent;
+  border: 3px solid transparent;
   border-radius: 8px;
   background-clip: padding-box;
-  background-color: var(--da-border-strong);
+  background-color: var(--da-scrollbar-thumb);
 }
 
 .da-editor ::-webkit-scrollbar-thumb:hover {
-  background-color: var(--da-muted);
+  background-color: var(--da-scrollbar-thumb-hover);
 }
 
+
+.da-tb__menu,
+.da-slash,
+.da-mention-menu,
+.da-emoji__viewport {
+  scrollbar-width: thin;
+  scrollbar-color: var(--da-muted) transparent;
+}
 
 .da-tb__menu::-webkit-scrollbar,
 .da-slash::-webkit-scrollbar,
@@ -114,7 +144,7 @@
   border: 2px solid transparent;
   border-radius: 8px;
   background-clip: padding-box;
-  
+
   background-color: var(--da-muted);
 }
 
@@ -154,7 +184,8 @@
   overflow: visible;
 }
 
- 
+
+
 .da-tb__scroll {
   display: flex;
   align-items: center;
@@ -163,14 +194,13 @@
   width: 0;
   min-width: 0;
   height: 100%;
- 
   overflow: visible;
 }
 
 .da-tb__scroll > * {
   min-width: 0;
 }
- 
+
 .da-tb__measure {
   position: absolute;
   top: 0;
@@ -178,7 +208,7 @@
   display: flex;
   align-items: center;
   gap: 2px;
- 
+
   height: 42px;
   width: max-content;
   max-width: none;
@@ -192,7 +222,7 @@
   flex: 0 0 auto;
   min-width: max-content;
 }
- 
+
 .da-tb__leading {
   display: flex;
   align-items: center;
@@ -201,12 +231,14 @@
   flex-shrink: 0;
 }
 
+
 .da-tb__overflow {
   display: flex;
   align-items: center;
   gap: 2px;
   height: 100%;
-  flex-shrink: 0;
+  flex: 0 0 auto;
+  min-width: max-content;
 }
 
 .da-tb__end {
@@ -217,7 +249,8 @@
   padding-left: 8px;
   margin-left: 4px;
   border-left: 1px solid var(--da-border);
-  flex-shrink: 0;
+  flex: 0 0 auto;
+  min-width: max-content;
 }
 
 .da-tb__group {
@@ -296,12 +329,7 @@
   color: var(--da-accent);
 }
 
-/* -------------------------------------------------- gradient accent (opt-in) --
- * Enabled by <DaEditor accent="gradient" />. Colour is confined to affordances
- * that signal state — active toolbar buttons, the slash icon, the focus ring,
- * the caret and the selection — never body text or a surface behind editable
- * content.
- */
+
 .da-editor--gradient .da-tb__btn--active {
   background: var(--da-accent-gradient);
   border-color: transparent;
@@ -313,7 +341,7 @@
   stroke: currentColor;
 }
 
-/* Gradient caret and selection wash inside the document. */
+
 .da-editor--gradient .da-editor__content {
   caret-color: #6d5efc;
 }
@@ -326,7 +354,7 @@
   background: color-mix(in srgb, #6d5efc 22%, transparent);
 }
 
-/* A hairline gradient strip under the fixed toolbar. */
+
 .da-editor--gradient .da-tb--fixed::after {
   content: '';
   position: absolute;
@@ -370,7 +398,7 @@
   cursor: not-allowed;
 }
 
- 
+
 .da-tb__btn--dropdown:has(.da-tb__value) {
   justify-content: flex-start;
 }
@@ -435,7 +463,7 @@
   box-shadow: var(--da-shadow);
 }
 
- 
+
 .da-tb__menu--right {
   left: auto;
   right: 0;
@@ -451,7 +479,7 @@
 .da-tb__menu {
   overscroll-behavior: contain;
   scrollbar-width: thin;
-  
+
   scrollbar-color: var(--da-muted) transparent;
 }
 
@@ -593,11 +621,7 @@
   user-select: none;
 }
 
-/*
- * Per-block placeholder. Rendered only when the block is empty and holds the
- * caret (the renderer adds `data-ph` under those conditions). `position` is set
- * on the host so the hint overlays the empty line rather than pushing it.
- */
+
 .da-h1[data-ph],
 .da-h2[data-ph],
 .da-h3[data-ph],
@@ -642,7 +666,7 @@
   font-weight: 650;
   line-height: 1.3;
   letter-spacing: -0.01em;
-  
+
   scroll-margin-top: 56px;
 }
 
@@ -774,8 +798,8 @@
 }
 
 .da-callout--info {
-  border-color: color-mix(in srgb, var(--da-accent) 30%, transparent);
-  background: var(--da-accent-soft);
+  border-color: var(--da-callout-info-border);
+  background: var(--da-content-accent-soft);
 }
 
 .da-callout--warning {
@@ -895,7 +919,7 @@
   text-decoration: underline;
   text-underline-offset: 2px;
   cursor: pointer;
-  
+
   position: relative;
 }
 
@@ -1110,7 +1134,7 @@
   min-width: 0;
   width: max-content;
   padding: 0;
-  
+
   max-width: 100vw;
   overflow: hidden;
 }
@@ -1133,7 +1157,7 @@
 .da-table-wrap {
   margin: 10px 0;
   overflow-x: auto;
-  
+
   position: relative;
 }
 
@@ -1160,7 +1184,7 @@
 .da-th {
   min-width: 60px;
   padding: 7px 10px;
-  
+
   border-top: 1px solid var(--da-border-strong);
   border-right: 1px solid var(--da-border-strong);
   border-bottom: 1px solid var(--da-border-strong);
@@ -1187,8 +1211,7 @@
   position: relative;
 }
 
-/* Text blocks that carry a gutter drag grip. The handle is absolutely
-   positioned into the left margin and only painted while the block is hovered. */
+
 .da-draggable {
   position: relative;
 }
@@ -1197,13 +1220,12 @@
   opacity: 1;
 }
 
-/* The row being dragged: dimmed in place so the ghost reads as the thing that
-   moved. */
+
 .da-dragging {
   opacity: 0.4;
 }
 
-/* Off-screen clone the browser snapshots for the drag image. */
+
 .da-drag-ghost {
   position: fixed;
   top: -9999px;
@@ -1221,7 +1243,7 @@
   display: none;
 }
 
-/* Horizontal line marking where the dragged block will land. */
+
 .da-drop-line {
   position: absolute;
   left: 28px;
@@ -1346,17 +1368,17 @@
   display: inline-block;
   padding: 1px 6px;
   border-radius: 4px;
-  background: var(--da-surface-hover);
-  color: var(--da-fg);
+  background: transparent;
+  color: var(--da-content-accent);
   font-size: 0.94em;
   font-weight: 500;
   white-space: nowrap;
   cursor: pointer;
 }
 
+
 .da-date:hover {
-  background: var(--da-accent-soft);
-  color: var(--da-accent);
+  background: var(--da-content-accent-soft);
 }
 
 .da-datepicker {
@@ -1475,8 +1497,8 @@
   display: inline-block;
   padding: 1px 6px;
   border-radius: 4px;
-  background: var(--da-accent-soft);
-  color: var(--da-accent);
+  background: var(--da-content-accent-soft);
+  color: var(--da-content-accent);
   font-size: 0.94em;
   font-weight: 500;
   white-space: nowrap;
@@ -1560,7 +1582,7 @@
   white-space: nowrap;
 }
 
-/* Inline `:name` emoji combobox — same silhouette as the mention menu. */
+
 .da-emoji-menu {
   position: absolute;
   z-index: 40;
@@ -2135,7 +2157,7 @@
 
 
 .da-color {
-  
+
   width: 284px;
   padding: 12px;
 }
@@ -2332,7 +2354,7 @@
 
 
 .da-emoji {
-  
+
   --da-emoji-size: 34px;
   --da-emoji-columns: 8;
 
@@ -2964,7 +2986,7 @@
   }
 }
 
- 
+
 .da-editor__split {
   display: flex;
   flex: 1;
@@ -2982,8 +3004,7 @@
   flex-shrink: 0;
 }
 
-/* A thin visual line with a wider grab area around it, so the divider is easy
-   to hit without drawing a heavy bar down the middle of the editor. */
+
 .da-editor__divider {
   position: relative;
   flex: 0 0 auto;
@@ -3014,8 +3035,7 @@
   outline: none;
 }
 
-/* The preview chrome follows the editor's theme, so a light editor does not
-   sit beside a dark panel. */
+
 .da-preview {
   display: flex;
   flex: 1;
@@ -3025,7 +3045,7 @@
   background-color: var(--da-surface);
 }
 
-/* Lifted out of the split to cover the viewport. */
+
 .da-preview--fullscreen {
   position: fixed;
   inset: 0;
@@ -3099,7 +3119,7 @@
   outline-offset: -2px;
 }
 
-/* Centres the frame and gives the fit measurement something to size against. */
+
 .da-preview__stage {
   display: flex;
   flex: 1;
@@ -3107,13 +3127,11 @@
   justify-content: center;
   min-height: 0;
   overflow: hidden;
-  /* Must match the padding passed to `useFitScale`, or the measured fit
-     disagrees with the room the frame actually has. */
+
   padding: 12px;
 }
 
-/* The document itself, on the device's screen. Serialized HTML carries its own
-   inline styles, so this only supplies the page around it. */
+
 .da-preview__page {
   box-sizing: border-box;
   min-height: 100%;
@@ -3125,7 +3143,7 @@
   line-height: 1.6;
 }
 
- 
+
 .da-preview .dfs__screen {
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -3148,7 +3166,7 @@
   border-collapse: collapse;
 }
 
-/* Too narrow to show an editor and a device mock at once. */
+
 @media (max-width: 900px) {
   .da-editor__split--previewing {
     flex-direction: column;
