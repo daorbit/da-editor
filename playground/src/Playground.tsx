@@ -8,7 +8,6 @@ import {
 } from '../../src';
 import { DEMO_CONTENT } from './demoContent';
 import { AiWorkspace, type AiWorkspaceHandle } from './ai';
-import { ConfirmDialog } from './ConfirmDialog';
 
 const MENTIONABLES: Mentionable[] = [
   { id: '1', name: 'Alice Chen', detail: 'alice@example.com' },
@@ -22,7 +21,6 @@ export function Playground({ navigate }: { navigate: (to: string) => void }) {
   const ref = useRef<DaEditorHandle>(null);
   const aiRef = useRef<AiWorkspaceHandle>(null);
   const [theme, setTheme] = useState<Theme>('light');
-  const [clearOpen, setClearOpen] = useState(false);
 
   return (
     <div className="pg-editor-page">
@@ -58,22 +56,9 @@ export function Playground({ navigate }: { navigate: (to: string) => void }) {
           preview={true}
           mentionables={MENTIONABLES}
           onAskAi={() => aiRef.current?.open()}
-          onClearAll={() => setClearOpen(true)}
         />
       </AiWorkspace>
 
-      <ConfirmDialog
-        open={clearOpen}
-        theme={theme === 'dark' ? 'dark' : 'light'}
-        title="Clear document"
-        message="Remove all content from the document? This cannot be undone."
-        confirmLabel="Clear"
-        onConfirm={() => {
-          ref.current?.clear();
-          setClearOpen(false);
-        }}
-        onCancel={() => setClearOpen(false)}
-      />
     </div>
   );
 }

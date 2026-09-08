@@ -2056,6 +2056,17 @@
   border-color: transparent;
 }
 
+.da-dialog__btn--danger {
+  border-color: transparent;
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.da-dialog__btn--danger:hover:not(:disabled) {
+  background: #b91c1c;
+  border-color: transparent;
+}
+
 .da-dialog__btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;

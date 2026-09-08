@@ -60,6 +60,7 @@ import { MentionCombobox } from './MentionCombobox';
 import { EmojiCombobox } from './EmojiCombobox';
 import { PromptDialog, type PromptRequest } from './PromptDialog';
 import { AlertDialog } from './AlertDialog';
+import { ConfirmDialog } from './ConfirmDialog';
 import { DialogContext, type DialogApi } from './dialogContext';
 import { applyBlockDrop, isBlockDrag, rowUnderPointer } from './BlockDragHandle';
 import { MediaDialog } from './MediaDialog';
@@ -228,6 +229,7 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
   const [findIndex, setFindIndex] = useState(0);
   const [promptRequest, setPromptRequest] = useState<PromptRequest | null>(null);
   const [alert, setAlert] = useState<{ title: string; message: string } | null>(null);
+  const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
 
   const dialogs = useMemo<DialogApi>(
     () => ({
@@ -626,8 +628,11 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
               onClearAll === false
                 ? undefined
                 : () => {
+                    // A host handler owns its own confirmation; the built-in
+                    // default must ask first, because clearing the document is
+                    // destructive and the button sits in the main toolbar.
                     if (typeof onClearAll === 'function') onClearAll();
-                    else replaceAll(emptyValue());
+                    else setClearConfirmOpen(true);
                   }
             }
           />
@@ -752,6 +757,18 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
           message={alert?.message ?? null}
           title={alert?.title}
           onClose={() => setAlert(null)}
+        />
+        <ConfirmDialog
+          open={clearConfirmOpen}
+          title="Clear document"
+          message="Remove all content from the document? This cannot be undone."
+          confirmLabel="Clear"
+          danger
+          onConfirm={() => {
+            replaceAll(emptyValue());
+            setClearConfirmOpen(false);
+          }}
+          onCancel={() => setClearConfirmOpen(false)}
         />
       </Slate>
       </DialogContext.Provider>

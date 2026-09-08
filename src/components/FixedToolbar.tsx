@@ -1,12 +1,17 @@
 import { Fragment, useRef, useState, type ReactNode } from 'react';
-import { useSlate } from 'slate-react';
+import { Editor, Range, Transforms } from 'slate';
+import { ReactEditor, useSlate } from 'slate-react';
+import { useDialogs } from './dialogContext';
+import { deserializeHtml, serializeHtml } from '../core/serialize';
 import {
   LineHeightIcon,
   BulletedListIcon,
   CellIcon,
   ClearFormattingIcon,
+  ClipboardIcon,
   ColumnIcon,
   ColumnsThreeIcon,
+  DuplicateIcon,
   EmojiIcon,
   ExportIcon,
   HighlighterIcon,
@@ -87,7 +92,13 @@ import {
   isInTable,
   toggleHeaderRow,
 } from '../core/tables';
-import { ELEMENT, MARK, type DaEditor, type MediaKind } from '../core/types';
+import {
+  ELEMENT,
+  MARK,
+  type DaEditor,
+  type EditorValue,
+  type MediaKind,
+} from '../core/types';
 
 
 export interface FixedToolbarProps {
@@ -122,6 +133,77 @@ export function FixedToolbar({
   const scrollRef = useRef<HTMLDivElement>(null);
   const [customTextColors, setCustomTextColors] = useState<string[]>([]);
   const [customBgColors, setCustomBgColors] = useState<string[]>([]);
+
+  const dialogs = useDialogs();
+
+  const selection = editor.selection;
+  const hasSelection = !!selection && !Range.isCollapsed(selection);
+
+  /*
+   * Clipboard access is permission-gated and origin-restricted, and reading is
+   * unavailable outright in Firefox and Safari. Both handlers therefore fall
+   * back to `document.execCommand`, which is deprecated but still the only
+   * path that works from a user gesture in those browsers, and surface a
+   * message rather than failing silently when neither is allowed.
+   */
+  const copySelection = async () => {
+    if (!hasSelection) return;
+    ReactEditor.focus(editor);
+    try {
+      const html = serializeHtml(Editor.fragment(editor, selection!) as EditorValue);
+      const text = Editor.string(editor, selection!);
+      if (navigator.clipboard?.write && typeof ClipboardItem !== 'undefined') {
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            'text/html': new Blob([html], { type: 'text/html' }),
+            'text/plain': new Blob([text], { type: 'text/plain' }),
+          }),
+        ]);
+        return;
+      }
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        return;
+      }
+      document.execCommand('copy');
+    } catch {
+      try {
+        document.execCommand('copy');
+      } catch {
+        dialogs.alert(
+          'Your browser blocked clipboard access. Use Ctrl+C to copy instead.',
+          'Copy unavailable',
+        );
+      }
+    }
+  };
+
+  const pasteFromClipboard = async () => {
+    ReactEditor.focus(editor);
+    try {
+      if (navigator.clipboard?.read && typeof ClipboardItem !== 'undefined') {
+        const items = await navigator.clipboard.read();
+        for (const item of items) {
+          if (item.types.includes('text/html')) {
+            const html = await (await item.getType('text/html')).text();
+            Transforms.insertFragment(editor, deserializeHtml(html));
+            return;
+          }
+        }
+      }
+      if (navigator.clipboard?.readText) {
+        const text = await navigator.clipboard.readText();
+        if (text) Editor.insertText(editor, text);
+        return;
+      }
+      throw new Error('unsupported');
+    } catch {
+      dialogs.alert(
+        'Your browser blocked clipboard access. Use Ctrl+V to paste instead.',
+        'Paste unavailable',
+      );
+    }
+  };
 
   const blockType = getBlockType(editor);
   const align = getAlign(editor);
@@ -174,6 +256,44 @@ export function FixedToolbar({
         <MenuItem label="Undo" hint="Ctrl+Z" disabled={!canUndo} onClick={() => editor.undo()} />
         <MenuItem label="Redo" hint="Ctrl+Shift+Z" disabled={!canRedo} onClick={() => editor.redo()} />
         {onClearAll && <MenuItem label="Clear document" onClick={onClearAll} />}
+      </>
+    ),
+  });
+
+  groups.push({
+    key: 'clipboard',
+    inline: (
+      <>
+        <ToolbarButton
+          icon={<DuplicateIcon />}
+          label="Copy"
+          shortcut="Ctrl+C"
+          disabled={!hasSelection}
+          onClick={copySelection}
+        />
+        <ToolbarButton
+          icon={<ClipboardIcon />}
+          label="Paste"
+          shortcut="Ctrl+V"
+          onClick={pasteFromClipboard}
+        />
+      </>
+    ),
+    menu: (
+      <>
+        <MenuItem
+          icon={<DuplicateIcon />}
+          label="Copy"
+          hint="Ctrl+C"
+          disabled={!hasSelection}
+          onClick={copySelection}
+        />
+        <MenuItem
+          icon={<ClipboardIcon />}
+          label="Paste"
+          hint="Ctrl+V"
+          onClick={pasteFromClipboard}
+        />
       </>
     ),
   });

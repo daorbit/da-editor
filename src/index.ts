@@ -38,6 +38,8 @@ export { PromptDialog } from './components/PromptDialog';
 export type { PromptDialogProps, PromptRequest } from './components/PromptDialog';
 export { AlertDialog } from './components/AlertDialog';
 export type { AlertDialogProps } from './components/AlertDialog';
+export { ConfirmDialog } from './components/ConfirmDialog';
+export type { ConfirmDialogProps } from './components/ConfirmDialog';
 export { DatePicker } from './components/DatePicker';
 export type { DatePickerProps } from './components/DatePicker';
 export { FindReplace } from './components/FindReplace';
