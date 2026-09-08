@@ -114,17 +114,13 @@ export function useOverflowCollapse(
       const style = getComputedStyle(toolbarEl);
       const padding =
         parseFloat(style.paddingLeft || '0') + parseFloat(style.paddingRight || '0');
+      const rowGap = parseFloat(style.columnGap || style.gap || '0');
+      const inFlowChildren = Array.from(toolbarEl.children).filter(
+        (child) => !child.classList.contains('da-tb__measure'),
+      ).length;
+      const rowGapTotal = rowGap * Math.max(0, inFlowChildren - 1);
 
-      // `getBoundingClientRect` rather than `clientWidth`: the latter is a
-      // rounded integer, and at a fractional width it rounds up — enough, at a
-      // boundary, to keep a group that does not quite fit.
       const outerWidth = boundsEl.getBoundingClientRect().width;
-
-      // The pinned clusters on the right are never collapsed, so their width is
-      // not space the groups can use. Both are measured rather than assumed:
-      // the "More" cluster's real width depends on the host's toolbar padding
-      // and font, and a hardcoded reserve that is too small leaves the last
-      // group half-drawn under it.
       const endEl = toolbarEl.querySelector<HTMLElement>('.da-tb__end');
       const endWidth = endEl ? endEl.getBoundingClientRect().width : 0;
       const overflowEl = toolbarEl.querySelector<HTMLElement>('.da-tb__overflow');
@@ -136,7 +132,7 @@ export function useOverflowCollapse(
       const leadingWidth = leadingEl ? leadingEl.getBoundingClientRect().width : 0;
 
       const available =
-        outerWidth - padding - leadingWidth - endWidth - overflowWidth - SEPARATOR_WIDTH;
+        outerWidth - padding - rowGapTotal - leadingWidth - endWidth - overflowWidth - SEPARATOR_WIDTH;
 
       let used = 0;
       let fit = 0;
