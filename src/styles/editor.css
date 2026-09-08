@@ -142,8 +142,9 @@
   min-width: 0;
   max-width: 100%;
   padding: 0 12px;
-  
+
   background: var(--da-bg);
+  border-bottom: 1px solid var(--da-border);
   position: sticky;
   top: 0;
   z-index: 5;

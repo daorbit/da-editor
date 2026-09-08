@@ -88,7 +88,7 @@ function serializeLeaf(node: Text): string {
   if (node.strikethrough) html = `<s>${html}</s>`;
   if (node.subscript) html = `<sub>${html}</sub>`;
   if (node.superscript) html = `<sup>${html}</sup>`;
-  if (node.kbd) html = `<kbd class="da-kbd">${html}</kbd>`;
+  if (node.kbd) html = `<kbd class="da-kbd"${s('kbd')}>${html}</kbd>`;
   if (node.highlight) {
     const bg = safeCss(String(node.highlight));
     if (bg) html = `<mark style="background:${bg}">${html}</mark>`;
