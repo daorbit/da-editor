@@ -147,6 +147,13 @@ export interface DaEditorProps {
   autoformat?: boolean;
   /** Renders the Ask AI affordances and fires when one is used. */
   onAskAi?: () => void;
+  /**
+   * Renders a "clear document" button in the fixed toolbar, after Redo. When
+   * given, it is called on click (confirm, then empty the document yourself via
+   * the handle's `clear()`); when omitted, the button empties the document
+   * without asking.
+   */
+  onClearAll?: (() => void) | boolean;
   /** Entries offered by the `@` mention combobox. */
   mentionables?: Mentionable[];
   /** Uploads a file picked from the device; falls back to a local object URL. */
@@ -183,6 +190,7 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
     accent = 'neutral',
     autoformat = true,
     onAskAi,
+    onClearAll,
     onPickMedia,
     mentionables,
     onUpload,
@@ -625,6 +633,14 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
             onToggleTheme={onToggleTheme}
             isDark={resolvedTheme === 'dark'}
             onPreview={preview ? () => setPreviewOpen(true) : undefined}
+            onClearAll={
+              onClearAll
+                ? () => {
+                    if (typeof onClearAll === 'function') onClearAll();
+                    else replaceAll(emptyValue());
+                  }
+                : undefined
+            }
           />
         )}
 

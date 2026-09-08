@@ -102,6 +102,8 @@ export interface FixedToolbarProps {
   isDark?: boolean;
   /** Renders the preview button; omitted when the host has not enabled it. */
   onPreview?: () => void;
+  /** Renders a "clear document" button after Redo; the host confirms and empties. */
+  onClearAll?: () => void;
 }
 
 export function FixedToolbar({
@@ -114,6 +116,7 @@ export function FixedToolbar({
   onToggleTheme,
   isDark,
   onPreview,
+  onClearAll,
 }: FixedToolbarProps) {
   const editor = useSlate() as DaEditor;
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -157,12 +160,20 @@ export function FixedToolbar({
           disabled={!canRedo}
           onClick={() => editor.redo()}
         />
+        {onClearAll && (
+          <ToolbarButton
+            icon={<ClearFormattingIcon />}
+            label="Clear document"
+            onClick={onClearAll}
+          />
+        )}
       </>
     ),
     menu: (
       <>
         <MenuItem label="Undo" hint="Ctrl+Z" disabled={!canUndo} onClick={() => editor.undo()} />
         <MenuItem label="Redo" hint="Ctrl+Shift+Z" disabled={!canRedo} onClick={() => editor.redo()} />
+        {onClearAll && <MenuItem label="Clear document" onClick={onClearAll} />}
       </>
     ),
   });

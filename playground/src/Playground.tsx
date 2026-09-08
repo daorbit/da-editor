@@ -1,13 +1,14 @@
 import { useRef, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import {
-  AlertDialog,
   DaEditor,
   type DaEditorHandle,
   type Mentionable,
   type Theme,
 } from '../../src';
 import { DEMO_CONTENT } from './demoContent';
+import { AiWorkspace, type AiWorkspaceHandle } from './ai';
+import { ConfirmDialog } from './ConfirmDialog';
 
 const MENTIONABLES: Mentionable[] = [
   { id: '1', name: 'Alice Chen', detail: 'alice@example.com' },
@@ -19,46 +20,59 @@ const MENTIONABLES: Mentionable[] = [
 
 export function Playground({ navigate }: { navigate: (to: string) => void }) {
   const ref = useRef<DaEditorHandle>(null);
+  const aiRef = useRef<AiWorkspaceHandle>(null);
   const [theme, setTheme] = useState<Theme>('light');
-  const [notice, setNotice] = useState<string | null>(null);
+  const [clearOpen, setClearOpen] = useState(false);
 
   return (
     <div className="pg-editor-page">
-      <DaEditor
-        ref={ref}
-        theme={theme}
-        onToggleTheme={() =>
-          setTheme((current) => (current === 'dark' ? 'light' : 'dark'))
-        }
-        toolbarLeading={
-          <button
-            type="button"
-            className="da-tb__btn"
-            title="Back to home"
-            aria-label="Back to home"
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={() => navigate('/')}
-          >
-            <ArrowLeft size={16} />
-          </button>
-        }
-        defaultValue={DEMO_CONTENT}
-        className="pg-editor-fill"
-        minHeight="0"
-        maxWidth="1100px"
-        autoFocus
-        wordCount
-        accent="gradient"
-        preview={true}
-        mentionables={MENTIONABLES}
-        onAskAi={() => setNotice('Wire this to your own endpoint.')}
-      />
-
-      <AlertDialog
-        message={notice}
-        title="Ask AI"
+      <AiWorkspace
+        getEditor={() => ref.current}
         theme={theme === 'dark' ? 'dark' : 'light'}
-        onClose={() => setNotice(null)}
+        handleRef={aiRef}
+      >
+        <DaEditor
+          ref={ref}
+          theme={theme}
+          onToggleTheme={() =>
+            setTheme((current) => (current === 'dark' ? 'light' : 'dark'))
+          }
+          toolbarLeading={
+            <button
+              type="button"
+              className="da-tb__btn"
+              title="Back to home"
+              aria-label="Back to home"
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => navigate('/')}
+            >
+              <ArrowLeft size={16} />
+            </button>
+          }
+          defaultValue={DEMO_CONTENT}
+          className="pg-editor-fill"
+          minHeight="0"
+          maxWidth="1100px"
+          autoFocus
+          wordCount
+          preview={true}
+          mentionables={MENTIONABLES}
+          onAskAi={() => aiRef.current?.open()}
+          onClearAll={() => setClearOpen(true)}
+        />
+      </AiWorkspace>
+
+      <ConfirmDialog
+        open={clearOpen}
+        theme={theme === 'dark' ? 'dark' : 'light'}
+        title="Clear document"
+        message="Remove all content from the document? This cannot be undone."
+        confirmLabel="Clear"
+        onConfirm={() => {
+          ref.current?.clear();
+          setClearOpen(false);
+        }}
+        onCancel={() => setClearOpen(false)}
       />
     </div>
   );
