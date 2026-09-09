@@ -9,10 +9,10 @@ import {
   BulletedListIcon,
   CellIcon,
   ClearFormattingIcon,
-  ClipboardIcon,
+  CopyIcon,
+  PasteIcon,
   ColumnIcon,
   ColumnsThreeIcon,
-  DuplicateIcon,
   EmojiIcon,
   ExportIcon,
   HighlighterIcon,
@@ -291,14 +291,14 @@ export function FixedToolbar({
     inline: (
       <>
         <ToolbarButton
-          icon={<DuplicateIcon />}
+          icon={<CopyIcon />}
           label="Copy"
           shortcut="Ctrl+C"
           disabled={!hasSelection}
           onClick={copySelection}
         />
         <ToolbarButton
-          icon={<ClipboardIcon />}
+          icon={<PasteIcon />}
           label="Paste"
           shortcut="Ctrl+V"
           onClick={pasteFromClipboard}
@@ -308,14 +308,14 @@ export function FixedToolbar({
     menu: (
       <>
         <MenuItem
-          icon={<DuplicateIcon />}
+          icon={<CopyIcon />}
           label="Copy"
           hint="Ctrl+C"
           disabled={!hasSelection}
           onClick={copySelection}
         />
         <MenuItem
-          icon={<ClipboardIcon />}
+          icon={<PasteIcon />}
           label="Paste"
           hint="Ctrl+V"
           onClick={pasteFromClipboard}

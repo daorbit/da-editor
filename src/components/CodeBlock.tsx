@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Node, Transforms } from 'slate';
 import { ReactEditor, useSelected, useSlateStatic, type RenderElementProps } from 'slate-react';
-import { CheckIcon, DuplicateIcon, SearchIcon } from '../icons';
+import { CheckIcon, CopyIcon, SearchIcon } from '../icons';
 import { LANGUAGES } from '../core/highlight';
 import { BlockDragHandle } from './BlockDragHandle';
 
@@ -122,7 +122,7 @@ export function CodeBlock({ attributes, children, element }: RenderElementProps)
           onMouseDown={(event) => event.preventDefault()}
           onClick={copy}
         >
-          {copied ? <CheckIcon size={14} /> : <DuplicateIcon size={14} />}
+          {copied ? <CheckIcon size={14} /> : <CopyIcon size={14} />}
         </button>
       </div>
 

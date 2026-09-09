@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Element as SlateElement, Transforms } from 'slate';
 import { ReactEditor, useSlate } from 'slate-react';
-import { CheckIcon, CloseIcon, DuplicateIcon, UnlinkIcon } from '../icons';
+import { CheckIcon, CloseIcon, CopyIcon, UnlinkIcon } from '../icons';
 import { ELEMENT, type DaEditor } from '../core/types';
 
 /** Trims a URL down to something readable in a narrow toolbar. */
@@ -170,7 +170,7 @@ export function LinkToolbar() {
             aria-label={copied ? 'Copied' : 'Copy link'}
             onClick={copy}
           >
-            {copied ? <CheckIcon size={15} /> : <DuplicateIcon size={15} />}
+            {copied ? <CheckIcon size={15} /> : <CopyIcon size={15} />}
           </button>
           <button
             type="button"
