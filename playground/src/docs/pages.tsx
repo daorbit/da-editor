@@ -19,8 +19,9 @@ export const DOC_BODIES: Record<string, () => ReactNode> = {
       <DocLead>
         <strong>da-text-editor</strong> is a Slate-based rich-text editor for
         React. Tables, mentions, slash commands, find &amp; replace, image and
-        column resizing, drag-and-drop uploads and Markdown shortcuts all work on
-        the first render — there is no plugin graph to assemble.
+        column resizing, drag-and-drop uploads, smart paste and Markdown
+        shortcuts all work on the first render — there is no plugin graph to
+        assemble.
       </DocLead>
       <p>
         The package ships one component, <Inline>&lt;DaEditor /&gt;</Inline>, and
@@ -28,9 +29,16 @@ export const DOC_BODIES: Record<string, () => ReactNode> = {
         icon set and the document model come bundled.
       </p>
       <p>
-        AI, uploads and mentions are exposed as hooks rather than built-in
-        integrations. The editor calls your handler and never makes a network
-        request of its own, so your keys stay on your server.
+        Opt-in extras — a content-checks panel, focus and typewriter writing
+        modes, link preview cards, a dictionary spell checker, a device-framed
+        preview — are one prop each and stay out of the bundle until you turn
+        them on. See <Link to="/docs/features">Features</Link>.
+      </p>
+      <p>
+        AI, uploads, mentions, link metadata and the spelling dictionary are
+        exposed as hooks rather than built-in integrations. The editor calls your
+        handler and never makes a network request of its own, so your keys stay
+        on your server.
       </p>
       <p>
         Continue to <Link to="/docs/installation">Installation</Link>, or open
@@ -104,9 +112,12 @@ const ref = useRef<DaEditorHandle>(null);
   features: () => (
     <>
       <DocLead>
-        Everything below is on by default — no separate plugin to install, no
-        peer dependency to resolve. The <Inline>emoji</Inline> combobox and
-        Markdown input rules have a matching boolean prop if you want them off.
+        Most of the list is on by default — no separate plugin to install, no
+        peer dependency to resolve. A few are opt-in: pass{' '}
+        <Inline>lintPanel</Inline>, <Inline>spellCheckEngine</Inline>,{' '}
+        <Inline>onFetchLinkMeta</Inline>, <Inline>preview</Inline>,{' '}
+        <Inline>defaultFocusMode</Inline> or <Inline>defaultTypewriter</Inline> to
+        turn one on. Turn defaults off with the matching boolean.
       </DocLead>
       <FeaturesTable />
       <p>
@@ -155,8 +166,9 @@ const ref = useRef<DaEditorHandle>(null);
   backend: () => (
     <>
       <DocLead>
-        AI, uploads and mentions are hooks, not integrations. The editor calls
-        your handler and never makes a network request of its own.
+        AI, uploads, mentions, link metadata and the spelling dictionary are
+        hooks, not integrations. The editor calls your handler and never makes a
+        network request of its own.
       </DocLead>
       {HOOKS.map((hook) => (
         <section key={hook.id} className="doc-hook">
