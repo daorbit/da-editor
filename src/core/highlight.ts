@@ -1,7 +1,6 @@
 import { Element as SlateElement, Node, Text, type NodeEntry, type Range } from 'slate';
 import Prism from 'prismjs';
 
-// Grammars are imported for their side effects, which register them on Prism.
 import 'prismjs/components/prism-markup.js';
 import 'prismjs/components/prism-clike.js';
 import 'prismjs/components/prism-javascript.js';
@@ -15,6 +14,7 @@ import 'prismjs/components/prism-java.js';
 import 'prismjs/components/prism-c.js';
 import 'prismjs/components/prism-cpp.js';
 import 'prismjs/components/prism-csharp.js';
+import 'prismjs/components/prism-markup-templating.js';
 import 'prismjs/components/prism-go.js';
 import 'prismjs/components/prism-rust.js';
 import 'prismjs/components/prism-ruby.js';
@@ -63,8 +63,7 @@ export const LANGUAGES: LanguageOption[] = [
   { value: 'yaml', label: 'YAML' },
 ];
 
-/** Very small heuristic used when a code block has no language set. */
-function detectLanguage(code: string): string {
+export function detectLanguage(code: string): string {
   if (/^\s*[{[]/.test(code) && /["']\s*:/.test(code)) return 'json';
   if (/^\s*(?:import|export)\s|=>|const\s|let\s/.test(code)) {
     return /<[A-Z]\w*/.test(code) ? 'tsx' : 'typescript';
@@ -101,11 +100,7 @@ function flatten(
   return out;
 }
 
-/**
- * Slate `decorate` function that adds Prism token ranges to code blocks.
- * The whole block is tokenized at once so multi-line constructs (block
- * comments, template literals) highlight correctly.
- */
+ 
 export function decorateCode([node, path]: NodeEntry): Range[] {
   if (!SlateElement.isElement(node) || node.type !== ELEMENT.codeBlock) return [];
 
@@ -121,7 +116,6 @@ export function decorateCode([node, path]: NodeEntry): Range[] {
 
   const tokens = flatten(Prism.tokenize(code, grammar));
 
-  // Walk the block's text nodes, mapping token offsets onto each one.
   const ranges: Range[] = [];
   let tokenIndex = 0;
   let tokenOffset = 0;
@@ -155,7 +149,6 @@ export function decorateCode([node, path]: NodeEntry): Range[] {
       }
     }
 
-    // Text nodes are separated by newlines in the joined source.
     if (consumed < code.length) {
       consumed += 1;
       if (tokenIndex < tokens.length) {
@@ -171,7 +164,24 @@ export function decorateCode([node, path]: NodeEntry): Range[] {
   return ranges;
 }
 
-/** Token class names a leaf may carry, used by the renderer. */
+ 
+export function highlightCodeToHtml(code: string, lang?: string): string {
+  const escaped = code
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+  const language = lang && lang !== 'plain' ? lang : detectLanguage(code);
+  const grammar = language ? Prism.languages[language] : undefined;
+  if (!grammar) return escaped;
+
+  try {
+    return Prism.highlight(code, grammar, language);
+  } catch {
+    return escaped;
+  }
+}
+
 export const PRISM_TOKEN_TYPES = [
   'comment',
   'prolog',

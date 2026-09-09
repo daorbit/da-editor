@@ -1,6 +1,7 @@
 import { Element as SlateElement, Node, Text, type Descendant } from 'slate';
 import { ELEMENT, type CustomElement, type EditorValue } from './types';
-import { INLINE_STYLES, calloutStyle } from './inlineStyles';
+import { INLINE_STYLES, STATIC_SKIN, calloutStyle, TOKEN_COLORS } from './inlineStyles';
+import { highlightCodeToHtml } from './highlight';
 
 /** Maps an element type to its entry in the inline style table. */
 const ELEMENT_STYLE_KEY: Record<string, string> = {
@@ -97,6 +98,23 @@ function serializeLeaf(node: Text): string {
     const fg = safeCss(String(node.color));
     if (fg) html = `<span style="color:${fg}">${html}</span>`;
   }
+  // Text-level styling the editor renders as a span but that was never
+  // serialized, so a custom size or face was silently dropped on save.
+  const spanStyles: string[] = [];
+  if (typeof node.fontSize === 'number' && Number.isFinite(node.fontSize)) {
+    spanStyles.push(`font-size:${node.fontSize}px`);
+  }
+  if (node.fontFamily) {
+    const family = safeCss(String(node.fontFamily));
+    if (family) spanStyles.push(`font-family:${family}`);
+  }
+  if (node.backgroundColor) {
+    const bg = safeCss(String(node.backgroundColor));
+    if (bg) spanStyles.push(`background-color:${bg}`);
+  }
+  if (spanStyles.length) {
+    html = `<span style="${attrSafeCss(spanStyles.join(';'))}">${html}</span>`;
+  }
   return html;
 }
 
@@ -112,13 +130,15 @@ function styleAttr(element: CustomElement, key?: string): string {
 
   // The base look comes first so align and indent below can override it.
   if (inlineStyles && key) {
-    const base =
-      key === 'callout'
-        ? calloutStyle(
-            'variant' in element && element.variant ? String(element.variant) : 'info',
-          )
-        : INLINE_STYLES[key];
-    if (base) styles.push(base);
+    if (key === 'callout') {
+      const variant =
+        'variant' in element && element.variant ? String(element.variant) : 'info';
+      styles.push(calloutStyle(variant, staticSkin));
+    } else {
+      if (INLINE_STYLES[key]) styles.push(INLINE_STYLES[key]);
+      // Literal light-theme colour/background/font, only for email & PDF.
+      if (staticSkin && STATIC_SKIN[key]) styles.push(STATIC_SKIN[key]);
+    }
   }
 
   if (element.align && element.align !== 'left') styles.push(`text-align:${element.align}`);
@@ -194,27 +214,52 @@ function listStyleAttr(element: CustomElement, attrs: string): string {
 /** Style attribute for elements that carry no Slate node of their own. */
 function s(key: string): string {
   if (!inlineStyles) return '';
-  const value = INLINE_STYLES[key];
-  return value ? ` style="${attrSafeCss(value)}"` : '';
+  const parts = [INLINE_STYLES[key], staticSkin ? STATIC_SKIN[key] : ''].filter(Boolean);
+  return parts.length ? ` style="${attrSafeCss(parts.join(';'))}"` : '';
 }
 
 export interface SerializeHtmlOptions {
-  /**
-   * Emit the editor's own styling as `style` attributes, so the output renders
-   * the same anywhere — a CMS preview, a published page, an email client —
-   * without loading the editor's stylesheet.
-   */
-  inlineStyles?: boolean;
+ 
+  inlineStyles?: boolean | 'static';
 }
+
+/** Whether the current serialization bakes in the literal light-theme skin. */
+let staticSkin = false;
 
 /** Serializes editor value to HTML. */
 export function serializeHtml(value: EditorValue, options: SerializeHtmlOptions = {}): string {
-  inlineStyles = options.inlineStyles ?? false;
+  inlineStyles = options.inlineStyles === 'static' || options.inlineStyles === true;
+  staticSkin = options.inlineStyles === 'static';
   try {
     return value.map(serializeNode).join('');
   } finally {
     inlineStyles = false;
+    staticSkin = false;
   }
+}
+
+/**
+ * Prism emits `<span class="token keyword">`. Rewrite those to the editor's own
+ * `da-token--*` classes so the shipped stylesheet colours them, and — when
+ * inlining — replace the class with the matching `color` declaration so the
+ * output needs no stylesheet at all. An empty code block stays a `<br>`.
+ */
+function highlightPre(code: string, lang: string): string {
+  if (!code) return '<br>';
+  const markup = highlightCodeToHtml(code, lang);
+
+  return markup.replace(
+    /class="token ([^"]+)"/g,
+    (_match, rawTypes: string) => {
+      const types = rawTypes.trim().split(/\s+/);
+      if (inlineStyles) {
+        const type = types.find((t) => TOKEN_COLORS[t]);
+        return type ? `style="color:${TOKEN_COLORS[type]}"` : 'class="da-token"';
+      }
+      const classes = ['da-token', ...types.map((t) => `da-token--${t}`)];
+      return `class="${classes.join(' ')}"`;
+    },
+  );
 }
 
 function serializeNode(node: Node): string {
@@ -246,7 +291,12 @@ function serializeNode(node: Node): string {
       const rawLang = 'lang' in node && node.lang ? String(node.lang) : '';
       const lang = /^[\w+-]{1,30}$/.test(rawLang) ? rawLang : '';
       const cls = lang ? ` class="da-code language-${lang}"` : c('da-code');
-      return `<pre${c('da-code-block')}${attrs}><code${cls}${s('code')}>${children}</code></pre>`;
+      // The editor colours code with runtime decorations that never reach the
+      // serialized output. Re-run the highlighter here so the preview and any
+      // saved copy keep their colours; `da-token--*` classes match the editor's
+      // own token styles, and inline-style mode gets the colours spelled out.
+      const highlighted = highlightPre(Node.string(node), lang);
+      return `<pre${c('da-code-block')}${attrs}><code${cls}${s('code')}>${highlighted}</code></pre>`;
     }
     case ELEMENT.bulletedList:
       return `<ul${c('da-ul')}${listStyleAttr(node, attrs)}>${children}</ul>`;
@@ -539,6 +589,17 @@ function styleMarks(element: HTMLElement): Partial<Text> {
     marks.highlight = bg;
   }
 
+  // A custom text size, written as `font-size:NNpx` by the serializer. Kept in
+  // px only — `em`/`%` depend on an inherited size the mark cannot carry.
+  const size = /(?:^|;)\s*font-size\s*:\s*([\d.]+)px/i.exec(style)?.[1];
+  if (size) {
+    const parsed = Number.parseFloat(size);
+    if (Number.isFinite(parsed)) marks.fontSize = parsed;
+  }
+
+  const family = /(?:^|;)\s*font-family\s*:\s*([^;]+)/i.exec(style)?.[1]?.trim();
+  if (family && !/^(inherit|initial)$/i.test(family)) marks.fontFamily = family;
+
   return marks as Partial<Text>;
 }
 
@@ -630,9 +691,34 @@ function asBlocks(children: Descendant[]): Descendant[] {
   return blocks;
 }
 
+/**
+ * A text node that is only whitespace and sits between element siblings is the
+ * indentation the source HTML was pretty-printed with, not document content.
+ * Keeping it turns every newline between two `<p>`s into a blank paragraph on
+ * import. Whitespace next to a real text sibling (`hello <b>x</b>`) is kept.
+ */
+function isFormattingWhitespace(node: globalThis.Node): boolean {
+  if (node.nodeType !== 3) return false;
+  if ((node.textContent ?? '').trim() !== '') return false;
+  // Whitespace inside a code block is code — the gap between two tokens.
+  for (let p = node.parentElement; p; p = p.parentElement) {
+    if (p.nodeName === 'PRE' || p.nodeName === 'CODE') return false;
+  }
+  const siblings = Array.from(node.parentNode?.childNodes ?? []);
+  return !siblings.some(
+    (s) => s !== node && s.nodeType === 3 && (s.textContent ?? '').trim() !== '',
+  );
+}
+
+/** Child nodes with the source's pretty-print whitespace removed. */
+function contentChildNodes(element: globalThis.Node): globalThis.Node[] {
+  return Array.from(element.childNodes).filter((child) => !isFormattingWhitespace(child));
+}
+
 function deserializeNode(el: globalThis.Node, marks: Partial<Text> = {}): Descendant[] {
   if (el.nodeType === 3) {
     const text = el.textContent ?? '';
+    if (isFormattingWhitespace(el)) return [];
     return text ? [{ text, ...marks }] : [];
   }
   if (el.nodeType !== 1) return [];
@@ -644,20 +730,33 @@ function deserializeNode(el: globalThis.Node, marks: Partial<Text> = {}): Descen
   // Inside <pre> the <code> tag is structural, not an inline code mark —
   // without this a code block picks up `code: true` on every reload.
   const isCodeInPre = tag === 'CODE' && element.parentElement?.nodeName === 'PRE';
-  const nextMarks = {
-    ...marks,
-    ...(markKey && !isCodeInPre ? { [markKey]: true } : null),
-    ...(tag === 'MARK' ? { highlight: DEFAULT_HIGHLIGHT } : null),
-    // Google Docs and most rich web content express marks as inline styles
-    // rather than tags, so reading only tags loses all their formatting.
-    ...styleMarks(element),
-  };
+  // Token spans the serializer bakes into a code block carry colour (as a class
+  // or an inline style). That is highlighting, regenerated on load — not a mark
+  // on the code text — so nothing inside <pre> should contribute marks.
+  let inPre = false;
+  for (let p = element.parentElement; p; p = p.parentElement) {
+    if (p.nodeName === 'PRE') {
+      inPre = true;
+      break;
+    }
+  }
+  const nextMarks = inPre
+    ? marks
+    : {
+        ...marks,
+        ...(markKey && !isCodeInPre ? { [markKey]: true } : null),
+        ...(tag === 'MARK' ? { highlight: DEFAULT_HIGHLIGHT } : null),
+        // Google Docs and most rich web content express marks as inline styles
+        // rather than tags, so reading only tags loses all their formatting.
+        ...styleMarks(element),
+      };
 
   if (tag === 'BR') {
     // A lone <br> is the placeholder the serializer writes for an empty block,
     // not a line break in the text — keeping it would grow a blank paragraph by
     // one newline on every save.
-    const alone = element.parentElement?.childNodes.length === 1;
+    const parent = element.parentElement;
+    const alone = !!parent && contentChildNodes(parent).length === 1;
     return alone ? [] : [{ text: '\n', ...marks }];
   }
 
@@ -898,6 +997,10 @@ function deserializeNode(el: globalThis.Node, marks: Partial<Text> = {}): Descen
         .querySelector('code')
         ?.className.match(/language-([\w-]+)/)?.[1];
       if (lang) extra.lang = lang;
+      // The serializer bakes highlighting in as one text node per token; a
+      // code block holds a single unmarked string, so fold them back together.
+      const text = children.map((child) => ('text' in child ? child.text : '')).join('');
+      return [{ type: blockType, ...extra, children: [{ text }] } as CustomElement];
     }
 
     if (blockType === ELEMENT.table) {

@@ -418,29 +418,43 @@ describe('serializeHtml element coverage', () => {
     }
   });
 
-  it('inlines styles when asked, so output renders without the stylesheet', () => {
-    const html = serializeHtml(
-      [
-        { type: ELEMENT.h1, children: [{ text: 'Title' }] },
-        { type: ELEMENT.callout, variant: 'warning', children: [{ text: 'Careful' }] },
+  const inlineFixture = [
+    { type: ELEMENT.h1, children: [{ text: 'Title' }] },
+    { type: ELEMENT.callout, variant: 'warning', children: [{ text: 'Careful' }] },
+    {
+      type: ELEMENT.table,
+      children: [
         {
-          type: ELEMENT.table,
-          children: [
-            {
-              type: ELEMENT.tableRow,
-              children: [{ type: ELEMENT.tableCell, children: [{ text: 'A' }] }],
-            },
-          ],
+          type: ELEMENT.tableRow,
+          children: [{ type: ELEMENT.tableCell, children: [{ text: 'A' }] }],
         },
-      ] as EditorValue,
-      { inlineStyles: true },
-    );
+      ],
+    },
+  ] as EditorValue;
 
-    expect(html).toMatch(/<h1 class="da-h1" style="[^"]*font-size:30px/);
+  it("'static' inline styles bake in the light theme, for email and PDF", () => {
+    const html = serializeHtml(inlineFixture, { inlineStyles: 'static' });
+
+    expect(html).toMatch(/<h1 class="da-h1" style="[^"]*font-size:27\.75px/);
+    expect(html).toMatch(/<h1 class="da-h1" style="[^"]*color:#1f2328/);
     expect(html).toMatch(/data-callout="warning"[^>]*style="[^"]*background:#fef6e7/);
     expect(html).toMatch(/<td class="da-td" style="[^"]*border:1px solid/);
     // No custom properties or color-mix, so it survives in email clients.
     expect(html).not.toMatch(/var\(--|color-mix/);
+  });
+
+  it('theme-aware inline styles leave color and background to the host page', () => {
+    const html = serializeHtml(inlineFixture, { inlineStyles: true });
+
+    // Structure is still inlined.
+    expect(html).toMatch(/<h1 class="da-h1" style="[^"]*font-size:27\.75px/);
+    // But nothing pins the text colour or an opaque page background, so the
+    // document stays legible pasted into a dark site.
+    expect(html).not.toMatch(/style="[^"]*color:#(1f2328|6b7280)/);
+    expect(html).not.toMatch(/style="[^"]*font-family:/);
+    expect(html).not.toMatch(/background:#fef6e7/);
+    // Fills are translucent neutrals that read on any background.
+    expect(html).toMatch(/data-callout="warning"[^>]*style="[^"]*rgba\(/);
   });
 
   it('never puts a double quote inside a style attribute', () => {
