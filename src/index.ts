@@ -63,6 +63,14 @@ export { lintDocument, revealIssue } from './core/lint';
 export type { LintIssue, LintSeverity, LintOptions } from './core/lint';
 export { LintPanel } from './components/LintPanel';
 export type { LintPanelProps } from './components/LintPanel';
+export { SpellChecker } from './core/spellcheck';
+export type {
+  SpellSuggestion,
+  SpellEngine,
+  SpellEngineLoader,
+} from './core/spellcheck';
+export { SpellPopover } from './components/SpellPopover';
+export type { SpellPopoverProps } from './components/SpellPopover';
 export { withUndoGrouping } from './core/withUndoGrouping';
 export { EmojiPicker } from './components/EmojiPicker';
 export type { EmojiPickerProps } from './components/EmojiPicker';

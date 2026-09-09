@@ -1,9 +1,6 @@
 import type { EditorValue } from '../../src';
 
-/**
- * A real-feeling blog post that exercises every block, mark and inline
- * element the editor supports, in context, rather than as a feature list.
- */
+ 
 export const DEMO_CONTENT: EditorValue = [
   { type: 'h1', children: [{ text: 'Building a rich-text editor people actually enjoy using' }] },
   {

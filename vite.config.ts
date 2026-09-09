@@ -18,9 +18,7 @@ export default defineConfig(({ command }) => ({
       formats: ['es', 'cjs'],
     },
     rollupOptions: {
-      // Everything in `dependencies` stays external: npm installs it anyway,
-      // and bundling copies of Slate/Prism defeats deduping when the consumer
-      // already has them.
+ 
       external: [
         'react',
         'react-dom',

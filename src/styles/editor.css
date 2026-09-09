@@ -3714,3 +3714,64 @@
   background: var(--da-content-accent-soft);
   color: var(--da-content-accent);
 }
+
+.da-spell-error {
+  text-decoration: underline wavy #dc2626;
+  text-decoration-skip-ink: none;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.da-editor[data-theme='dark'] .da-spell-error {
+  text-decoration-color: #f87171;
+}
+
+.da-spell-pop {
+  position: absolute;
+  z-index: 45;
+  min-width: 160px;
+  max-width: 240px;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  border: 1px solid var(--da-border);
+  border-radius: var(--da-radius-sm);
+  background: var(--da-bg);
+  box-shadow: var(--da-shadow);
+}
+
+.da-spell-pop__item {
+  display: block;
+  width: 100%;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  font-size: 13px;
+  color: var(--da-fg);
+  cursor: pointer;
+}
+
+.da-spell-pop__item:hover {
+  background: var(--da-surface-hover);
+}
+
+.da-spell-pop__item--muted {
+  color: var(--da-muted);
+  font-size: 12px;
+}
+
+.da-spell-pop__empty {
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--da-muted);
+}
+
+.da-spell-pop__sep {
+  height: 1px;
+  margin: 3px 0;
+  background: var(--da-border);
+}

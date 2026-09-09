@@ -8,6 +8,7 @@ import {
 } from '../../src';
 import { DEMO_CONTENT } from './demoContent';
 import { AiWorkspace, type AiWorkspaceHandle } from './ai';
+import { loadSpellEngine } from './spellEngine';
 
 const MENTIONABLES: Mentionable[] = [
   { id: '1', name: 'Alice Chen', detail: 'alice@example.com' },
@@ -52,11 +53,26 @@ export function Playground({ navigate }: { navigate: (to: string) => void }) {
           minHeight="0"
           maxWidth="1100px"
           autoFocus
+          spellCheck
+          spellCheckEngine={loadSpellEngine}
           wordCount
           preview={true}
           lintPanel
+          smartPaste
+          fixedToolbar
+          floatingToolbar
+          slashMenu
+          emoji
+          autoformat
+          toasts
           mentionables={MENTIONABLES}
           onAskAi={() => aiRef.current?.open()}
+          onUpload={async (file) => URL.createObjectURL(file)}
+          onPickMedia={async (kind) => {
+            const url = window.prompt(`Paste a ${kind} URL`);
+            return url ? { url } : null;
+          }}
+          onClearAll={true}
           onFetchLinkMeta={async (url) => {
             let host = url;
             try {

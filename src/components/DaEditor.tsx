@@ -68,6 +68,12 @@ import { MediaDialog } from './MediaDialog';
 import { PreviewPane } from './PreviewPane';
 import { ToastHost } from './ToastHost';
 import { LintPanel } from './LintPanel';
+import { SpellPopover } from './SpellPopover';
+import {
+  SpellChecker,
+  type SpellEngine,
+  type SpellEngineLoader,
+} from '../core/spellcheck';
 import { toast } from '../core/toast';
 import { smartPasteText } from '../core/smartPaste';
 import { TableToolbar } from './TableToolbar';
@@ -108,15 +114,9 @@ const MIN_SPLIT = 25;
 const MAX_SPLIT = 75;
 
 export interface DaEditorHandle {
-  /** The underlying Slate editor. */
   editor: DaEditorType;
   getValue: () => EditorValue;
   setValue: (value: EditorValue) => void;
-  /**
-   * Serialized HTML. Pass `{ inlineStyles: true }` to embed the editor's own
-   * styling as `style` attributes, so the output looks the same wherever it is
-   * rendered without loading the stylesheet.
-   */
   getHTML: (options?: SerializeHtmlOptions) => string;
   getMarkdown: () => string;
   getText: () => string;
@@ -149,16 +149,9 @@ export interface DaEditorProps {
   autoformat?: boolean;
   /** Renders the Ask AI affordances and fires when one is used. */
   onAskAi?: () => void;
-
   onClearAll?: (() => void) | boolean;
-  /** Entries offered by the `@` mention combobox. */
   mentionables?: Mentionable[];
-  /** Uploads a file picked from the device; falls back to a local object URL. */
   onUpload?: UploadHandler;
-  /**
-   * Resolves open-graph metadata for a pasted bare URL. When provided, such a
-   * paste becomes a rich preview card; without it, a plain link.
-   */
   onFetchLinkMeta?: FetchLinkMeta;
   
   onPickMedia?: (kind: MediaKind) => Promise<{ url: string; name?: string } | null>;
@@ -173,23 +166,13 @@ export interface DaEditorProps {
   toolbarLeading?: ReactNode;
   autoFocus?: boolean;
   spellCheck?: boolean;
+  spellCheckEngine?: SpellEngine | SpellEngineLoader;
   preview?: boolean;
   previewTitle?: string;
-  /**
-   * Show the built-in toast for copy / cut / paste and similar actions. On by
-   * default; pass `false` to suppress it (e.g. when the host app shows its own).
-   */
   toasts?: boolean;
-  /**
-   * Recognise a pasted bare URL, Markdown block or code snippet and insert it
-   * as the matching content instead of plain text. On by default.
-   */
   smartPaste?: boolean;
-  /** Start in focus mode (dim all but the current block). Toggle: Ctrl+Alt+F. */
   defaultFocusMode?: boolean;
-  /** Start in typewriter mode (keep the caret line centred). Toggle: Ctrl+Alt+T. */
   defaultTypewriter?: boolean;
-  /** Enable the content-checks panel and its toolbar toggle. */
   lintPanel?: boolean;
 }
 
@@ -224,6 +207,7 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
     toolbarLeading,
     autoFocus = false,
     spellCheck = true,
+    spellCheckEngine,
     preview = false,
     previewTitle,
     toasts = true,
@@ -315,6 +299,16 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
   useEffect(() => {
     if (autoFocus) ReactEditor.focus(editor);
   }, [autoFocus, editor]);
+ 
+  useEffect(() => {
+    let dom: HTMLElement;
+    try {
+      dom = ReactEditor.toDOMNode(editor, editor);
+    } catch {
+      return;
+    }
+    dom.setAttribute('spellcheck', spellCheck ? 'true' : 'false');
+  }, [editor, spellCheck, value]);
 
 
   const renderElement = useCallback(
@@ -372,6 +366,24 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
   const [focusMode, setFocusMode] = useState(defaultFocusMode);
   const [typewriter, setTypewriter] = useState(defaultTypewriter);
   const [lintOpen, setLintOpen] = useState(false);
+ 
+  const spellcheckOn = !!spellCheckEngine;
+  const spellChecker = useMemo(
+    () => new SpellChecker(spellCheckEngine),
+    // Rebuilt only if the host swaps the engine reference wholesale.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+  const [, forceRedecorate] = useState(0);
+  useEffect(() => {
+    if (!spellcheckOn) return;
+    spellChecker.onReady = () => forceRedecorate((n) => n + 1);
+    if (typeof spellCheckEngine === 'function') void spellChecker.load();
+    else if (spellCheckEngine) spellChecker.setEngine(spellCheckEngine);
+    return () => {
+      spellChecker.onReady = null;
+    };
+  }, [spellcheckOn, spellChecker, spellCheckEngine]);
 
   const [dropActive, setDropActive] = useState(false);
  
@@ -587,22 +599,11 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
   };
 
   const handleChange = (next: Descendant[]) => {
-    // Selection-only changes are not content changes.
     const isContentChange = editor.operations.some((op) => op.type !== 'set_selection');
-
-    // `value` state only feeds `<Slate initialValue>` (read once per `slateKey`)
-    // and the preview pane. Re-setting it on every caret move forces a full
-    // DaEditor re-render — and a re-render of the toolbars — for nothing, which
-    // is what makes a drag-selection stutter. Update it only when the content
-    // actually changed, or when the preview is open and needs to stay live.
     if (isContentChange || previewOpen) setValue(next);
     if (isContentChange) onChange?.(next);
   };
 
-  /**
-   * Code highlighting and find highlighting share the one `decorate` slot, so
-   * their ranges are concatenated rather than one replacing the other.
-   */
   const searchOptions = useMemo(
     () => ({
       caseSensitive: findCaseSensitive,
@@ -615,24 +616,30 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
 
   const decorate = useCallback(
     (entry: Parameters<typeof decorateCode>[0]) => {
-      const code = decorateCode(entry);
-      if (!findOpen || !findQuery) return code;
+      const ranges = decorateCode(entry);
 
-      const active = findMatches(editor, findQuery, searchOptions)[findIndex];
-      const scopeRange =
-        findInSelection && editor.selection && !Range.isCollapsed(editor.selection)
-          ? editor.selection
-          : undefined;
-      return [
-        ...code,
-        ...decorateSearch(entry as [unknown, number[]], findQuery, {
-          ...searchOptions,
-          activeRange: active?.range,
-          scopeRange,
-        }),
-      ];
+      if (spellcheckOn && spellChecker.ready) {
+        ranges.push(...spellChecker.decorate(entry));
+      }
+
+      if (findOpen && findQuery) {
+        const active = findMatches(editor, findQuery, searchOptions)[findIndex];
+        const scopeRange =
+          findInSelection && editor.selection && !Range.isCollapsed(editor.selection)
+            ? editor.selection
+            : undefined;
+        ranges.push(
+          ...decorateSearch(entry as [unknown, number[]], findQuery, {
+            ...searchOptions,
+            activeRange: active?.range,
+            scopeRange,
+          }),
+        );
+      }
+
+      return ranges;
     },
-    [editor, findOpen, findQuery, searchOptions, findIndex],
+    [editor, findOpen, findQuery, searchOptions, findIndex, spellcheckOn, spellChecker],
   );
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -860,6 +867,10 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
               className="da-editor__content"
               readOnly={locked}
               spellCheck={spellCheck}
+             
+              autoCorrect={spellCheck ? 'on' : 'off'}
+              autoCapitalize={spellCheck ? 'sentences' : 'off'}
+              data-gramm="false"
               // Only passed while the document is empty, so it cannot appear
               // against a block that merely happens to be blank.
               placeholder={showPlaceholder ? placeholder : undefined}
@@ -897,6 +908,7 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
             {!locked && (
               <LinkPopover open={linkOpen} onClose={() => setLinkOpen(false)} />
             )}
+            {!locked && spellcheckOn && <SpellPopover checker={spellChecker} />}
           </div>
         </div>
 
