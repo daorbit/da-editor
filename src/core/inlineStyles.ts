@@ -93,7 +93,9 @@ export const INLINE_STYLES: Record<string, string> = {
   li: 'padding:2px 0;line-height:1.65',
   // `.da-hr-wrap`'s 6px of padding, folded into the rule's own margin.
   hr: `margin:6px 0;border:none;border-top:1px solid ${NEUTRAL_BORDER_STRONG}`,
-  table: 'border-collapse:collapse;table-layout:fixed;width:100%;margin:10px 0',
+ 
+  table:
+    'border-collapse:collapse;table-layout:fixed;width:max-content;min-width:100%;margin:10px 0',
   td: `min-width:60px;padding:7px 10px;border:1px solid ${NEUTRAL_BORDER_STRONG};vertical-align:top;text-align:left`,
   th: `min-width:60px;padding:7px 10px;border:1px solid ${NEUTRAL_BORDER_STRONG};background:${NEUTRAL_FILL};vertical-align:top;text-align:left;font-weight:600`,
   // `.da-image-wrap`'s 10px margin, folded in: the wrapper is an editing

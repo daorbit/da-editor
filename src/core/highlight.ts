@@ -101,6 +101,38 @@ function flatten(
 }
 
  
+/**
+ * Tokenizing is the costly half of `decorateCode`, and Slate re-runs
+ * `decorate` for every node on every render — every keystroke and every caret
+ * move. The token list depends only on the source and the language, so cache
+ * it; the cheap offset-to-range mapping still runs each call because the paths
+ * warm while an edit churns only the block being typed in.
+ */
+type TokenList = Array<{ length: number; types: string[] }>;
+const TOKEN_CACHE_MAX = 24;
+const tokenCache = new Map<string, TokenList>();
+
+function tokenizeCached(
+  code: string,
+  language: string,
+  grammar: Prism.Grammar,
+): TokenList {
+  const key = language + " " + code;
+  const hit = tokenCache.get(key);
+  if (hit) {
+    // Delete + re-set moves the entry to the end, so it is evicted last.
+    tokenCache.delete(key);
+    tokenCache.set(key, hit);
+    return hit;
+  }
+  const value = flatten(Prism.tokenize(code, grammar));
+  tokenCache.set(key, value);
+  if (tokenCache.size > TOKEN_CACHE_MAX) {
+    tokenCache.delete(tokenCache.keys().next().value as string);
+  }
+  return value;
+}
+
 export function decorateCode([node, path]: NodeEntry): Range[] {
   if (!SlateElement.isElement(node) || node.type !== ELEMENT.codeBlock) return [];
 
@@ -114,7 +146,7 @@ export function decorateCode([node, path]: NodeEntry): Range[] {
   const grammar = Prism.languages[language];
   if (!grammar) return [];
 
-  const tokens = flatten(Prism.tokenize(code, grammar));
+  const tokens = tokenizeCached(code, language, grammar);
 
   const ranges: Range[] = [];
   let tokenIndex = 0;

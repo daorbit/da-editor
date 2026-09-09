@@ -1157,15 +1157,24 @@
 .da-table-wrap {
   margin: 10px 0;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
 
   position: relative;
 }
-
+ 
+.da-table-scroll {
+  position: relative;
+  width: max-content;
+  min-width: 100%;
+}
 
 .da-table {
   border-collapse: separate;
   border-spacing: 0;
-  width: 100%;
+
+  width: max-content;
+  min-width: 100%;
   table-layout: fixed;
 }
 
@@ -3172,8 +3181,13 @@
   height: auto;
 }
 
+.da-preview__page .da-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .da-preview__page table {
-  width: 100%;
+  min-width: 100%;
   border-collapse: collapse;
 }
 
@@ -3195,5 +3209,136 @@
     border-left: 0;
     border-top: 1px solid var(--da-border);
     min-height: 320px;
+  }
+}
+
+
+/* ------------------------------------------------------------------ toast -- */
+
+/* Portalled to <body>, so it sits outside `.da-editor` and cannot use the
+   editor's CSS variables — the palette here is self-contained and follows the
+   OS theme on its own. Pointer-events are off on the stack so a toast never
+   eats a click meant for the page; each card re-enables them for dismissal. */
+.da-toast-host {
+  position: fixed;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2147483000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.da-toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 360px;
+  padding: 9px 15px 9px 12px;
+  border-radius: 10px;
+  font: 500 13px/1.4 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  /* Near-opaque on purpose: a translucent card portalled over a dark editor
+     canvas reads as a dark pill even in a light theme. */
+  color: #1f2328;
+  background: #ffffff;
+  border: 1px solid rgba(15, 20, 30, 0.08);
+  box-shadow:
+    0 8px 28px rgba(16, 20, 30, 0.16),
+    0 2px 6px rgba(16, 20, 30, 0.08);
+  cursor: default;
+  user-select: none;
+  animation: da-toast-in 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.da-toast--leaving {
+  animation: da-toast-out 180ms ease forwards;
+}
+
+.da-toast__icon {
+  flex: none;
+  opacity: 0.7;
+}
+
+.da-toast--success .da-toast__icon {
+  color: #10966e;
+  opacity: 1;
+}
+
+.da-toast--danger .da-toast__icon {
+  color: #dc2626;
+  opacity: 1;
+}
+
+.da-toast__msg {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@keyframes da-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes da-toast-out {
+  to {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.97);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .da-toast,
+  .da-toast--leaving {
+    animation-duration: 1ms;
+  }
+}
+
+/* Dark palette. Applied when the editor resolved to a dark theme
+   (`[data-theme="dark"]` on the host), and — only when the host has NOT pinned
+   a theme — when the OS asks for dark. A `theme="light"` editor keeps the light
+   toast even on a dark OS. */
+.da-toast-host[data-theme='dark'] .da-toast {
+  color: #e8eaed;
+  background: #23262d;
+  border-color: rgba(255, 255, 255, 0.09);
+  box-shadow:
+    0 8px 30px rgba(0, 0, 0, 0.5),
+    0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.da-toast-host[data-theme='dark'] .da-toast--success .da-toast__icon {
+  color: #34d399;
+}
+
+.da-toast-host[data-theme='dark'] .da-toast--danger .da-toast__icon {
+  color: #f87171;
+}
+
+@media (prefers-color-scheme: dark) {
+  .da-toast-host:not([data-theme]) .da-toast {
+    color: #e8eaed;
+    background: #23262d;
+    border-color: rgba(255, 255, 255, 0.09);
+    box-shadow:
+      0 8px 30px rgba(0, 0, 0, 0.5),
+      0 2px 6px rgba(0, 0, 0, 0.4);
+  }
+  .da-toast-host:not([data-theme]) .da-toast--success .da-toast__icon {
+    color: #34d399;
+  }
+  .da-toast-host:not([data-theme]) .da-toast--danger .da-toast__icon {
+    color: #f87171;
   }
 }

@@ -3,13 +3,12 @@ import { Link, NavLink, useParams } from 'react-router-dom';
 import { Moon, Sun } from 'lucide-react';
 import { DOC_NAV, adjacentDocs, findDoc } from './nav';
 import { DOC_BODIES } from './pages';
+import { version as PKG_VERSION } from '../../../package.json';
 
 interface DocsLayoutProps {
   onToggleTheme: () => void;
   dark: boolean;
 }
-
-const PKG_VERSION = '0.1.24';
 
 export function DocsLayout({ onToggleTheme, dark }: DocsLayoutProps) {
   const { page } = useParams<{ page?: string }>();
@@ -18,7 +17,6 @@ export function DocsLayout({ onToggleTheme, dark }: DocsLayoutProps) {
   const Body = DOC_BODIES[slug];
   const [navOpen, setNavOpen] = useState(false);
 
-  // Close the mobile sidebar whenever the page changes.
   useEffect(() => setNavOpen(false), [slug]);
 
   const { prev, next } = adjacentDocs(slug);

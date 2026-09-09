@@ -65,6 +65,8 @@ import { DialogContext, type DialogApi } from './dialogContext';
 import { applyBlockDrop, isBlockDrag, rowUnderPointer } from './BlockDragHandle';
 import { MediaDialog } from './MediaDialog';
 import { PreviewPane } from './PreviewPane';
+import { ToastHost } from './ToastHost';
+import { toast } from '../core/toast';
 import { TableToolbar } from './TableToolbar';
 import { MediaToolbar } from './MediaToolbar';
 import { LinkToolbar } from './LinkToolbar';
@@ -163,6 +165,11 @@ export interface DaEditorProps {
   spellCheck?: boolean;
   preview?: boolean;
   previewTitle?: string;
+  /**
+   * Show the built-in toast for copy / cut / paste and similar actions. On by
+   * default; pass `false` to suppress it (e.g. when the host app shows its own).
+   */
+  toasts?: boolean;
 }
 
 export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEditor(
@@ -197,6 +204,7 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
     spellCheck = true,
     preview = false,
     previewTitle,
+    toasts = true,
   },
   ref,
 ) {
@@ -343,6 +351,13 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
   const isFileDrag = (event: React.DragEvent) =>
     Array.from(event.dataTransfer.types).includes('Files');
 
+  // `dragover` fires ~60 times a second. Locating the row under the pointer
+  // reads layout and re-renders the whole editor, so the work is throttled to
+  // one animation frame and skipped entirely when the pointer has not moved
+  // enough to change the target.
+  const dragFrame = useRef(0);
+  const lastDragY = useRef(-1);
+
   const handleDragOver = (event: React.DragEvent) => {
     if (locked) return;
 
@@ -351,14 +366,21 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
     if (isBlockDrag(event.dataTransfer)) {
       event.preventDefault();
       event.dataTransfer.dropEffect = 'move';
-      const target = rowUnderPointer(event.clientX, event.clientY);
-      const base = containerRef.current?.getBoundingClientRect();
-      if (target && base) {
-        const y = target.after ? target.rect.bottom : target.rect.top;
-        setDropLine(y - base.top);
-      } else {
-        setDropLine(null);
-      }
+
+      const { clientX, clientY } = event;
+      if (Math.abs(clientY - lastDragY.current) < 4) return;
+      lastDragY.current = clientY;
+
+      if (dragFrame.current) return;
+      dragFrame.current = requestAnimationFrame(() => {
+        dragFrame.current = 0;
+        const target = rowUnderPointer(clientX, clientY);
+        const base = containerRef.current?.getBoundingClientRect();
+        const next = target && base
+          ? (target.after ? target.rect.bottom : target.rect.top) - base.top
+          : null;
+        setDropLine((current) => (current === next ? current : next));
+      });
       return;
     }
 
@@ -368,14 +390,24 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
     setDropActive(true);
   };
 
+  const endDrag = () => {
+    if (dragFrame.current) {
+      cancelAnimationFrame(dragFrame.current);
+      dragFrame.current = 0;
+    }
+    lastDragY.current = -1;
+  };
+
   const handleDragLeave = (event: React.DragEvent) => {
     if (event.currentTarget.contains(event.relatedTarget as globalThis.Node)) return;
+    endDrag();
     setDropActive(false);
     setDropLine(null);
   };
 
   const handleDrop = (event: React.DragEvent) => {
     if (locked) return;
+    endDrag();
 
     // A block being reordered by its grip, handled before files: this drag
     // carries no files, so the file path below would ignore it.
@@ -405,12 +437,21 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
   const handlePaste = (event: React.ClipboardEvent) => {
     if (locked) return;
     const files = Array.from(event.clipboardData.files);
-    if (files.length === 0) return;
+    if (files.length > 0) {
+      // Screenshot pastes arrive as files with no useful text alternative, so
+      // they would otherwise land as nothing at all.
+      event.preventDefault();
+      void insertFiles(editor, files, onUpload);
+    }
+    if (toasts) toast('Pasted', { tone: 'success' });
+  };
 
-    // Screenshot pastes arrive as files with no useful text alternative, so
-    // they would otherwise land as nothing at all.
-    event.preventDefault();
-    void insertFiles(editor, files, onUpload);
+  const handleCopy = () => {
+    if (toasts) toast('Copied to clipboard', { tone: 'success' });
+  };
+
+  const handleCut = () => {
+    if (!locked && toasts) toast('Cut to clipboard', { tone: 'success' });
   };
 
  
@@ -455,9 +496,15 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
   };
 
   const handleChange = (next: Descendant[]) => {
-    setValue(next);
     // Selection-only changes are not content changes.
     const isContentChange = editor.operations.some((op) => op.type !== 'set_selection');
+
+    // `value` state only feeds `<Slate initialValue>` (read once per `slateKey`)
+    // and the preview pane. Re-setting it on every caret move forces a full
+    // DaEditor re-render — and a re-render of the toolbars — for nothing, which
+    // is what makes a drag-selection stutter. Update it only when the content
+    // actually changed, or when the preview is open and needs to stay live.
+    if (isContentChange || previewOpen) setValue(next);
     if (isContentChange) onChange?.(next);
   };
 
@@ -693,6 +740,8 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
               onPaste={handlePaste}
+              onCopy={handleCopy}
+              onCut={handleCut}
             />
 
             {floatingToolbar && !locked && (
@@ -772,6 +821,7 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
         />
       </Slate>
       </DialogContext.Provider>
+      {toasts && <ToastHost theme={resolvedTheme} />}
     </div>
   );
 });

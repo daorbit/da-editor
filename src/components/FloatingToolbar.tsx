@@ -39,19 +39,22 @@ export function FloatingToolbar({ onAskAi, onLink }: FloatingToolbarProps) {
   const [position, setPosition] = useState<Position | null>(null);
   const blockType = getBlockType(editor);
   const fontSize = getEffectiveFontSize(editor);
-  // Falls back to the paragraph spec so the button always has an icon.
   const activeBlock =
     BLOCK_SPECS.find((spec) => spec.type === blockType) ??
     BLOCK_SPECS.find((spec) => spec.type === ELEMENT.paragraph);
 
   const { selection } = editor;
 
-  // Only show over a real, non-empty, focused selection.
   const shouldShow =
     Boolean(selection) &&
     ReactEditor.isFocused(editor) &&
     !Range.isCollapsed(selection!) &&
     Editor.string(editor, selection!) !== '';
+
+ 
+  const selectionKey = shouldShow
+    ? `${JSON.stringify(selection!.anchor)}-${JSON.stringify(selection!.focus)}`
+    : '';
 
   useEffect(() => {
     const el = ref.current;
@@ -70,8 +73,7 @@ export function FloatingToolbar({ onAskAi, onLink }: FloatingToolbarProps) {
     const container = el.offsetParent as HTMLElement | null;
     const base = container?.getBoundingClientRect();
 
-    // Flip below the selection when there isn't enough room above (e.g. the
-    // selection sits right under the sticky toolbar).
+ 
     const spaceAbove = rect.top - (base?.top ?? 0);
     const top =
       spaceAbove < el.offsetHeight + 8
@@ -85,7 +87,8 @@ export function FloatingToolbar({ onAskAi, onLink }: FloatingToolbarProps) {
         rect.left - (base?.left ?? 0) + rect.width / 2 - el.offsetWidth / 2,
       ),
     });
-  });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectionKey, shouldShow]);
 
   if (!shouldShow) return null;
 
@@ -95,7 +98,6 @@ export function FloatingToolbar({ onAskAi, onLink }: FloatingToolbarProps) {
       className="da-tb da-tb--floating"
       role="toolbar"
       aria-label="Selection toolbar"
-      // Rendered before measuring so the ref exists; hidden until positioned.
       style={{
         top: position?.top ?? 0,
         left: position?.left ?? 0,
@@ -106,9 +108,6 @@ export function FloatingToolbar({ onAskAi, onLink }: FloatingToolbarProps) {
       {onAskAi && (
         <>
           <ToolbarButton icon={<SparklesIcon />} label="Ask AI" onClick={onAskAi}>
-            {/* Not `da-tb__value`: that carries a fixed 78px width so a
-                changing dropdown label cannot reflow the toolbar, and this
-                label never changes — it only padded the button out. */}
             <span className="da-tb__label">Ask AI</span>
           </ToolbarButton>
           <ToolbarSeparator />

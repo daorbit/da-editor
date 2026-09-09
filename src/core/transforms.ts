@@ -343,6 +343,14 @@ export function getFontSize(editor: DaEditor): number | null {
 }
 
  
+/**
+ * `getComputedStyle` forces a style recalc, and the toolbar calls this on
+ * every render — which, during a drag-selection, is many times a second. The
+ * measured size only depends on which block the caret is in, so cache it by
+ * block path and reflow just once per block.
+ */
+let fontSizeCache: { key: string; value: number } | null = null;
+
 export function getEffectiveFontSize(editor: DaEditor): number {
   const marked = getFontSize(editor);
   if (marked !== null) return marked;
@@ -352,9 +360,16 @@ export function getEffectiveFontSize(editor: DaEditor): number {
       match: (n) => SlateElement.isElement(n) && Editor.isBlock(editor, n),
     });
     if (!node) return DEFAULT_FONT_SIZE;
+
+    const blockType = SlateElement.isElement(node[0]) ? node[0].type : '';
+    const key = `${blockType}:${node[1].join('.')}`;
+    if (fontSizeCache?.key === key) return fontSizeCache.value;
+
     const dom = ReactEditor.toDOMNode(editor, node[0]);
     const computed = Number.parseFloat(getComputedStyle(dom).fontSize);
-    return Number.isFinite(computed) ? Math.round(computed) : DEFAULT_FONT_SIZE;
+    const value = Number.isFinite(computed) ? Math.round(computed) : DEFAULT_FONT_SIZE;
+    fontSizeCache = { key, value };
+    return value;
   } catch {
     return DEFAULT_FONT_SIZE;
   }

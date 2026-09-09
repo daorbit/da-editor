@@ -18,6 +18,9 @@ export { MediaDialog } from './components/MediaDialog';
 export type { MediaDialogProps } from './components/MediaDialog';
 export { PreviewPane } from './components/PreviewPane';
 export type { PreviewPaneProps } from './components/PreviewPane';
+export { ToastHost } from './components/ToastHost';
+export { toast, useToasts, dismissToast } from './core/toast';
+export type { Toast, ToastTone, ToastOptions } from './core/toast';
 export {
   DeviceFrame,
   DEVICE_IDS,

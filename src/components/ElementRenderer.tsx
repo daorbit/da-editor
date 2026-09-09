@@ -542,36 +542,39 @@ function Table({ attributes, children, element }: RenderElementProps) {
 
   return (
     <div className="da-table-wrap">
-      <table {...attributes} className="da-table">
-        {shown && shown.length > 0 && (
-          <colgroup contentEditable={false}>
-            {shown.map((width, index) => (
-              // eslint-disable-next-line react/no-array-index-key
-              <col key={index} style={{ width }} />
-            ))}
-          </colgroup>
-        )}
-        <tbody>{children}</tbody>
-      </table>
+    
+      <div className="da-table-scroll">
+        <table {...attributes} className="da-table">
+          {shown && shown.length > 0 && (
+            <colgroup contentEditable={false}>
+              {shown.map((width, index) => (
+                // eslint-disable-next-line react/no-array-index-key
+                <col key={index} style={{ width }} />
+              ))}
+            </colgroup>
+          )}
+          <tbody>{children}</tbody>
+        </table>
 
-      {/* Overlaid on the column boundaries rather than placed in cells: a
-          handle inside a <td> would sit in editable content and take the
-          caret when clicked. */}
-      {shown && shown.length > 1 && (
-        <div className="da-table-handles" contentEditable={false}>
-          {shown.slice(0, -1).map((_, index) => (
-            <span
-              // eslint-disable-next-line react/no-array-index-key
-              key={index}
-              className="da-table-handle"
-              role="separator"
-              aria-label={`Resize column ${index + 1}`}
-              style={{ left: shown.slice(0, index + 1).reduce((sum, w) => sum + w, 0) }}
-              onPointerDown={(event) => startResize(event, index)}
-            />
-          ))}
-        </div>
-      )}
+        {/* Overlaid on the column boundaries rather than placed in cells: a
+            handle inside a <td> would sit in editable content and take the
+            caret when clicked. */}
+        {shown && shown.length > 1 && (
+          <div className="da-table-handles" contentEditable={false}>
+            {shown.slice(0, -1).map((_, index) => (
+              <span
+                // eslint-disable-next-line react/no-array-index-key
+                key={index}
+                className="da-table-handle"
+                role="separator"
+                aria-label={`Resize column ${index + 1}`}
+                style={{ left: shown.slice(0, index + 1).reduce((sum, w) => sum + w, 0) }}
+                onPointerDown={(event) => startResize(event, index)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

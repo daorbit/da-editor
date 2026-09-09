@@ -343,7 +343,13 @@ function serializeNode(node: Node): string {
       const colgroup = widths?.length
         ? `<colgroup>${widths.map((w) => `<col style="width:${w}px">`).join('')}</colgroup>`
         : '';
-      return `<div class="da-table-wrap"><table${c('da-table')}${attrs}>${colgroup}<tbody>${children}</tbody></table></div>`;
+      // The wrapper scrolls a wide table on a narrow screen instead of letting
+      // it clip; without a style attribute here the inline-styles output has no
+      // scroll at all.
+      const wrapStyle = inlineStyles
+        ? ' style="margin:10px 0;overflow-x:auto;-webkit-overflow-scrolling:touch"'
+        : '';
+      return `<div class="da-table-wrap"${wrapStyle}><table${c('da-table')}${attrs}>${colgroup}<tbody>${children}</tbody></table></div>`;
     }
     case ELEMENT.tableRow:
       return `<tr${c('da-tr')}${attrs}>${children}</tr>`;

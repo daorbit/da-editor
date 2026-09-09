@@ -3,6 +3,7 @@ import { Editor, Range, Transforms } from 'slate';
 import { ReactEditor, useSlate } from 'slate-react';
 import { useDialogs } from './dialogContext';
 import { deserializeHtml, serializeHtml } from '../core/serialize';
+import { toast } from '../core/toast';
 import {
   LineHeightIcon,
   BulletedListIcon,
@@ -117,6 +118,32 @@ export interface FixedToolbarProps {
   onClearAll?: () => void;
 }
 
+ 
+const GROUP_ORDER = [
+  'ai',
+  'colors',
+  'history',
+  'clipboard',
+  'blocktype',
+  'fontsize',
+  'insert',
+  'table',
+  'media',
+  'link',
+  'marks',
+  'lists',
+  'align',
+  'indent',
+  'emoji',
+  'columns',
+  'io',
+] as const;
+
+const groupRank = (key: string): number => {
+  const i = GROUP_ORDER.indexOf(key as (typeof GROUP_ORDER)[number]);
+  return i === -1 ? GROUP_ORDER.length : i;
+};
+
 export function FixedToolbar({
   leading,
   onAskAi,
@@ -139,13 +166,7 @@ export function FixedToolbar({
   const selection = editor.selection;
   const hasSelection = !!selection && !Range.isCollapsed(selection);
 
-  /*
-   * Clipboard access is permission-gated and origin-restricted, and reading is
-   * unavailable outright in Firefox and Safari. Both handlers therefore fall
-   * back to `document.execCommand`, which is deprecated but still the only
-   * path that works from a user gesture in those browsers, and surface a
-   * message rather than failing silently when neither is allowed.
-   */
+ 
   const copySelection = async () => {
     if (!hasSelection) return;
     ReactEditor.focus(editor);
@@ -159,13 +180,16 @@ export function FixedToolbar({
             'text/plain': new Blob([text], { type: 'text/plain' }),
           }),
         ]);
+        toast('Copied to clipboard', { tone: 'success' });
         return;
       }
       if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(text);
+        toast('Copied to clipboard', { tone: 'success' });
         return;
       }
       document.execCommand('copy');
+      toast('Copied to clipboard', { tone: 'success' });
     } catch {
       try {
         document.execCommand('copy');
@@ -187,6 +211,7 @@ export function FixedToolbar({
           if (item.types.includes('text/html')) {
             const html = await (await item.getType('text/html')).text();
             Transforms.insertFragment(editor, deserializeHtml(html));
+            toast('Pasted', { tone: 'success' });
             return;
           }
         }
@@ -194,6 +219,7 @@ export function FixedToolbar({
       if (navigator.clipboard?.readText) {
         const text = await navigator.clipboard.readText();
         if (text) Editor.insertText(editor, text);
+        toast('Pasted', { tone: 'success' });
         return;
       }
       throw new Error('unsupported');
@@ -886,9 +912,10 @@ export function FixedToolbar({
     </>
   );
 
-  // Groups that don't fit collapse whole into the "More" menu, keeping every
-  // feature reachable instead of clipping the toolbar on a narrow screen.
-  // Measured off-screen so widths stay available even once collapsed away.
+ 
+  groups.sort((a, b) => groupRank(a.key) - groupRank(b.key));
+
+ 
   const measureRef = useRef<HTMLDivElement>(null);
   const visibleCount = useOverflowCollapse(scrollRef, measureRef, groups.length);
   const visibleGroups = groups.slice(0, visibleCount);
