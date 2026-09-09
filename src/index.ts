@@ -49,8 +49,20 @@ export { FindReplace } from './components/FindReplace';
 export type { FindReplaceProps } from './components/FindReplace';
 export { WordCount } from './components/WordCount';
 export type { WordCountProps } from './components/WordCount';
-export { findMatches, goToMatch, replaceMatch, replaceAll } from './core/search';
+export {
+  findMatches,
+  goToMatch,
+  replaceMatch,
+  replaceAll,
+  expandReplacement,
+} from './core/search';
 export type { SearchMatch, SearchOptions } from './core/search';
+export { smartPasteText } from './core/smartPaste';
+export type { SmartPasteResult, SmartPasteOptions } from './core/smartPaste';
+export { lintDocument, revealIssue } from './core/lint';
+export type { LintIssue, LintSeverity, LintOptions } from './core/lint';
+export { LintPanel } from './components/LintPanel';
+export type { LintPanelProps } from './components/LintPanel';
 export { withUndoGrouping } from './core/withUndoGrouping';
 export { EmojiPicker } from './components/EmojiPicker';
 export type { EmojiPickerProps } from './components/EmojiPicker';
@@ -185,6 +197,9 @@ export type {
   UploadHandler,
   CustomElement,
   CustomText,
+  LinkMeta,
+  FetchLinkMeta,
+  LinkCardElement,
 } from './core/types';
 
 /* Icons */

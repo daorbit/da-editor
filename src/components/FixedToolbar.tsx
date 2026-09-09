@@ -22,6 +22,9 @@ import {
   LetterCaseIcon,
   LinkIcon,
   EyeIcon,
+  FocusIcon,
+  TypewriterIcon,
+  ShieldCheckIcon,
   MoonIcon,
   MoreIcon,
   NumberedListIcon,
@@ -114,6 +117,12 @@ export interface FixedToolbarProps {
   isDark?: boolean;
   /** Renders the preview button; omitted when the host has not enabled it. */
   onPreview?: () => void;
+  focusMode?: boolean;
+  onToggleFocusMode?: () => void;
+  typewriter?: boolean;
+  onToggleTypewriter?: () => void;
+  lintOpen?: boolean;
+  onToggleLint?: () => void;
   /** Renders a "clear document" button after Redo; the host confirms and empties. */
   onClearAll?: () => void;
 }
@@ -154,6 +163,12 @@ export function FixedToolbar({
   onToggleTheme,
   isDark,
   onPreview,
+  focusMode,
+  onToggleFocusMode,
+  typewriter,
+  onToggleTypewriter,
+  lintOpen,
+  onToggleLint,
   onClearAll,
 }: FixedToolbarProps) {
   const editor = useSlate() as DaEditor;
@@ -974,6 +989,35 @@ export function FixedToolbar({
       <div className="da-tb__end">
       {onPreview && (
         <ToolbarButton icon={<EyeIcon />} label="Preview" onClick={onPreview} />
+      )}
+
+      {onToggleFocusMode && (
+        <ToolbarButton
+          icon={<FocusIcon />}
+          label="Focus mode"
+          shortcut="Ctrl+Alt+F"
+          active={focusMode}
+          onClick={onToggleFocusMode}
+        />
+      )}
+
+      {onToggleTypewriter && (
+        <ToolbarButton
+          icon={<TypewriterIcon />}
+          label="Typewriter mode"
+          shortcut="Ctrl+Alt+T"
+          active={typewriter}
+          onClick={onToggleTypewriter}
+        />
+      )}
+
+      {onToggleLint && (
+        <ToolbarButton
+          icon={<ShieldCheckIcon />}
+          label="Content checks"
+          active={lintOpen}
+          onClick={onToggleLint}
+        />
       )}
 
       {onToggleTheme && (

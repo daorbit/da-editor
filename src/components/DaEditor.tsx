@@ -10,7 +10,7 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from 'react';
-import { createEditor, Editor, Transforms, type Descendant } from 'slate';
+import { createEditor, Editor, Range, Transforms, type Descendant } from 'slate';
 import { withHistory } from 'slate-history';
 import { Editable, ReactEditor, Slate, withReact } from 'slate-react';
 import isHotkey from 'is-hotkey';
@@ -49,6 +49,7 @@ import {
   type MediaKind,
   type Theme,
   type UploadHandler,
+  type FetchLinkMeta,
 } from '../core/types';
 import { ElementRenderer } from './ElementRenderer';
 import { LeafRenderer } from './LeafRenderer';
@@ -66,7 +67,9 @@ import { applyBlockDrop, isBlockDrag, rowUnderPointer } from './BlockDragHandle'
 import { MediaDialog } from './MediaDialog';
 import { PreviewPane } from './PreviewPane';
 import { ToastHost } from './ToastHost';
+import { LintPanel } from './LintPanel';
 import { toast } from '../core/toast';
+import { smartPasteText } from '../core/smartPaste';
 import { TableToolbar } from './TableToolbar';
 import { MediaToolbar } from './MediaToolbar';
 import { LinkToolbar } from './LinkToolbar';
@@ -120,6 +123,8 @@ export interface DaEditorHandle {
   setHTML: (html: string) => void;
   focus: () => void;
   clear: () => void;
+  setFocusMode: (on: boolean) => void;
+  setTypewriter: (on: boolean) => void;
 }
 
 export interface DaEditorProps {
@@ -150,6 +155,11 @@ export interface DaEditorProps {
   mentionables?: Mentionable[];
   /** Uploads a file picked from the device; falls back to a local object URL. */
   onUpload?: UploadHandler;
+  /**
+   * Resolves open-graph metadata for a pasted bare URL. When provided, such a
+   * paste becomes a rich preview card; without it, a plain link.
+   */
+  onFetchLinkMeta?: FetchLinkMeta;
   
   onPickMedia?: (kind: MediaKind) => Promise<{ url: string; name?: string } | null>;
   onToggleTheme?: () => void;
@@ -170,6 +180,17 @@ export interface DaEditorProps {
    * default; pass `false` to suppress it (e.g. when the host app shows its own).
    */
   toasts?: boolean;
+  /**
+   * Recognise a pasted bare URL, Markdown block or code snippet and insert it
+   * as the matching content instead of plain text. On by default.
+   */
+  smartPaste?: boolean;
+  /** Start in focus mode (dim all but the current block). Toggle: Ctrl+Alt+F. */
+  defaultFocusMode?: boolean;
+  /** Start in typewriter mode (keep the caret line centred). Toggle: Ctrl+Alt+T. */
+  defaultTypewriter?: boolean;
+  /** Enable the content-checks panel and its toolbar toggle. */
+  lintPanel?: boolean;
 }
 
 export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEditor(
@@ -191,6 +212,7 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
     onPickMedia,
     mentionables,
     onUpload,
+    onFetchLinkMeta,
     onToggleTheme,
     mode = 'editing',
     className,
@@ -205,6 +227,10 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
     preview = false,
     previewTitle,
     toasts = true,
+    smartPaste = true,
+    defaultFocusMode = false,
+    defaultTypewriter = false,
+    lintPanel = false,
   },
   ref,
 ) {
@@ -234,6 +260,9 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
   const splitRef = useRef<HTMLDivElement>(null);
   const [findQuery, setFindQuery] = useState('');
   const [findCaseSensitive, setFindCaseSensitive] = useState(false);
+  const [findWholeWord, setFindWholeWord] = useState(false);
+  const [findRegex, setFindRegex] = useState(false);
+  const [findInSelection, setFindInSelection] = useState(false);
   const [findIndex, setFindIndex] = useState(0);
   const [promptRequest, setPromptRequest] = useState<PromptRequest | null>(null);
   const [alert, setAlert] = useState<{ title: string; message: string } | null>(null);
@@ -287,6 +316,7 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
     if (autoFocus) ReactEditor.focus(editor);
   }, [autoFocus, editor]);
 
+
   const renderElement = useCallback(
     (props: Parameters<typeof ElementRenderer>[0]) => <ElementRenderer {...props} />,
     [],
@@ -296,10 +326,7 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
     [],
   );
 
-  /**
-   * Swaps the whole document. `<Slate>` reads `initialValue` only on mount, so
-   * the tree is rebuilt and the subtree remounted via `slateKey`.
-   */
+ 
   const replaceAll = (next: EditorValue) => {
     Editor.withoutNormalizing(editor, () => {
       Transforms.deselect(editor);
@@ -342,19 +369,68 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
     }
   };
 
+  const [focusMode, setFocusMode] = useState(defaultFocusMode);
+  const [typewriter, setTypewriter] = useState(defaultTypewriter);
+  const [lintOpen, setLintOpen] = useState(false);
+
   const [dropActive, setDropActive] = useState(false);
-  // Pixel position (relative to the container) of the block drop indicator, or
-  // null when no block is being dragged over a valid target.
+ 
   const [dropLine, setDropLine] = useState<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  // Focus mode dims every block but the one holding the caret; typewriter mode
+  // keeps that block vertically centred. Both follow the native selection so
+  // arrow-key and click moves count, not just edits.
+  useEffect(() => {
+    if (!focusMode && !typewriter) return;
+
+    const content = containerRef.current?.querySelector<HTMLElement>('.da-editor__content');
+    const scroller = scrollAreaRef.current;
+    if (!content) return;
+
+    let frame = 0;
+    const clearActive = () =>
+      content.querySelectorAll('.da-focus-active').forEach((el) => el.classList.remove('da-focus-active'));
+
+    const update = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const sel = window.getSelection();
+        const anchorNode = sel && sel.rangeCount ? sel.anchorNode : null;
+        if (!anchorNode || !content.contains(anchorNode)) return;
+
+        let block =
+          anchorNode.nodeType === 3 ? anchorNode.parentElement : (anchorNode as HTMLElement);
+        while (block && block.parentElement !== content) block = block.parentElement;
+        if (!block) return;
+
+        if (focusMode) {
+          clearActive();
+          block.classList.add('da-focus-active');
+        }
+        if (typewriter && scroller) {
+          const b = block.getBoundingClientRect();
+          const s = scroller.getBoundingClientRect();
+          const delta = b.top - s.top - scroller.clientHeight / 2 + b.height / 2;
+          if (Math.abs(delta) > 4) scroller.scrollBy({ top: delta, behavior: 'smooth' });
+        }
+      });
+    };
+
+    update();
+    document.addEventListener('selectionchange', update);
+    return () => {
+      document.removeEventListener('selectionchange', update);
+      cancelAnimationFrame(frame);
+      clearActive();
+    };
+  }, [focusMode, typewriter, value]);
 
   const isFileDrag = (event: React.DragEvent) =>
     Array.from(event.dataTransfer.types).includes('Files');
 
-  // `dragover` fires ~60 times a second. Locating the row under the pointer
-  // reads layout and re-renders the whole editor, so the work is throttled to
-  // one animation frame and skipped entirely when the pointer has not moved
-  // enough to change the target.
+ 
   const dragFrame = useRef(0);
   const lastDragY = useRef(-1);
 
@@ -438,11 +514,26 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
     if (locked) return;
     const files = Array.from(event.clipboardData.files);
     if (files.length > 0) {
-      // Screenshot pastes arrive as files with no useful text alternative, so
-      // they would otherwise land as nothing at all.
       event.preventDefault();
       void insertFiles(editor, files, onUpload);
+      if (toasts) toast('Pasted', { tone: 'success' });
+      return;
     }
+
+    const html = event.clipboardData.getData('text/html');
+    const plain = event.clipboardData.getData('text/plain');
+ 
+    if (smartPaste && !html && plain) {
+      const { handled } = smartPasteText(editor, plain, {
+        fetchLinkMeta: onFetchLinkMeta,
+      });
+      if (handled) {
+        event.preventDefault();
+        if (toasts) toast('Pasted', { tone: 'success' });
+        return;
+      }
+    }
+
     if (toasts) toast('Pasted', { tone: 'success' });
   };
 
@@ -512,26 +603,49 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
    * Code highlighting and find highlighting share the one `decorate` slot, so
    * their ranges are concatenated rather than one replacing the other.
    */
+  const searchOptions = useMemo(
+    () => ({
+      caseSensitive: findCaseSensitive,
+      wholeWord: findWholeWord,
+      regex: findRegex,
+      inSelection: findInSelection,
+    }),
+    [findCaseSensitive, findWholeWord, findRegex, findInSelection],
+  );
+
   const decorate = useCallback(
     (entry: Parameters<typeof decorateCode>[0]) => {
       const code = decorateCode(entry);
       if (!findOpen || !findQuery) return code;
 
-      const active = findMatches(editor, findQuery, { caseSensitive: findCaseSensitive })[
-        findIndex
-      ];
+      const active = findMatches(editor, findQuery, searchOptions)[findIndex];
+      const scopeRange =
+        findInSelection && editor.selection && !Range.isCollapsed(editor.selection)
+          ? editor.selection
+          : undefined;
       return [
         ...code,
         ...decorateSearch(entry as [unknown, number[]], findQuery, {
-          caseSensitive: findCaseSensitive,
+          ...searchOptions,
           activeRange: active?.range,
+          scopeRange,
         }),
       ];
     },
-    [editor, findOpen, findQuery, findCaseSensitive, findIndex],
+    [editor, findOpen, findQuery, searchOptions, findIndex],
   );
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (isHotkey('mod+alt+f', event.nativeEvent)) {
+      event.preventDefault();
+      setFocusMode((on) => !on);
+      return;
+    }
+    if (isHotkey('mod+alt+t', event.nativeEvent)) {
+      event.preventDefault();
+      setTypewriter((on) => !on);
+      return;
+    }
     if (isHotkey('mod+f', event.nativeEvent)) {
       event.preventDefault();
       setFindOpen(true);
@@ -629,6 +743,8 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
       setHTML: (html) => replaceAll(deserializeHtml(html)),
       focus: () => ReactEditor.focus(editor),
       clear: () => replaceAll(emptyValue()),
+      setFocusMode: (on) => setFocusMode(on),
+      setTypewriter: (on) => setTypewriter(on),
     }),
     // `replaceAll` closes over `onChange`, which the caller may redefine.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -671,6 +787,12 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
             onToggleTheme={onToggleTheme}
             isDark={resolvedTheme === 'dark'}
             onPreview={preview ? () => setPreviewOpen(true) : undefined}
+            focusMode={focusMode}
+            onToggleFocusMode={() => setFocusMode((on) => !on)}
+            typewriter={typewriter}
+            onToggleTypewriter={() => setTypewriter((on) => !on)}
+            lintOpen={lintPanel ? lintOpen : undefined}
+            onToggleLint={lintPanel ? () => setLintOpen((on) => !on) : undefined}
             onClearAll={
               onClearAll === false
                 ? undefined
@@ -693,6 +815,12 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
             onQueryChange={setFindQuery}
             caseSensitive={findCaseSensitive}
             onCaseSensitiveChange={setFindCaseSensitive}
+            wholeWord={findWholeWord}
+            onWholeWordChange={setFindWholeWord}
+            regex={findRegex}
+            onRegexChange={setFindRegex}
+            inSelection={findInSelection}
+            onInSelectionChange={setFindInSelection}
             activeIndex={findIndex}
             onActiveIndexChange={setFindIndex}
           />
@@ -703,7 +831,10 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
           className={`da-editor__split${previewOpen ? ' da-editor__split--previewing' : ''}`}
         >
         <div
-          className="da-editor__scroll"
+          ref={scrollAreaRef}
+          className={`da-editor__scroll${focusMode ? ' da-editor__scroll--focus' : ''}${
+            typewriter ? ' da-editor__scroll--typewriter' : ''
+          }`}
           // A `minHeight` of "0" lets the editor fill a flex parent instead.
           style={{
             minHeight: minHeight === '0' ? undefined : minHeight,
@@ -791,6 +922,8 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
           </>
         )}
         </div>
+
+        {lintPanel && <LintPanel open={lintOpen} onClose={() => setLintOpen(false)} />}
 
         {wordCount && <WordCount />}
 

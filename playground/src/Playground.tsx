@@ -54,8 +54,23 @@ export function Playground({ navigate }: { navigate: (to: string) => void }) {
           autoFocus
           wordCount
           preview={true}
+          lintPanel
           mentionables={MENTIONABLES}
           onAskAi={() => aiRef.current?.open()}
+          onFetchLinkMeta={async (url) => {
+            let host = url;
+            try {
+              host = new URL(url).hostname.replace(/^www\./, '');
+            } catch {
+              /* keep raw */
+            }
+            return {
+              title: `Preview title — ${host}`,
+              description:
+                'Placeholder open-graph description so the card renders in the playground. Wire a real fetch in your app.',
+              siteName: host,
+            };
+          }}
         />
       </AiWorkspace>
 

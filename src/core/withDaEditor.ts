@@ -17,6 +17,7 @@ const VOID_TYPES: ElementType[] = [
   ELEMENT.inlineEquation,
   ELEMENT.date,
   ELEMENT.footnote,
+  ELEMENT.linkCard,
 ];
 const INLINE_TYPES: ElementType[] = [
   ELEMENT.link,

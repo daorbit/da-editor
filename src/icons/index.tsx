@@ -487,6 +487,12 @@ export const RedoIcon = (p: IconProps) => (
   </Icon>
 );
 
+export const ReplaceIcon = (p: IconProps) => (
+  <StrokeIcon {...p}>
+    <path d="M17 2L21 6M21 6L17 10M21 6H7.8C6.11984 6 5.27976 6 4.63803 6.32698C4.07354 6.6146 3.6146 7.07354 3.32698 7.63803C3 8.27976 3 9.11984 3 10.8V11M3 18H16.2C17.8802 18 18.7202 18 19.362 17.673C19.9265 17.3854 20.3854 16.9265 20.673 16.362C21 15.7202 21 14.8802 21 13.2V13M3 18L7 22M3 18L7 14"/>
+  </StrokeIcon>
+);
+
 export const SearchIcon = (p: IconProps) => (
   <Icon {...p}>
     <path d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z"/>
@@ -516,6 +522,32 @@ export const CloseIcon = (p: IconProps) => (
   <Icon {...p}>
     <path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"/>
   </Icon>
+);
+
+export const FocusIcon = (p: IconProps) => (
+  <StrokeIcon {...p}>
+    <circle cx="12" cy="12" r="3" />
+    <path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2" />
+  </StrokeIcon>
+);
+
+export const TypewriterIcon = (p: IconProps) => (
+  <StrokeIcon {...p}>
+    <path d="M12 3v6M5 9h14a2 2 0 0 1 2 2v3H3v-3a2 2 0 0 1 2-2ZM7 14v3a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-3M8.5 12h.01M12 12h.01M15.5 12h.01" />
+  </StrokeIcon>
+);
+
+export const ShieldCheckIcon = (p: IconProps) => (
+  <StrokeIcon {...p}>
+    <path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6l7-3Z" />
+    <path d="M9 12l2 2 4-4" />
+  </StrokeIcon>
+);
+
+export const CropIcon = (p: IconProps) => (
+  <StrokeIcon {...p}>
+    <path d="M6 2v14a2 2 0 0 0 2 2h14M2 6h14a2 2 0 0 1 2 2v14" />
+  </StrokeIcon>
 );
 
 export const EyeIcon = (p: IconProps) => (

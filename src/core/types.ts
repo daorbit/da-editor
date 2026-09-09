@@ -37,6 +37,7 @@ export const ELEMENT = {
   inlineEquation: 'inline_equation',
   date: 'date',
   footnote: 'footnote',
+  linkCard: 'link_card',
 } as const;
 
 export type ElementType = (typeof ELEMENT)[keyof typeof ELEMENT];
@@ -98,6 +99,16 @@ export interface BaseElement {
   children: Descendant[];
 }
 
+/** Open-graph style metadata a host resolves for a pasted URL. */
+export interface LinkMeta {
+  title?: string;
+  description?: string;
+  image?: string;
+  siteName?: string;
+}
+
+export type FetchLinkMeta = (url: string) => Promise<LinkMeta | null>;
+
 export interface TodoElement extends BaseElement {
   type: typeof ELEMENT.todoListItem;
   checked?: boolean;
@@ -120,11 +131,26 @@ export interface MediaElement extends BaseElement {
     | typeof ELEMENT.video
     | typeof ELEMENT.audio
     | typeof ELEMENT.file
-    | typeof ELEMENT.embed;
+    | typeof ELEMENT.embed
+    | typeof ELEMENT.linkCard;
   url: string;
   caption?: string;
   name?: string;
   width?: number;
+  /** Corner rounding preset. */
+  radius?: 'none' | 'sm' | 'md' | 'lg' | 'full';
+  /** Border weight preset. */
+  border?: 'none' | 'thin' | 'medium';
+  /** Drop-shadow preset. */
+  shadow?: 'none' | 'sm' | 'lg';
+  /** CSS aspect-ratio crop, e.g. '16/9'. `undefined` keeps the natural ratio. */
+  aspect?: string;
+  /** How the image fills a cropped frame. */
+  fit?: 'cover' | 'contain';
+  /** Resolved open-graph metadata, on link-card elements. */
+  meta?: LinkMeta;
+  /** True while a link card's metadata fetch is in flight. */
+  loading?: boolean;
 }
 
 export interface TableElement extends BaseElement {
@@ -148,6 +174,11 @@ export interface MentionElement extends BaseElement {
   id: string;
   name: string;
 }
+
+/** A pasted-URL preview card. Modelled as a media element so it needs no new
+ *  union member — the element union is at TypeScript's practical recursion
+ *  limit and a tenth `extends BaseElement` member makes `children` circular. */
+export type LinkCardElement = MediaElement & { type: typeof ELEMENT.linkCard };
 
 export type CustomElement =
   | BaseElement

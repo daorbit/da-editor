@@ -184,6 +184,8 @@ export function ElementRenderer(props: RenderElementProps) {
       return <Link {...props} />;
     case ELEMENT.mention:
       return <Mention {...props} />;
+    case ELEMENT.linkCard:
+      return <LinkCard {...props} />;
     default:
       return <EmptyLineParagraph {...props} style={style} />;
   }
@@ -366,6 +368,23 @@ function Image({ attributes, children, element }: RenderElementProps) {
 
   const shownWidth = dragWidth ?? width;
 
+  const radius = 'radius' in element ? element.radius : undefined;
+  const border = 'border' in element ? element.border : undefined;
+  const shadow = 'shadow' in element ? element.shadow : undefined;
+  const aspect = 'aspect' in element ? element.aspect : undefined;
+  const fit = 'fit' in element ? element.fit : undefined;
+
+  const imgClass = [
+    'da-image',
+    selected ? 'da-media--selected' : '',
+    radius && radius !== 'none' ? `da-image--r-${radius}` : '',
+    border && border !== 'none' ? `da-image--b-${border}` : '',
+    shadow && shadow !== 'none' ? `da-image--s-${shadow}` : '',
+    aspect ? 'da-image--cropped' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return (
     <div {...attributes} className="da-media-wrap" style={{ textAlign: element.align }}>
       <BlockDragHandle element={element} />
@@ -379,7 +398,12 @@ function Image({ attributes, children, element }: RenderElementProps) {
               ref={imgRef}
               src={url}
               alt={caption}
-              className={`da-image${selected ? ' da-media--selected' : ''}`}
+              className={imgClass}
+              style={
+                aspect
+                  ? { aspectRatio: aspect.replace('/', ' / '), objectFit: fit ?? 'cover' }
+                  : undefined
+              }
               draggable={false}
             />
             <span
@@ -821,5 +845,55 @@ function Mention({ attributes, children, element }: RenderElementProps) {
       @{name}
       {children}
     </span>
+  );
+}
+
+function LinkCard({ attributes, children, element }: RenderElementProps) {
+  const selected = useSelected();
+  const url = 'url' in element ? String(element.url ?? '') : '';
+  const meta = 'meta' in element && element.meta ? element.meta : {};
+  const title = String(meta.title ?? '');
+  const description = String(meta.description ?? '');
+  const image = String(meta.image ?? '');
+  const siteName = String(meta.siteName ?? '');
+  const loading = 'loading' in element ? Boolean(element.loading) : false;
+
+  let host = siteName;
+  if (!host) {
+    try {
+      host = new URL(url).hostname.replace(/^www\./, '');
+    } catch {
+      host = url;
+    }
+  }
+
+  return (
+    <div
+      {...attributes}
+      contentEditable={false}
+      className={`da-linkcard${selected ? ' da-linkcard--selected' : ''}${
+        loading ? ' da-linkcard--loading' : ''
+      }`}
+    >
+      <a
+        className="da-linkcard__link"
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <span className="da-linkcard__body">
+          <span className="da-linkcard__site">{host}</span>
+          <span className="da-linkcard__title">{title || url}</span>
+          {description && <span className="da-linkcard__desc">{description}</span>}
+        </span>
+        {image ? (
+          <span
+            className="da-linkcard__thumb"
+            style={{ backgroundImage: `url(${JSON.stringify(image)})` }}
+          />
+        ) : null}
+      </a>
+      {children}
+    </div>
   );
 }
