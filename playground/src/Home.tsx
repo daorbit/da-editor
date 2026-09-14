@@ -116,7 +116,7 @@ export interface HomeProps {
   dark: boolean;
 }
 
-const FEEDBACK_FORM_SRC = 'https://forms.daorbit.in/form/6a9e9287282c134d26c0f753/view';
+const FEEDBACK_FORM_SRC = 'https://forms.daorbit.in/form/6aa79a65eafa25640d94f63c/view';
 
 export function Home({ navigate, onToggleTheme, dark }: HomeProps) {
   const editorRef = useRef<DaEditorHandle>(null);
