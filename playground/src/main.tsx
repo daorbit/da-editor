@@ -18,6 +18,17 @@ function App() {
   const navigate = useNavigate();
   const [theme, setTheme] = useState<Theme>('light');
 
+  useEffect(() => {
+    const s = document.createElement('script');
+    s.src = 'https://quantalog-be.daorbit.in/tracker.js';
+    s.async = true;
+    s.dataset.site = 'lKjFa1AWqady8eh7';
+    document.head.appendChild(s);
+    return () => {
+      document.head.removeChild(s);
+    };
+  }, []);
+
   // The page chrome follows the same theme as the editor.
   useEffect(() => {
     document.documentElement.dataset.pgTheme = theme;
