@@ -22,6 +22,7 @@ import {
   toggleMark,
 } from '../core/transforms';
 import { ELEMENT, MARK, type DaEditor } from '../core/types';
+import { usePointerSelecting } from '../core/useDismiss';
 
 export interface FloatingToolbarProps {
   onAskAi?: () => void;
@@ -44,8 +45,10 @@ export function FloatingToolbar({ onAskAi, onLink }: FloatingToolbarProps) {
     BLOCK_SPECS.find((spec) => spec.type === ELEMENT.paragraph);
 
   const { selection } = editor;
+  const selecting = usePointerSelecting(editor);
 
   const shouldShow =
+    !selecting &&
     Boolean(selection) &&
     ReactEditor.isFocused(editor) &&
     !Range.isCollapsed(selection!) &&

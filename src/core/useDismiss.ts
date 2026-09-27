@@ -42,6 +42,44 @@ export function useEditorFocused(editor: DaEditor): boolean {
 }
 
 /**
+ * Whether the user is mid-way through dragging out a selection in the editor.
+ *
+ * UI anchored to the selection would otherwise chase the pointer on every
+ * selection change of the drag; it waits for the button to be released.
+ */
+export function usePointerSelecting(editor: DaEditor): boolean {
+  const [selecting, setSelecting] = useState(false);
+
+  useEffect(() => {
+    let dom: HTMLElement;
+    try {
+      dom = ReactEditor.toDOMNode(editor, editor);
+    } catch {
+      return;
+    }
+
+    const start = (event: PointerEvent) => {
+      if (event.button === 0) setSelecting(true);
+    };
+    const end = () => setSelecting(false);
+
+    dom.addEventListener('pointerdown', start);
+    document.addEventListener('pointerup', end);
+    document.addEventListener('pointercancel', end);
+    window.addEventListener('blur', end);
+
+    return () => {
+      dom.removeEventListener('pointerdown', start);
+      document.removeEventListener('pointerup', end);
+      document.removeEventListener('pointercancel', end);
+      window.removeEventListener('blur', end);
+    };
+  }, [editor]);
+
+  return selecting;
+}
+
+/**
  * Calls `onDismiss` when a pointer or Escape lands outside `ref`.
  *
  * Pass `active: false` when nothing is open so the listeners stay off.

@@ -3,6 +3,7 @@ import { ELEMENT, type DaEditor, type ElementType } from './types';
 import { LIST_TYPES, wrapLink } from './transforms';
 import { normalizeTable } from './tables';
 import { parseMarkdown, parseWordHtml } from './io';
+import { isPlainTextTarget } from './clipboard';
 
 const VOID_TYPES: ElementType[] = [
   ELEMENT.divider,
@@ -120,6 +121,10 @@ export function withDaEditor(editor: DaEditor): DaEditor {
     }
   };
 
+  // Slate's default soft break splits the block outright, skipping the list,
+  // heading and code block handling above.
+  editor.insertSoftBreak = () => editor.insertBreak();
+
   editor.deleteBackward = (unit) => {
     const { selection } = editor;
 
@@ -160,6 +165,12 @@ export function withDaEditor(editor: DaEditor): DaEditor {
   };
 
   editor.insertData = (data) => {
+    // Code is pasted verbatim; rich parsing would turn it into other blocks.
+    if (isPlainTextTarget(editor)) {
+      editor.insertTextData(data);
+      return;
+    }
+
     // A copy from this editor carries Slate's own fragment. Re-parsing its
     // HTML would flatten voids and custom nodes, so let Slate handle it.
     if (data.getData('application/x-slate-fragment')) {

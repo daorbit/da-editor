@@ -437,8 +437,32 @@ export function insertEmoji(editor: DaEditor, emoji: string): void {
   Transforms.insertText(editor, emoji);
 }
 
+/**
+ * Selects the whole code block holding the selection. Returns false when the
+ * selection is not in one, or already covers it, so Select All can fall
+ * through to the whole document.
+ */
+export function selectCodeBlock(editor: DaEditor): boolean {
+  const { selection } = editor;
+  if (!selection) return false;
+
+  const entry = Editor.above(editor, {
+    match: (n) => SlateElement.isElement(n) && n.type === ELEMENT.codeBlock,
+  });
+  if (!entry) return false;
+
+  const range = Editor.range(editor, entry[1]);
+  if (Range.equals(Editor.unhangRange(editor, selection), range)) return false;
+
+  Transforms.select(editor, range);
+  return true;
+}
+
 export function isEditorEmpty(editor: DaEditor): boolean {
-  const { children } = editor;
+  return isValueEmpty(editor.children);
+}
+
+export function isValueEmpty(children: Node[]): boolean {
   if (children.length !== 1) return false;
   const [first] = children;
   return (

@@ -13,7 +13,7 @@
   --da-accent: #111111;
   --da-accent-fg: #ffffff;
   --da-accent-soft: #ededed;
-  --da-selection: #e2e2e2;
+  --da-selection: rgba(59, 91, 253, 0.18);
 
 
   --da-content-accent: #3b5bfd;
@@ -65,7 +65,7 @@
   --da-accent: #f0f0f0;
   --da-accent-fg: #16181d;
   --da-accent-soft: #2e323b;
-  --da-selection: #3a3f49;
+  --da-selection: rgba(122, 162, 247, 0.3);
 
   --da-content-accent: #7aa2f7;
   --da-content-accent-soft: #23304a;
@@ -81,6 +81,14 @@
 
 .da-editor ::selection {
   background: var(--da-selection);
+}
+
+.da-block-handle ::selection,
+.da-code__bar ::selection,
+.da-todo__box ::selection,
+.da-callout__icon::selection,
+.da-link-preview ::selection {
+  background: transparent;
 }
 
 
@@ -270,6 +278,7 @@
 .da-tb--floating {
   position: absolute;
   z-index: 30;
+  animation: da-float-in 0.12s ease-out;
   padding: 4px;
   border: 1px solid var(--da-border);
   border-radius: var(--da-radius-sm);
@@ -613,6 +622,8 @@
 .da-editor__content {
   outline: none;
   min-height: inherit;
+  overflow-wrap: break-word;
+  -webkit-tap-highlight-color: transparent;
 }
 
 
@@ -1001,6 +1012,17 @@
 .da-slash--in {
   animation: da-slash-in 0.13s ease-out;
   transform-origin: top left;
+}
+
+@keyframes da-float-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes da-slash-in {
@@ -1862,6 +1884,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   pointer-events: none;
+  user-select: none;
 }
 
 .da-link-preview__hint {

@@ -613,7 +613,9 @@ function Link({ attributes, children, element }: RenderElementProps) {
       {...attributes}
       href={url}
       className={`da-link${selected ? ' da-link--selected' : ''}`}
-      onMouseEnter={() => setHovered(true)}
+      // Not while a button is held: inserting the preview mid-drag disturbs the
+      // selection being dragged out across the link.
+      onMouseEnter={(event) => setHovered(event.buttons === 0)}
       onMouseLeave={() => setHovered(false)}
       // The href is live in the editor, so plain clicks must not navigate away.
       onClick={(event) => {

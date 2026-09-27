@@ -1,8 +1,9 @@
-import { Element as SlateElement, Path, Range, Transforms } from 'slate';
-import { ELEMENT, type DaEditor, type FetchLinkMeta } from './types';
+import { Editor, Element as SlateElement, Node, Path, Range, Transforms } from 'slate';
+import { ELEMENT, type CustomElement, type DaEditor, type FetchLinkMeta } from './types';
 import { parseMarkdown } from './io';
 import { isEmbeddable, toEmbedUrl } from './media';
 import { detectLanguage } from './highlight';
+import { wrapLink } from './transforms';
 
 const URL_ONLY = /^\s*(https?:\/\/[^\s]+)\s*$/i;
 const IMAGE_URL = /\.(png|jpe?g|gif|webp|avif|svg)(\?[^\s]*)?$/i;
@@ -27,6 +28,42 @@ function looksLikeCode(text: string): boolean {
   return codeSignals.test(text) && indentedLines >= 1;
 }
 
+const PRE_WHITESPACE = /white-space:\s*pre/i;
+const MONO_FONT = /font-family:[^;"]*(consolas|monaco|menlo|courier|mono)/i;
+
+/**
+ * IDEs such as VS Code put coloured `white-space: pre` markup on the clipboard.
+ * Parsed as HTML it becomes a stack of styled paragraphs, so it is better read
+ * as the plain code it is.
+ */
+export function isCodeEditorHtml(html: string): boolean {
+  const head = html.slice(0, 2000);
+  return PRE_WHITESPACE.test(head) && MONO_FONT.test(head);
+}
+
+/**
+ * Inserts a block at the caret. Pasting onto an empty top-level line replaces
+ * that line, rather than leaving a blank paragraph behind the new block.
+ */
+function insertBlock(editor: DaEditor, node: CustomElement): void {
+  const entry = Editor.above<CustomElement>(editor, {
+    match: (n) => SlateElement.isElement(n) && Editor.isBlock(editor, n),
+  });
+  const emptyLine =
+    entry &&
+    entry[1].length === 1 &&
+    entry[0].type === ELEMENT.paragraph &&
+    entry[0].children.length === 1 &&
+    Node.string(entry[0]) === ''
+      ? Editor.pathRef(editor, entry[1])
+      : null;
+
+  Transforms.insertNodes(editor, node);
+
+  const stale = emptyLine?.unref();
+  if (stale) Transforms.removeNodes(editor, { at: stale });
+}
+
 export interface SmartPasteResult {
   handled: boolean;
 }
@@ -46,7 +83,7 @@ export function smartPasteText(
   raw: string,
   options: SmartPasteOptions = {},
 ): SmartPasteResult {
-  const text = raw.replace(/\r\n/g, '\n');
+  const text = raw.replace(/\r\n/g, '\n').replace(/\n+$/, '');
 
   const url = text.match(URL_ONLY)?.[1];
   if (url) {
@@ -63,10 +100,10 @@ export function smartPasteText(
   }
 
   if (looksLikeCode(text)) {
-    Transforms.insertNodes(editor, {
+    insertBlock(editor, {
       type: ELEMENT.codeBlock,
       lang: detectLanguage(text) || undefined,
-      children: [{ text: text.replace(/\n$/, '') }],
+      children: [{ text }],
     });
     return { handled: true };
   }
@@ -79,7 +116,7 @@ function insertUrl(editor: DaEditor, url: string, options: SmartPasteOptions): v
   const hasSelection = !!selection && !Range.isCollapsed(selection);
 
   if (IMAGE_URL.test(url)) {
-    Transforms.insertNodes(editor, {
+    insertBlock(editor, {
       type: ELEMENT.image,
       url,
       children: [{ text: '' }],
@@ -88,7 +125,7 @@ function insertUrl(editor: DaEditor, url: string, options: SmartPasteOptions): v
   }
 
   if (!hasSelection && isEmbeddable(url)) {
-    Transforms.insertNodes(editor, {
+    insertBlock(editor, {
       type: ELEMENT.embed,
       url: toEmbedUrl(url),
       children: [{ text: '' }],
@@ -106,15 +143,11 @@ function insertUrl(editor: DaEditor, url: string, options: SmartPasteOptions): v
     return;
   }
 
-  Transforms.insertNodes(editor, {
-    type: ELEMENT.link,
-    url,
-    children: [{ text: url }],
-  });
+  wrapLink(editor, url);
 }
 
 function insertLinkCard(editor: DaEditor, url: string, fetchMeta: FetchLinkMeta): void {
-  Transforms.insertNodes(editor, {
+  insertBlock(editor, {
     type: ELEMENT.linkCard,
     url,
     loading: true,

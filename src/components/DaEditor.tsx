@@ -16,6 +16,7 @@ import { Editable, ReactEditor, Slate, withReact } from 'slate-react';
 import isHotkey from 'is-hotkey';
 import { withDaEditor } from '../core/withDaEditor';
 import { withUndoGrouping } from '../core/withUndoGrouping';
+import { isPlainTextTarget, withClipboard } from '../core/clipboard';
 import { FindReplace } from './FindReplace';
 import { WordCount } from './WordCount';
 import {
@@ -27,7 +28,9 @@ import {
   clearMarks,
   indent,
   isEditorEmpty,
+  isValueEmpty,
   replaceBlock,
+  selectCodeBlock,
   toggleMark,
 } from '../core/transforms';
 import {
@@ -75,7 +78,7 @@ import {
   type SpellEngineLoader,
 } from '../core/spellcheck';
 import { toast } from '../core/toast';
-import { smartPasteText } from '../core/smartPaste';
+import { isCodeEditorHtml, smartPasteText } from '../core/smartPaste';
 import { TableToolbar } from './TableToolbar';
 import { MediaToolbar } from './MediaToolbar';
 import { LinkToolbar } from './LinkToolbar';
@@ -90,23 +93,45 @@ import {
   pickTextFile,
 } from '../core/io';
 
-const MARK_HOTKEYS: Record<string, keyof typeof MARK> = {
-  'mod+b': 'bold',
-  'mod+i': 'italic',
-  'mod+u': 'underline',
-  'mod+shift+x': 'strikethrough',
-  'mod+e': 'code',
-};
+// Compiled once: `isHotkey(string, event)` re-parses the combo on every call,
+// and these run on every keystroke.
+const MARK_HOTKEYS: [(event: globalThis.KeyboardEvent) => boolean, keyof typeof MARK][] = (
+  [
+    ['mod+b', 'bold'],
+    ['mod+i', 'italic'],
+    ['mod+u', 'underline'],
+    ['mod+shift+x', 'strikethrough'],
+    ['mod+e', 'code'],
+  ] as const
+).map(([hotkey, mark]) => [isHotkey(hotkey), mark]);
 
-const BLOCK_HOTKEYS: Record<string, (typeof ELEMENT)[keyof typeof ELEMENT]> = {
-  'mod+alt+0': ELEMENT.paragraph,
-  'mod+alt+1': ELEMENT.h1,
-  'mod+alt+2': ELEMENT.h2,
-  'mod+alt+3': ELEMENT.h3,
-  'mod+shift+.': ELEMENT.blockquote,
-  'mod+shift+7': ELEMENT.numberedList,
-  'mod+shift+8': ELEMENT.bulletedList,
-  'mod+shift+9': ELEMENT.todoListItem,
+const BLOCK_HOTKEYS: [
+  (event: globalThis.KeyboardEvent) => boolean,
+  (typeof ELEMENT)[keyof typeof ELEMENT],
+][] = (
+  [
+    ['mod+alt+0', ELEMENT.paragraph],
+    ['mod+alt+1', ELEMENT.h1],
+    ['mod+alt+2', ELEMENT.h2],
+    ['mod+alt+3', ELEMENT.h3],
+    ['mod+shift+.', ELEMENT.blockquote],
+    ['mod+shift+7', ELEMENT.numberedList],
+    ['mod+shift+8', ELEMENT.bulletedList],
+    ['mod+shift+9', ELEMENT.todoListItem],
+  ] as const
+).map(([hotkey, type]) => [isHotkey(hotkey), type]);
+
+const HOTKEY = {
+  focusMode: isHotkey('mod+alt+f'),
+  typewriter: isHotkey('mod+alt+t'),
+  find: isHotkey('mod+f'),
+  link: isHotkey('mod+k'),
+  askAi: isHotkey('mod+j'),
+  clearMarks: isHotkey('mod+\\'),
+  tab: isHotkey('tab'),
+  shiftTab: isHotkey('shift+tab'),
+  exitBlock: isHotkey('mod+enter'),
+  selectAll: isHotkey('mod+a'),
 };
 
 /** How far the split divider can travel, as the editor's share of the width. */
@@ -221,7 +246,9 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
   const editor = useMemo(
     () =>
       withUndoGrouping(
-        withDaEditor(withHistory(withReact(createEditor())) as DaEditorType),
+        withClipboard(
+          withDaEditor(withHistory(withReact(createEditor())) as DaEditorType),
+        ),
       ),
     [],
   );
@@ -235,6 +262,7 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
   }, []);
 
   const [value, setValue] = useState<EditorValue>(initialValue);
+  const [isEmpty, setIsEmpty] = useState(() => isValueEmpty(initialValue));
   const [linkOpen, setLinkOpen] = useState(false);
   const [mediaKind, setMediaKind] = useState<MediaKind | null>(null);
   const [findOpen, setFindOpen] = useState(false);
@@ -308,7 +336,7 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
       return;
     }
     dom.setAttribute('spellcheck', spellCheck ? 'true' : 'false');
-  }, [editor, spellCheck, value]);
+  }, [editor, spellCheck, slateKey]);
 
 
   const renderElement = useCallback(
@@ -332,6 +360,7 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
     // History from the previous document no longer applies.
     editor.history = { undos: [], redos: [] };
     setValue(editor.children as EditorValue);
+    setIsEmpty(isEditorEmpty(editor));
     setSlateKey((key) => key + 1);
     onChange?.(editor.children as EditorValue);
   };
@@ -437,7 +466,7 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
       cancelAnimationFrame(frame);
       clearActive();
     };
-  }, [focusMode, typewriter, value]);
+  }, [focusMode, typewriter, slateKey]);
 
   const isFileDrag = (event: React.DragEvent) =>
     Array.from(event.dataTransfer.types).includes('Files');
@@ -534,8 +563,15 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
 
     const html = event.clipboardData.getData('text/html');
     const plain = event.clipboardData.getData('text/plain');
- 
-    if (smartPaste && !html && plain) {
+    const fromEditor = event.clipboardData.types.includes('application/x-slate-fragment');
+
+    if (
+      smartPaste &&
+      plain &&
+      !fromEditor &&
+      !isPlainTextTarget(editor) &&
+      (!html || isCodeEditorHtml(html))
+    ) {
       const { handled } = smartPasteText(editor, plain, {
         fetchLinkMeta: onFetchLinkMeta,
       });
@@ -549,12 +585,15 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
     if (toasts) toast('Pasted', { tone: 'success' });
   };
 
+  const hasSelectedContent = () =>
+    !!editor.selection && !Range.isCollapsed(editor.selection);
+
   const handleCopy = () => {
-    if (toasts) toast('Copied to clipboard', { tone: 'success' });
+    if (toasts && hasSelectedContent()) toast('Copied to clipboard', { tone: 'success' });
   };
 
   const handleCut = () => {
-    if (!locked && toasts) toast('Cut to clipboard', { tone: 'success' });
+    if (!locked && toasts && hasSelectedContent()) toast('Cut to clipboard', { tone: 'success' });
   };
 
  
@@ -598,10 +637,19 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
     else exportHtml(current);
   };
 
+  // The document lives in Slate; mirroring it into state on every keystroke
+  // would re-render the whole shell, so state follows it only for the preview.
   const handleChange = (next: Descendant[]) => {
     const isContentChange = editor.operations.some((op) => op.type !== 'set_selection');
-    if (isContentChange || previewOpen) setValue(next);
-    if (isContentChange) onChange?.(next);
+    if (!isContentChange) return;
+    setIsEmpty(isEditorEmpty(editor));
+    if (previewOpen) setValue(next);
+    onChange?.(next);
+  };
+
+  const openPreview = () => {
+    setValue(editor.children as EditorValue);
+    setPreviewOpen(true);
   };
 
   const searchOptions = useMemo(
@@ -614,6 +662,25 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
     [findCaseSensitive, findWholeWord, findRegex, findInSelection],
   );
 
+  // `decorate` runs once per node, so the active match is looked up once per
+  // document version rather than rescanning the whole document for every node.
+  const activeMatchCache = useRef<{
+    children: Descendant[];
+    key: string;
+    range: Range | undefined;
+  } | null>(null);
+
+  const activeMatchRange = (): Range | undefined => {
+    const key = `${findQuery} ${findIndex} ${JSON.stringify(searchOptions)}`;
+    const cached = activeMatchCache.current;
+    if (cached && cached.children === editor.children && cached.key === key) {
+      return cached.range;
+    }
+    const range = findMatches(editor, findQuery, searchOptions)[findIndex]?.range;
+    activeMatchCache.current = { children: editor.children, key, range };
+    return range;
+  };
+
   const decorate = useCallback(
     (entry: Parameters<typeof decorateCode>[0]) => {
       const ranges = decorateCode(entry);
@@ -623,7 +690,7 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
       }
 
       if (findOpen && findQuery) {
-        const active = findMatches(editor, findQuery, searchOptions)[findIndex];
+        const activeRange = activeMatchRange();
         const scopeRange =
           findInSelection && editor.selection && !Range.isCollapsed(editor.selection)
             ? editor.selection
@@ -631,7 +698,7 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
         ranges.push(
           ...decorateSearch(entry as [unknown, number[]], findQuery, {
             ...searchOptions,
-            activeRange: active?.range,
+            activeRange,
             scopeRange,
           }),
         );
@@ -643,70 +710,78 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
   );
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (isHotkey('mod+alt+f', event.nativeEvent)) {
+    const native = event.nativeEvent;
+
+    if (HOTKEY.focusMode(native)) {
       event.preventDefault();
       setFocusMode((on) => !on);
       return;
     }
-    if (isHotkey('mod+alt+t', event.nativeEvent)) {
+    if (HOTKEY.typewriter(native)) {
       event.preventDefault();
       setTypewriter((on) => !on);
       return;
     }
-    if (isHotkey('mod+f', event.nativeEvent)) {
+    if (HOTKEY.find(native)) {
       event.preventDefault();
       setFindOpen(true);
       return;
     }
 
-    for (const [hotkey, mark] of Object.entries(MARK_HOTKEYS)) {
-      if (isHotkey(hotkey, event.nativeEvent)) {
+    // The first press selects the code block, the second the whole document.
+    if (HOTKEY.selectAll(native)) {
+      if (selectCodeBlock(editor)) event.preventDefault();
+      return;
+    }
+
+    for (const [matches, mark] of MARK_HOTKEYS) {
+      if (matches(native)) {
         event.preventDefault();
         toggleMark(editor, MARK[mark]);
         return;
       }
     }
 
-    for (const [hotkey, type] of Object.entries(BLOCK_HOTKEYS)) {
-      if (isHotkey(hotkey, event.nativeEvent)) {
+    for (const [matches, type] of BLOCK_HOTKEYS) {
+      if (matches(native)) {
         event.preventDefault();
         replaceBlock(editor, type);
         return;
       }
     }
 
-    if (isHotkey('mod+k', event.nativeEvent)) {
+    if (HOTKEY.link(native)) {
       event.preventDefault();
       setLinkOpen(true);
       return;
     }
 
-    if (isHotkey('mod+j', event.nativeEvent) && onAskAi) {
+    if (HOTKEY.askAi(native) && onAskAi) {
       event.preventDefault();
       onAskAi();
       return;
     }
 
-    if (isHotkey('mod+\\', event.nativeEvent)) {
+    if (HOTKEY.clearMarks(native)) {
       event.preventDefault();
       clearMarks(editor);
       return;
     }
 
     // Inside a table Tab walks cells; elsewhere it indents.
-    if (isHotkey('tab', event.nativeEvent)) {
+    if (HOTKEY.tab(native)) {
       event.preventDefault();
       if (!moveToCell(editor, 'next')) indent(editor, 1);
       return;
     }
-    if (isHotkey('shift+tab', event.nativeEvent)) {
+    if (HOTKEY.shiftTab(native)) {
       event.preventDefault();
       if (!moveToCell(editor, 'previous')) indent(editor, -1);
       return;
     }
 
     // Mod+Enter escapes a code block, which swallows plain Enter.
-    if (isHotkey('mod+enter', event.nativeEvent)) {
+    if (HOTKEY.exitBlock(native)) {
       event.preventDefault();
       Transforms.insertNodes(editor, {
         type: ELEMENT.paragraph,
@@ -758,7 +833,7 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
     [editor, onChange],
   );
 
-  const showPlaceholder = isEditorEmpty(editor);
+  const showPlaceholder = isEmpty;
   // Viewing mode is read-only regardless of the `readOnly` prop.
   const locked = readOnly || mode === 'viewing';
 
@@ -793,7 +868,7 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
             onExport={handleExport}
             onToggleTheme={onToggleTheme}
             isDark={resolvedTheme === 'dark'}
-            onPreview={preview ? () => setPreviewOpen(true) : undefined}
+            onPreview={preview ? openPreview : undefined}
             focusMode={focusMode}
             onToggleFocusMode={() => setFocusMode((on) => !on)}
             typewriter={typewriter}
