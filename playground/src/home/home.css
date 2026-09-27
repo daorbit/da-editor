@@ -744,6 +744,194 @@
   color: #f78c6c;
 }
 
+.lp-ai {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  align-items: start;
+  gap: 56px;
+}
+
+.lp-ai .lp-heading {
+  margin-bottom: 28px;
+}
+
+.lp-ai__steps {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0 0 32px;
+  padding: 0;
+  list-style: none;
+  counter-reset: lp-ai-step;
+}
+
+.lp-ai__steps li {
+  position: relative;
+  padding-left: 40px;
+  color: var(--lp-muted);
+  font-size: 15px;
+  line-height: 1.55;
+  counter-increment: lp-ai-step;
+}
+
+.lp-ai__steps li::before {
+  content: counter(lp-ai-step);
+  position: absolute;
+  top: -2px;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--lp-grad);
+  color: #ffffff;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.lp-ai__works {
+  margin: 0 0 10px;
+  color: var(--lp-faint);
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.lp-ai__tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lp-ai__tools li {
+  padding: 6px 12px;
+  border: 1px solid var(--lp-border);
+  border-radius: 999px;
+  background: var(--lp-card);
+  color: var(--lp-fg);
+  font-size: 13px;
+  font-weight: 550;
+}
+
+.lp-ai__card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--lp-radius-lg);
+  background:
+    radial-gradient(70% 55% at 100% 0%, rgba(123, 92, 255, 0.28), transparent 70%),
+    radial-gradient(60% 50% at 0% 100%, rgba(61, 139, 255, 0.2), transparent 70%),
+    var(--lp-code-bg);
+  color: var(--lp-code-fg);
+  box-shadow: var(--lp-shadow-lg);
+}
+
+.lp-ai__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 46px;
+  padding: 0 8px 0 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.lp-ai__file {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #b9bfcc;
+  font-family: var(--lp-mono);
+  font-size: 12.5px;
+}
+
+.lp-ai__copy {
+  padding: 5px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  background: transparent;
+  color: #d5d9e2;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.lp-ai__copy:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.lp-ai__task {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 16px 0;
+}
+
+.lp-ai__task-label {
+  color: #e4e7ee;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.lp-ai__input {
+  width: 100%;
+  min-height: 64px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  outline: none;
+  background: rgba(255, 255, 255, 0.04);
+  color: #ffffff;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  resize: vertical;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.lp-ai__input::placeholder {
+  color: #7d8494;
+}
+
+.lp-ai__input:focus {
+  border-color: #9d8bff;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.lp-ai__prompt {
+  max-height: 300px;
+  margin: 16px;
+  padding: 14px 16px;
+  overflow: auto;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.28);
+  color: #aeb4c2;
+  font-family: var(--lp-mono);
+  font-size: 12.5px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  mask-image: linear-gradient(#000 82%, transparent);
+  -webkit-mask-image: linear-gradient(#000 82%, transparent);
+}
+
+.lp-ai__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 0 16px 18px;
+}
+
 .lp-stats {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1386,12 +1574,13 @@
   font-size: 13px;
 }
 
-.lp :focus-visible {
+.lp :is(a, button, summary, input, [tabindex]):not(.da-editor *):focus-visible {
   outline: 2px solid var(--lp-violet);
   outline-offset: 2px;
 }
 
 @media (max-width: 1024px) {
+  .lp-ai,
   .lp-split,
   .lp-menu-panel,
   .lp-dev {

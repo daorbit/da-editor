@@ -8,11 +8,12 @@ export const PROPS: { name: string; type: string; def: string; body: string }[] 
   { name: 'defaultValue', type: 'EditorValue', def: '—', body: 'Initial document. Track updates with onChange.' },
   { name: 'defaultHtml', type: 'string', def: '—', body: 'Initial document as HTML. Ignored when defaultValue is set.' },
   { name: 'onChange', type: '(value) => void', def: '—', body: 'Fires on every document change.' },
-  { name: 'placeholder', type: 'string', def: "'Write something…'", body: 'Shown only while the document is empty.' },
-  { name: 'readOnly', type: 'boolean', def: 'false', body: 'Locks the document and hides the editing chrome.' },
-  { name: 'mode', type: "'editing' | 'viewing'", def: "'editing'", body: "'viewing' locks the document, like readOnly." },
+  { name: 'placeholder', type: 'string', def: "'Write something, or press '/' for commands…'", body: 'Shown only while the document is empty.' },
+  { name: 'readOnly', type: 'boolean', def: 'false', body: 'Locks the document and hides every toolbar and menu.' },
+  { name: 'mode', type: "'editing' | 'viewing'", def: "'editing'", body: "'viewing' locks the document exactly like readOnly. Use it for an Editing / Viewing switch in your UI." },
   { name: 'theme', type: "'light' | 'dark' | 'system'", def: "'light'", body: "'system' follows the OS setting and updates live." },
   { name: 'onToggleTheme', type: '() => void', def: '—', body: 'Renders the theme toggle in the toolbar and fires on click.' },
+  { name: 'toolbarLeading', type: 'ReactNode', def: '—', body: 'Rendered at the start of the fixed toolbar, for your own controls such as a back button.' },
   { name: 'fixedToolbar', type: 'boolean', def: 'true', body: 'The toolbar pinned above the content.' },
   { name: 'floatingToolbar', type: 'boolean', def: 'true', body: 'The toolbar that appears over a selection.' },
   { name: 'slashMenu', type: 'boolean', def: 'true', body: 'The / block menu.' },
@@ -22,8 +23,9 @@ export const PROPS: { name: string; type: string; def: string; body: string }[] 
   { name: 'wordCount', type: 'boolean', def: 'false', body: 'Words, characters and reading time, in a footer bar.' },
   { name: 'mentionables', type: 'Mentionable[]', def: '—', body: 'Entries offered by the @ combobox. Omit to disable mentions.' },
   { name: 'onAskAi', type: '() => void', def: '—', body: 'Renders the Ask AI button and binds Ctrl+J.' },
-  { name: 'onUpload', type: '(file, kind) => Promise<string>', def: '—', body: 'Uploads a file and returns its URL. Falls back to an object URL.' },
-  { name: 'onPickMedia', type: '(kind) => Promise<Picked | null>', def: '—', body: 'Opens your own media library instead of the built-in dialog.' },
+  { name: 'onUpload', type: '(file, kind) => Promise<string>', def: '—', body: 'Uploads a file and resolves to its URL. Without it, files become temporary object URLs that stop working after a reload.' },
+  { name: 'onPickMedia', type: '(kind) => Promise<{ url, name? } | null>', def: '—', body: 'Opens your own media library instead of the built-in dialog. Resolve null to cancel.' },
+  { name: 'onClearAll', type: '(() => void) | boolean', def: 'shown', body: 'The Clear document button. Omitted or true: shown, with a built-in confirmation. A function replaces that behaviour. false hides the button.' },
   { name: 'maxWidth', type: 'string', def: '—', body: 'Constrains the text column, like a document editor.' },
   { name: 'minHeight', type: 'string', def: "'320px'", body: "Pass '0' to fill a flex parent instead." },
   { name: 'maxHeight', type: 'string', def: '—', body: 'Caps the height; the document scrolls inside it.' },
@@ -31,6 +33,7 @@ export const PROPS: { name: string; type: string; def: string; body: string }[] 
   { name: 'spellCheck', type: 'boolean', def: 'true', body: "The browser's native spell checking on the editable." },
   { name: 'spellCheckEngine', type: 'SpellEngine | SpellEngineLoader', def: '—', body: 'A dictionary engine (nspell, typo-js, …) or a loader for one. Turns on wavy underlines and a click-to-fix menu. No dictionary is bundled.' },
   { name: 'preview', type: 'boolean', def: 'false', body: 'Adds a device-framed live preview pane, opened from the toolbar.' },
+  { name: 'previewTitle', type: 'string', def: "'Preview'", body: 'Heading shown at the top of the preview pane.' },
   { name: 'toasts', type: 'boolean', def: 'true', body: 'The built-in top-centre toast for copy / cut / paste. Follows the resolved theme.' },
   { name: 'smartPaste', type: 'boolean', def: 'true', body: 'A pasted bare URL, Markdown block or code snippet is inserted as the matching content, not plain text.' },
   { name: 'onFetchLinkMeta', type: '(url) => Promise<LinkMeta | null>', def: '—', body: 'When set, a pasted bare URL becomes a rich preview card and this fills its title, description and image.' },
@@ -59,7 +62,7 @@ export const FEATURES: { name: string; how: string; body: string }[] = [
   { name: 'Images', how: 'Drop, paste or toolbar', body: 'Resize with the side handles, reorder with the gutter grip, align left / centre / right, and in the Style panel set corner radius, border, shadow and an aspect-ratio crop.' },
   { name: 'Uploads', how: 'Drag & drop or paste', body: 'Files and screenshots route through your onUpload handler. Without one they become local object URLs.' },
   { name: 'Code blocks', how: 'Slash menu or ```', body: 'Prism highlighting across 20+ languages, with a language picker on the block. Colours are baked into the serialized HTML too.' },
-  { name: 'Import', how: 'Toolbar', body: 'HTML, Markdown and .docx via Mammoth — tables, lists and callouts survive the round trip.' },
+  { name: 'Import', how: 'Toolbar', body: 'Word (.docx), HTML and Markdown files. Headings, lists, tables, links and formatting are kept. Importing replaces the document.' },
   { name: 'Export', how: 'Toolbar or ref', body: "HTML, Markdown or Slate JSON. getHTML({ inlineStyles: true }) inlines structure but leaves colour to the host page; 'static' also bakes the light theme, for email and PDF." },
   { name: 'Preview', how: 'preview prop + toolbar', body: 'A device-framed live preview (desktop / tablet / mobile) rendered from the inline-styled HTML.' },
   { name: 'Copy / paste toast', how: 'Any copy or paste', body: 'A subtle top-centre confirmation. On by default; turn off with toasts={false}.' },
@@ -79,7 +82,7 @@ export const API: { name: string; sig: string; body: string }[] = [
   { name: 'clear', sig: '() => void', body: 'Empties the document.' },
   { name: 'setFocusMode', sig: '(on: boolean) => void', body: 'Toggles focus mode from outside the toolbar.' },
   { name: 'setTypewriter', sig: '(on: boolean) => void', body: 'Toggles typewriter mode from outside the toolbar.' },
-  { name: 'editor', sig: 'DaEditor', body: 'The underlying Slate editor, for your own transforms.' },
+  { name: 'editor', sig: 'SlateDaEditor', body: 'The underlying Slate editor. Pass it to exported helpers such as toggleMark or insertTable.' },
 ];
 
 /** The custom properties every colour in the editor resolves through. */
@@ -89,14 +92,21 @@ export const TOKENS: [string, string][] = [
   ['--da-muted', 'Secondary text and carets'],
   ['--da-faint', 'Disabled text and placeholders'],
   ['--da-border', 'Hairlines and menu borders'],
+  ['--da-border-strong', 'Stronger borders, such as focused inputs'],
   ['--da-surface', 'Insets: inputs, code blocks, slash icons'],
   ['--da-surface-hover', 'Hover fill on buttons and menu items'],
   ['--da-accent', 'Active state; neutral by default'],
   ['--da-accent-soft', 'Active background behind toolbar buttons'],
+  ['--da-accent-fg', 'Text on accent-filled controls'],
+  ['--da-accent-gradient', 'Gradient used when accent="gradient"'],
+  ['--da-content-accent', 'Accents inside the document, such as mentions and dates'],
+  ['--da-content-accent-soft', 'Soft fills behind content accents'],
   ['--da-tb-icon', 'Toolbar and menu icons'],
   ['--da-link', 'Links in the document'],
   ['--da-selection', 'Text selection'],
   ['--da-radius', 'Corner radius for panels'],
+  ['--da-radius-sm', 'Corner radius for buttons and small controls'],
+  ['--da-shadow', 'Shadow under menus and popovers'],
   ['--da-font', 'UI and document font stack'],
   ['--da-mono', 'Code and monospace stack'],
 ];
@@ -123,6 +133,7 @@ export const HOOKS = [
     id: 'ai',
     label: 'Ask AI',
     prop: 'onAskAi',
+    summary: 'A function that runs when Ask AI is used',
     blurb:
       'Renders the Ask AI button and binds Ctrl+J. You read the document off the ref, call your own endpoint, and write the answer back. Nothing is sent anywhere by the editor.',
     code: `const ref = useRef<DaEditorHandle>(null);
@@ -148,8 +159,9 @@ async function askAi() {
     id: 'upload',
     label: 'Uploads',
     prop: 'onUpload',
+    summary: 'A function that stores a file and resolves to its URL',
     blurb:
-      'Return a URL and the editor inserts it. Without this, media embeds as base64 data URLs — fine for a demo, heavy for real documents.',
+      'Resolve to a URL and the editor inserts it. Without this handler, files become temporary blob: object URLs that stop working when the page reloads, so any real app should set it.',
     code: `<DaEditor
   onUpload={async (file, kind) => {
     const body = new FormData();
@@ -169,6 +181,7 @@ async function askAi() {
     id: 'mentions',
     label: 'Mentions',
     prop: 'mentionables',
+    summary: 'The list of people who can be mentioned',
     blurb:
       'Pass a list and @ opens a combobox over it. Matching, keyboard navigation and insertion are handled for you.',
     code: `<DaEditor
@@ -190,8 +203,9 @@ async function askAi() {
     id: 'link-meta',
     label: 'Link preview cards',
     prop: 'onFetchLinkMeta',
+    summary: 'A function that resolves open-graph metadata for a URL',
     blurb:
-      'A pasted bare URL becomes a rich card. Return open-graph metadata and the editor fills the title, description and thumbnail; a null result falls back to a plain link. Fetch through your own proxy — browsers cannot read cross-origin OG tags directly.',
+      'A pasted bare URL becomes a rich card. Return open-graph metadata and the editor fills the title, description and thumbnail. If you return null or the request fails, the card shows the URL and host name. Fetch through your own endpoint: browsers cannot read another site’s open-graph tags directly.',
     code: `<DaEditor
   onFetchLinkMeta={async (url) => {
     const res = await fetch(
@@ -206,6 +220,7 @@ async function askAi() {
     id: 'spell',
     label: 'Spell check',
     prop: 'spellCheckEngine',
+    summary: 'A spelling engine, or a function that loads one',
     blurb:
       'The editor bundles no dictionary. Pass a spelling engine — anything with correct(word) and suggest(word) — or a function that loads one. nspell with a Hunspell dictionary is the common choice; typo-js or a remote service work too.',
     code: `import nspell from 'nspell';
@@ -257,13 +272,13 @@ export const SHORTCUTS: { group: string; rows: [string, string][] }[] = [
       ['Mod + Alt + F', 'Toggle focus mode'],
       ['Mod + Alt + T', 'Toggle typewriter mode'],
       ['Mod + Z', 'Undo'],
-      ['Mod + Shift + Z', 'Redo'],
+      ['Mod + Shift + Z', 'Redo (Ctrl + Y also works on Windows)'],
     ],
   },
   {
     group: 'Triggers',
     rows: [
-      ['/', 'Block menu on an empty line'],
+      ['/', 'Block menu, at the start of a line or after a space'],
       ['@', 'Mention combobox (needs mentionables)'],
       [':name', 'Emoji combobox — two or more letters (needs emoji)'],
       ['## , - , > , ```', 'Markdown shortcuts while typing (needs autoformat)'],

@@ -18,6 +18,7 @@ export function LeafRenderer({ attributes, children, leaf }: RenderLeafProps) {
 
   const className = [
     leaf.comment ? 'da-commented' : '',
+    leaf.highlight ? 'da-highlight' : '',
     leaf.searchMatch ? 'da-search-hit' : '',
     leaf.searchActive ? 'da-search-hit--active' : '',
     leaf.spellError ? 'da-spell-error' : '',

@@ -83,6 +83,10 @@
   background: var(--da-selection);
 }
 
+.da-editor[data-theme='dark'] .da-highlight {
+  color: #1f2328;
+}
+
 .da-block-handle ::selection,
 .da-code__bar ::selection,
 .da-todo__box ::selection,
@@ -632,6 +636,10 @@
   opacity: 1 !important;
   pointer-events: none;
   user-select: none;
+}
+
+.da-editor--readonly .da-block-handle {
+  display: none;
 }
 
 .da-editor--readonly .da-editor__container {

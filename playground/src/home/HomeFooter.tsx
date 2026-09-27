@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { DOC_PAGES } from '../docs/nav';
+import { findDoc } from '../docs/nav';
 import { GithubMark } from '../ui/GithubMark';
 import { GITHUB_URL, ISSUES_URL, NPM_URL } from './homeContent';
 
@@ -9,6 +9,10 @@ const PRODUCT_LINKS = [
   { href: '#quickstart', label: 'Quick start' },
   { href: '#faq', label: 'FAQ' },
 ];
+
+const FOOTER_DOCS = ['introduction', 'quickstart', 'props', 'theming']
+  .map((slug) => findDoc(slug))
+  .filter((page) => page !== undefined);
 
 const COMMUNITY_LINKS = [
   { href: GITHUB_URL, label: 'GitHub' },
@@ -45,11 +49,14 @@ export function HomeFooter() {
 
         <nav className="lp-footer__col" aria-label="Docs">
           <h3 className="lp-footer__heading">Docs</h3>
-          {DOC_PAGES.map((page) => (
+          {FOOTER_DOCS.map((page) => (
             <Link key={page.slug} className="lp-footer__link" to={`/docs/${page.slug}`}>
               {page.title}
             </Link>
           ))}
+          <Link className="lp-footer__link" to="/docs/introduction">
+            All docs
+          </Link>
         </nav>
 
         <nav className="lp-footer__col" aria-label="Community">

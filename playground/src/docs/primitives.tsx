@@ -108,6 +108,35 @@ export function Step({ title, children }: { title: string; children: ReactNode }
   );
 }
 
+export function DataTable({ head, rows }: { head: string[]; rows: ReactNode[][] }) {
+  return (
+    <div className="doc-grid-wrap">
+      <table className="doc-grid">
+        <thead>
+          <tr>
+            {head.map((cell) => (
+              <th key={cell}>{cell}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, rowIndex) => (
+            <tr key={rowIndex}>
+              {row.map((cell, cellIndex) => (
+                <td key={cellIndex}>{cell}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+export function List({ children }: { children: ReactNode }) {
+  return <ul className="doc-list">{children}</ul>;
+}
+
 export function PropsTable() {
   return (
     <div className="doc-table">

@@ -491,7 +491,9 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
       if (dragFrame.current) return;
       dragFrame.current = requestAnimationFrame(() => {
         dragFrame.current = 0;
-        const target = rowUnderPointer(clientX, clientY);
+        const target = containerRef.current
+          ? rowUnderPointer(clientX, clientY, containerRef.current)
+          : null;
         const base = containerRef.current?.getBoundingClientRect();
         const next = target && base
           ? (target.after ? target.rect.bottom : target.rect.top) - base.top
@@ -671,7 +673,7 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
   } | null>(null);
 
   const activeMatchRange = (): Range | undefined => {
-    const key = `${findQuery} ${findIndex} ${JSON.stringify(searchOptions)}`;
+    const key = JSON.stringify([findQuery, findIndex, searchOptions]);
     const cached = activeMatchCache.current;
     if (cached && cached.children === editor.children && cached.key === key) {
       return cached.range;
@@ -858,7 +860,7 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
       )}
       <DialogContext.Provider value={dialogs}>
       <Slate key={slateKey} editor={editor} initialValue={value} onChange={handleChange}>
-        {fixedToolbar && !readOnly && (
+        {fixedToolbar && !locked && (
           <FixedToolbar
             leading={toolbarLeading}
             onAskAi={onAskAi}

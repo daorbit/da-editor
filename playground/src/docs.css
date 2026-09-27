@@ -549,6 +549,69 @@
   color: var(--lp-muted);
 }
 
+.doc-grid-wrap {
+  margin: 0 0 28px;
+  overflow-x: auto;
+  border: 1px solid var(--lp-border);
+  border-radius: 14px;
+  background: var(--lp-card);
+}
+
+.doc-grid {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.doc-grid th {
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--lp-border);
+  background: var(--lp-soft);
+  color: var(--lp-faint);
+  font-size: 11.5px;
+  font-weight: 650;
+  letter-spacing: 0.05em;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.doc-grid td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--lp-border);
+  color: var(--lp-muted);
+  vertical-align: top;
+}
+
+.doc-grid td:first-child {
+  color: var(--lp-fg);
+  font-weight: 550;
+}
+
+.doc-grid tr:last-child td {
+  border-bottom: 0;
+}
+
+.doc-list {
+  margin: 0 0 20px;
+  padding-left: 22px;
+  color: var(--lp-muted);
+}
+
+.doc-list li {
+  margin: 6px 0;
+  padding-left: 4px;
+}
+
+.doc-list li::marker {
+  color: var(--lp-faint);
+}
+
+.doc-list strong {
+  color: var(--lp-fg);
+}
+
 .doc-kbd {
   justify-self: start;
   padding: 3px 9px;

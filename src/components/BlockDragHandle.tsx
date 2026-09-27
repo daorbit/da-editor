@@ -65,16 +65,17 @@ export function isBlockDrag(dataTransfer: DataTransfer): boolean {
 export function rowUnderPointer(
   clientX: number,
   clientY: number,
+  root: ParentNode = document,
 ): { index: number; after: boolean; rect: DOMRect } | null {
-  const content = document.querySelector('.da-editor__content');
+  const content = root.querySelector('.da-editor__content');
   if (!content) return null;
   const rows = Array.from(content.children) as HTMLElement[];
   if (rows.length === 0) return null;
 
-  let row =
-    (document.elementFromPoint(clientX, clientY) as HTMLElement | null)?.closest(
-      '.da-editor__content > *',
-    ) as HTMLElement | null;
+  const hit = document.elementFromPoint(clientX, clientY) as HTMLElement | null;
+  let row = hit && content.contains(hit)
+    ? (hit.closest('.da-editor__content > *') as HTMLElement | null)
+    : null;
 
   if (!row) {
     row =

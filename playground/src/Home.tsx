@@ -1,3 +1,4 @@
+import { AiPromptSection } from './home/AiPromptSection';
 import { CtaBand } from './home/CtaBand';
 import { DeveloperSection } from './home/DeveloperSection';
 import { FaqSection } from './home/FaqSection';
@@ -24,6 +25,7 @@ export function Home({ onToggleTheme, dark }: HomeProps) {
         <HeroSection dark={dark} />
         <StackStrip />
         <QuickStartSection />
+        <AiPromptSection />
         <FeaturesSection />
         <MenusSection />
         <DeveloperSection />

@@ -11,6 +11,7 @@ export interface HomeNavProps {
 
 const SECTION_LINKS = [
   { href: '#features', label: 'Features' },
+  { href: '#ai', label: 'Build with AI' },
   { href: '#menus', label: 'Menus' },
   { href: '#faq', label: 'FAQ' },
 ];

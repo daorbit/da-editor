@@ -1,6 +1,12 @@
 import type { Descendant } from 'slate';
 import { ELEMENT, type EditorValue } from './types';
-import { deserializeHtml, emptyValue, serializeHtml, serializeMarkdown } from './serialize';
+import {
+  deserializeHtml,
+  emptyValue,
+  sanitizeIncomingUrl,
+  serializeHtml,
+  serializeMarkdown,
+} from './serialize';
 
 /** Triggers a browser download for text content. */
 export function downloadText(filename: string, content: string, mime: string): void {
@@ -94,6 +100,39 @@ export async function importWordFile(file: File): Promise<EditorValue> {
  * Converts Markdown to an editor value. Deliberately small: block-level syntax
  * plus inline emphasis, which covers what this editor can itself produce.
  */
+const TABLE_ROW = /^\s*\|.*\|\s*$/;
+const TABLE_DIVIDER = /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?\s*$/;
+const IMAGE_LINE = /^!\[([^\]]*)\]\(([^)\s]+)\)$/;
+const DEFAULT_COLUMN_WIDTH = 160;
+
+function splitRow(line: string): string[] {
+  return line
+    .trim()
+    .replace(/^\|/, '')
+    .replace(/\|$/, '')
+    .split(/(?<!\\)\|/)
+    .map((cell) => cell.trim().replace(/\\\|/g, '|'));
+}
+
+function markdownTable(rows: string[]): Descendant {
+  const [head, , ...body] = rows.map(splitRow);
+  const columns = Math.max(head.length, ...body.map((row) => row.length));
+  const cells = (row: string[], header: boolean) =>
+    Array.from({ length: columns }, (_, index) => ({
+      type: header ? ELEMENT.tableHeaderCell : ELEMENT.tableCell,
+      children: [{ type: ELEMENT.paragraph, children: parseInline(row[index] ?? '') }],
+    }));
+
+  return {
+    type: ELEMENT.table,
+    columnWidths: Array.from({ length: columns }, () => DEFAULT_COLUMN_WIDTH),
+    children: [
+      { type: ELEMENT.tableRow, children: cells(head, true) },
+      ...body.map((row) => ({ type: ELEMENT.tableRow, children: cells(row, false) })),
+    ],
+  } as Descendant;
+}
+
 export function parseMarkdown(markdown: string): EditorValue {
   const lines = markdown.replace(/\r\n/g, '\n').split('\n');
   const blocks: EditorValue = [];
@@ -123,7 +162,8 @@ export function parseMarkdown(markdown: string): EditorValue {
     codeBuffer = null;
   };
 
-  for (const line of lines) {
+  for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+    const line = lines[lineIndex];
     const fence = line.match(/^```(\w*)\s*$/);
     if (fence) {
       if (codeBuffer) flushCode();
@@ -141,6 +181,31 @@ export function parseMarkdown(markdown: string): EditorValue {
 
     if (line.trim() === '') {
       flushList();
+      continue;
+    }
+
+    if (TABLE_ROW.test(line) && TABLE_DIVIDER.test(lines[lineIndex + 1] ?? '')) {
+      flushList();
+      const rows = [line, lines[lineIndex + 1]];
+      lineIndex += 2;
+      while (lineIndex < lines.length && TABLE_ROW.test(lines[lineIndex])) {
+        rows.push(lines[lineIndex]);
+        lineIndex += 1;
+      }
+      lineIndex -= 1;
+      blocks.push(markdownTable(rows));
+      continue;
+    }
+
+    const image = line.trim().match(IMAGE_LINE);
+    if (image && sanitizeIncomingUrl(image[2])) {
+      flushList();
+      blocks.push({
+        type: ELEMENT.image,
+        url: image[2],
+        ...(image[1] ? { caption: image[1] } : {}),
+        children: [{ text: '' }],
+      } as Descendant);
       continue;
     }
 
@@ -234,7 +299,12 @@ function parseInline(text: string): Descendant[] {
     else if (italic !== undefined) runs.push({ text: italic, italic: true });
     else if (italic2 !== undefined) runs.push({ text: italic2, italic: true });
     else if (linkText !== undefined) {
-      runs.push({ type: ELEMENT.link, url: linkUrl, children: [{ text: linkText }] });
+      const safe = sanitizeIncomingUrl(linkUrl);
+      runs.push(
+        safe
+          ? { type: ELEMENT.link, url: safe, children: [{ text: linkText }] }
+          : { text: linkText },
+      );
     }
 
     lastIndex = pattern.lastIndex;

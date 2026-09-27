@@ -2,6 +2,7 @@ import { useRef, useState, type CSSProperties } from 'react';
 import { Element as SlateElement, Node, Transforms } from 'slate';
 import {
   ReactEditor,
+  useReadOnly,
   useSelected,
   useSlateStatic,
   type RenderElementProps,
@@ -222,6 +223,7 @@ function EmptyLineParagraph({ attributes, children, element, style }: RenderElem
 
 function TodoItem({ attributes, children, element }: RenderElementProps) {
   const editor = useSlateStatic();
+  const readOnly = useReadOnly();
   const ph = usePlaceholder(element);
   const checked = 'checked' in element ? Boolean(element.checked) : false;
 
@@ -236,6 +238,7 @@ function TodoItem({ attributes, children, element }: RenderElementProps) {
         <input
           type="checkbox"
           checked={checked}
+          disabled={readOnly}
           onChange={(event) => {
             const path = ReactEditor.findPath(editor, element);
             Transforms.setNodes(editor, { checked: event.target.checked }, { at: path });
