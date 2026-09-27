@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Editor, Range } from 'slate';
 import { ReactEditor, useSlate } from 'slate-react';
 import { CheckIcon, UnlinkIcon } from '../icons';
-import { isLinkActive, unwrapLink, wrapLink } from '../core/transforms';
+import { isLinkActive, normalizeLinkUrl, unwrapLink, wrapLink } from '../core/transforms';
 import type { DaEditor } from '../core/types';
 
 export interface LinkPopoverProps {
@@ -99,9 +99,8 @@ export function LinkPopover({ open, onClose }: LinkPopoverProps) {
   };
 
   const apply = () => {
-    const trimmed = url.trim();
-    if (!trimmed) return;
-    const href = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+    const href = normalizeLinkUrl(url);
+    if (!href) return;
     restore();
     wrapLink(editor, href);
     onClose();

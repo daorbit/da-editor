@@ -30,8 +30,7 @@
 /* Home and docs drop the blue accent for a monochrome black/white scheme;
    the playground editor keeps the default blue. Colour returns only as soft
    ambient gradients — never as a flat fill on a control. */
-.pg-page,
-.docs {
+.pg-page {
   --pg-accent: #0d0d0d;
   --pg-accent-fg: #ffffff;
   --pg-accent-soft: #f0f0ee;
@@ -46,8 +45,7 @@
   --pg-grad-line: linear-gradient(90deg, transparent, var(--pg-border) 20%, var(--pg-border) 80%, transparent);
 }
 
-:root[data-pg-theme='dark'] .pg-page,
-:root[data-pg-theme='dark'] .docs {
+:root[data-pg-theme='dark'] .pg-page {
   --pg-accent: #f2f2f0;
   --pg-accent-fg: #0d0d0d;
   --pg-accent-soft: #22262e;
@@ -63,8 +61,7 @@
 /* Ambient wash behind the hero. Pinned to the viewport so it spans the full
    width regardless of the centred content column, and faded out well before
    the fold so it never fights the text below it. */
-.pg-page::before,
-.docs::before {
+.pg-page::before {
   content: '';
   position: fixed;
   inset: 0 0 auto 0;
@@ -81,18 +78,15 @@
   mask-image: linear-gradient(#000 30%, transparent 92%);
 }
 
-:root[data-pg-theme='dark'] .pg-page::before,
-:root[data-pg-theme='dark'] .docs::before {
+:root[data-pg-theme='dark'] .pg-page::before {
   opacity: 0.4;
 }
 
-.pg-page,
-.docs {
+.pg-page {
   position: relative;
 }
 
-.pg-page > *,
-.docs > * {
+.pg-page > * {
   position: relative;
   z-index: 1;
 }

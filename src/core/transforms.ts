@@ -169,6 +169,18 @@ export function unwrapLink(editor: DaEditor): void {
   });
 }
 
+const EXPLICIT_SCHEME = /^(https?:|mailto:|tel:|#|\/)/i;
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Turns typed link text into an href: bare domains get https, bare emails mailto. */
+export function normalizeLinkUrl(input: string): string {
+  const trimmed = input.trim();
+  if (!trimmed) return '';
+  if (EXPLICIT_SCHEME.test(trimmed)) return trimmed;
+  if (EMAIL.test(trimmed)) return `mailto:${trimmed}`;
+  return `https://${trimmed}`;
+}
+
 export function wrapLink(editor: DaEditor, url: string): void {
   if (isLinkActive(editor)) unwrapLink(editor);
 

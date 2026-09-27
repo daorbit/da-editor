@@ -1,133 +1,89 @@
-import { useEffect, useState } from 'react';
-import { Link, NavLink, useParams } from 'react-router-dom';
-import { Moon, Sun } from 'lucide-react';
-import { DOC_NAV, adjacentDocs, findDoc } from './nav';
+import { useEffect, useRef, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { ChevronRight } from 'lucide-react';
+import { findDoc, findGroup } from './nav';
 import { DOC_BODIES } from './pages';
-import { version as PKG_VERSION } from '../../../package.json';
+import { DocsHeader } from './DocsHeader';
+import { DocsPager } from './DocsPager';
+import { DocsSearch } from './DocsSearch';
+import { DocsSidebar } from './DocsSidebar';
+import { DocsToc } from './DocsToc';
+import { useDocHeadings } from './useDocHeadings';
+import { useHashScroll } from './useHashScroll';
+import { GITHUB_URL, ISSUES_URL, NPM_URL } from '../home/homeContent';
+import '../home/home.css';
 
 interface DocsLayoutProps {
   onToggleTheme: () => void;
   dark: boolean;
 }
 
+function isTypingTarget(target: EventTarget | null): boolean {
+  return (
+    target instanceof HTMLElement &&
+    (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))
+  );
+}
+
 export function DocsLayout({ onToggleTheme, dark }: DocsLayoutProps) {
   const { page } = useParams<{ page?: string }>();
   const slug = page ?? 'introduction';
   const doc = findDoc(slug);
+  const group = findGroup(slug);
   const Body = DOC_BODIES[slug];
-  const [navOpen, setNavOpen] = useState(false);
 
+  const articleRef = useRef<HTMLElement>(null);
+  const [navOpen, setNavOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const { headings, activeId } = useDocHeadings(articleRef, slug);
+
+  useHashScroll();
   useEffect(() => setNavOpen(false), [slug]);
 
-  const { prev, next } = adjacentDocs(slug);
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const combo = (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k';
+      const slash = event.key === '/' && !isTypingTarget(event.target);
+      if (combo || slash) {
+        event.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   return (
-    <div className="docs">
-      <header className="docs-header">
-        <div className="docs-header__inner">
-          <div className="docs-header__left">
-            <button
-              type="button"
-              className="docs-header__burger"
-              aria-label="Toggle navigation"
-              aria-expanded={navOpen}
-              onClick={() => setNavOpen((v) => !v)}
-            >
-              <span />
-              <span />
-              <span />
-            </button>
-            <Link className="docs-brand" to="/">
-              <img
-                className="docs-brand__mark"
-                src="/da-editor-logo-512.png"
-                alt=""
-                width={24}
-                height={24}
-              />
-              da-text-editor
-              <span className="docs-brand__ver">v{PKG_VERSION}</span>
-            </Link>
-          </div>
+    <div className="lp dx">
+      <DocsHeader
+        dark={dark}
+        navOpen={navOpen}
+        onToggleNav={() => setNavOpen((open) => !open)}
+        onToggleTheme={onToggleTheme}
+        onOpenSearch={() => setSearchOpen(true)}
+      />
 
-          <nav className="docs-header__nav">
-            <NavLink className="docs-headlink" to="/docs/introduction">
-              Docs
-            </NavLink>
-            <Link className="docs-headlink" to="/playground">
-              Playground
-            </Link>
-            <a
-              className="docs-headlink"
-              href="https://www.npmjs.com/package/da-text-editor"
-              target="_blank"
-              rel="noreferrer"
-            >
-              npm
-            </a>
-            <a
-              className="docs-headlink"
-              href="https://github.com/daorbit/da-editor"
-              target="_blank"
-              rel="noreferrer"
-            >
-              GitHub
-            </a>
-            <button
-              type="button"
-              className="docs-iconbtn"
-              onClick={onToggleTheme}
-              aria-label="Toggle theme"
-            >
-              {dark ? <Sun size={15} /> : <Moon size={15} />}
-            </button>
-          </nav>
-        </div>
-      </header>
+      <div className="dx-body">
+        <DocsSidebar open={navOpen} />
+        {navOpen && <div className="dx-scrim" onClick={() => setNavOpen(false)} aria-hidden />}
 
-      <div className="docs-body">
-        <aside className={`docs-side ${navOpen ? 'docs-side--open' : ''}`}>
-          <nav className="docs-side__nav">
-            {DOC_NAV.map((group) => (
-              <div className="docs-side__group" key={group.label}>
-                <p className="docs-side__label">{group.label}</p>
-                {group.pages.map((p) => (
-                  <NavLink
-                    key={p.slug}
-                    to={`/docs/${p.slug}`}
-                    className={({ isActive }) =>
-                      `docs-side__link ${isActive ? 'docs-side__link--active' : ''}`
-                    }
-                  >
-                    {p.title}
-                  </NavLink>
-                ))}
-              </div>
-            ))}
-          </nav>
-        </aside>
-
-        {navOpen && (
-          <div
-            className="docs-side__scrim"
-            onClick={() => setNavOpen(false)}
-            aria-hidden
-          />
-        )}
-
-        <main className="docs-main">
-          <article className="docs-article">
+        <main className="dx-main">
+          <article className="dx-article" ref={articleRef}>
             {doc && Body ? (
               <>
-                <p className="docs-eyebrow">
-                  {DOC_NAV.find((g) => g.pages.some((p) => p.slug === slug))?.label}
-                </p>
-                <h1 className="docs-title">{doc.title}</h1>
+                <nav className="dx-crumbs" aria-label="Breadcrumb">
+                  <Link to="/docs/introduction">Docs</Link>
+                  <ChevronRight size={13} />
+                  <span>{group?.label}</span>
+                  <ChevronRight size={13} />
+                  <span aria-current="page">{doc.title}</span>
+                </nav>
+                <h1 className="dx-title">{doc.title}</h1>
                 <Body />
               </>
             ) : (
               <>
-                <h1 className="docs-title">Page not found</h1>
+                <h1 className="dx-title">Page not found</h1>
                 <p className="doc-lead">
                   No docs page at <code className="doc-inline">/docs/{slug}</code>.{' '}
                   <Link to="/docs/introduction">Back to Introduction</Link>.
@@ -136,49 +92,28 @@ export function DocsLayout({ onToggleTheme, dark }: DocsLayoutProps) {
             )}
           </article>
 
-          {(prev || next) && (
-            <nav className="docs-pager">
-              {prev ? (
-                <Link className="docs-pager__link" to={`/docs/${prev.slug}`}>
-                  <span className="docs-pager__dir">Previous</span>
-                  <span className="docs-pager__title">{prev.title}</span>
-                </Link>
-              ) : (
-                <span />
-              )}
-              {next ? (
-                <Link
-                  className="docs-pager__link docs-pager__link--next"
-                  to={`/docs/${next.slug}`}
-                >
-                  <span className="docs-pager__dir">Next</span>
-                  <span className="docs-pager__title">{next.title}</span>
-                </Link>
-              ) : (
-                <span />
-              )}
-            </nav>
-          )}
+          <DocsPager slug={slug} />
 
-          <footer className="docs-footer">
+          <footer className="dx-footer">
             <span>MIT licensed</span>
-            <a
-              href="https://github.com/daorbit/da-editor"
-              target="_blank"
-              rel="noreferrer"
-            >
-              GitHub
-            </a>
-            <a
-              href="https://www.npmjs.com/package/da-text-editor"
-              target="_blank"
-              rel="noreferrer"
-            >
-              npm
-            </a>
+            <span className="dx-footer__links">
+              <a href={GITHUB_URL} target="_blank" rel="noreferrer">
+                GitHub
+              </a>
+              <a href={NPM_URL} target="_blank" rel="noreferrer">
+                npm
+              </a>
+              <a href={ISSUES_URL} target="_blank" rel="noreferrer">
+                Report an issue
+              </a>
+            </span>
           </footer>
         </main>
+
+        <DocsToc headings={headings} activeId={activeId} />
       </div>
+
+      <DocsSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
     </div>
   );
 }

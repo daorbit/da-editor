@@ -14,9 +14,21 @@ import { DocsLayout } from './docs/DocsLayout';
 import './playground.css';
 import './docs.css';
 
+const THEME_KEY = 'da-editor:theme';
+
+function readStoredTheme(): Theme {
+  try {
+    const stored = localStorage.getItem(THEME_KEY);
+    if (stored === 'light' || stored === 'dark') return stored;
+  } catch {
+    // Storage can be blocked; fall back to the OS preference.
+  }
+  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
 function App() {
   const navigate = useNavigate();
-  const [theme, setTheme] = useState<Theme>('light');
+  const [theme, setTheme] = useState<Theme>(readStoredTheme);
 
   useEffect(() => {
     const s = document.createElement('script');
@@ -32,6 +44,11 @@ function App() {
   // The page chrome follows the same theme as the editor.
   useEffect(() => {
     document.documentElement.dataset.pgTheme = theme;
+    try {
+      localStorage.setItem(THEME_KEY, theme);
+    } catch {
+      // Storage can be blocked; the theme still applies for this visit.
+    }
   }, [theme]);
 
   const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
@@ -42,10 +59,15 @@ function App() {
       <Route
         path="/"
         element={
-          <Home navigate={go} onToggleTheme={toggleTheme} dark={theme === 'dark'} />
+          <Home onToggleTheme={toggleTheme} dark={theme === 'dark'} />
         }
       />
-      <Route path="/playground" element={<Playground navigate={go} />} />
+      <Route
+        path="/playground"
+        element={
+          <Playground navigate={go} onToggleTheme={toggleTheme} dark={theme === 'dark'} />
+        }
+      />
       <Route
         path="/docs"
         element={<Navigate to="/docs/introduction" replace />}
@@ -58,6 +80,8 @@ function App() {
     </Routes>
   );
 }
+
+document.documentElement.dataset.pgTheme = readStoredTheme();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

@@ -1,10 +1,9 @@
-import { useRef, useState } from 'react';
+import { useRef } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import {
   DaEditor,
   type DaEditorHandle,
   type Mentionable,
-  type Theme,
 } from '../../src';
 import { DEMO_CONTENT } from './demoContent';
 import { AiWorkspace, type AiWorkspaceHandle } from './ai';
@@ -18,24 +17,28 @@ const MENTIONABLES: Mentionable[] = [
   { id: '5', name: 'Yuki Tanaka', detail: 'yuki@example.com' },
 ];
 
-export function Playground({ navigate }: { navigate: (to: string) => void }) {
+export interface PlaygroundProps {
+  navigate: (to: string) => void;
+  dark: boolean;
+  onToggleTheme: () => void;
+}
+
+export function Playground({ navigate, dark, onToggleTheme }: PlaygroundProps) {
   const ref = useRef<DaEditorHandle>(null);
   const aiRef = useRef<AiWorkspaceHandle>(null);
-  const [theme, setTheme] = useState<Theme>('light');
+  const theme = dark ? 'dark' : 'light';
 
   return (
     <div className="pg-editor-page">
       <AiWorkspace
         getEditor={() => ref.current}
-        theme={theme === 'dark' ? 'dark' : 'light'}
+        theme={theme}
         handleRef={aiRef}
       >
         <DaEditor
           ref={ref}
           theme={theme}
-          onToggleTheme={() =>
-            setTheme((current) => (current === 'dark' ? 'light' : 'dark'))
-          }
+          onToggleTheme={onToggleTheme}
           toolbarLeading={
             <button
               type="button"

@@ -1,8 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
-import { Element as SlateElement, Transforms } from 'slate';
-import { ReactEditor, useSlate } from 'slate-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Editor, Element as SlateElement, Range, Transforms } from 'slate';
+import { useSlate } from 'slate-react';
 import { CheckIcon, CloseIcon, CopyIcon, UnlinkIcon } from '../icons';
 import { ELEMENT, type DaEditor } from '../core/types';
+import { normalizeLinkUrl } from '../core/transforms';
+import { useEditorFocused } from '../core/useDismiss';
+import { useAnchoredPosition } from '../core/useInlineCombobox';
 
 /** Trims a URL down to something readable in a narrow toolbar. */
 function displayUrl(url: string): string {
@@ -15,15 +18,28 @@ export function LinkToolbar() {
   const editor = useSlate() as DaEditor;
   const ref = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
   const [copied, setCopied] = useState(false);
 
-  const [entry] = Array.from(
-    editor.nodes({
-      match: (n) => SlateElement.isElement(n) && n.type === ELEMENT.link,
-    }),
+  const focused = useEditorFocused(editor);
+  const collapsed = !!editor.selection && Range.isCollapsed(editor.selection);
+
+  // Only for a caret inside a link; a text selection gets the floating toolbar.
+  const [entry] = collapsed
+    ? Array.from(
+        editor.nodes({
+          match: (n) => SlateElement.isElement(n) && n.type === ELEMENT.link,
+        }),
+      )
+    : [];
+  const pathKey = entry ? entry[1].join('.') : '';
+
+  const anchor = useMemo(
+    () => (entry ? Editor.range(editor, entry[1]) : null),
+    // Recomputed per link, not per render, so positioning settles.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [editor, pathKey, entry && (entry[0] as { url?: string }).url],
   );
 
   // Leaving the link closes the editing state so it reopens clean next time.
@@ -34,37 +50,18 @@ export function LinkToolbar() {
     }
   }, [entry]);
 
-  useEffect(() => {
-    const el = ref.current;
-    if (!el || !entry) {
-      setPosition(null);
-      return;
-    }
+  const visible = !!entry && (focused || editing);
+  const position = useAnchoredPosition(editor, visible ? anchor : null, ref, editing);
 
-    try {
-      const rect = ReactEditor.toDOMNode(editor, entry[0]).getBoundingClientRect();
-      const container = el.offsetParent as HTMLElement | null;
-      const base = container?.getBoundingClientRect();
-
-      setPosition({
-        top: rect.bottom - (base?.top ?? 0) + 8,
-        left: Math.max(4, rect.left - (base?.left ?? 0)),
-      });
-    } catch {
-      setPosition(null);
-    }
-  });
-
-  if (!entry) return null;
+  if (!visible || !entry) return null;
 
   const [node, path] = entry;
   if (!SlateElement.isElement(node)) return null;
   const url = 'url' in node ? node.url : '';
 
   const apply = () => {
-    const trimmed = draft.trim();
-    if (!trimmed) return;
-    const href = /^(https?:|mailto:|tel:|#|\/)/i.test(trimmed) ? trimmed : `https://${trimmed}`;
+    const href = normalizeLinkUrl(draft);
+    if (!href) return;
     Transforms.setNodes(editor, { url: href }, { at: path });
     setEditing(false);
   };
@@ -98,7 +95,9 @@ export function LinkToolbar() {
         left: position?.left ?? 0,
         visibility: position ? 'visible' : 'hidden',
       }}
-      onMouseDown={(event) => event.preventDefault()}
+      onMouseDown={(event) => {
+        if (!(event.target instanceof HTMLInputElement)) event.preventDefault();
+      }}
     >
       {editing ? (
         <>

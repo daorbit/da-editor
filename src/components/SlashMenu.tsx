@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Editor, Range, Transforms } from 'slate';
+import { useMemo, useRef } from 'react';
+import { Transforms } from 'slate';
 import { ReactEditor, useSlate } from 'slate-react';
-import { BLOCK_SPECS } from './toolbarConfig';
+import { BLOCK_SPECS, INSERT_SPECS } from './toolbarConfig';
 import {
   EmojiIcon,
   ImageIcon,
@@ -13,6 +13,24 @@ import {
 import { replaceBlock } from '../core/transforms';
 import { insertTable } from '../core/tables';
 import { ELEMENT, type DaEditor, type ElementType, type MediaKind } from '../core/types';
+import { useEditorFocused } from '../core/useDismiss';
+import {
+  useAnchoredPosition,
+  useMenuNavigation,
+  useTriggerQuery,
+} from '../core/useInlineCombobox';
+
+const TRIGGER = /(?:^|\s)\/(\w*)$/;
+
+/** Insert-menu entries also offered from the slash menu, keyed by `INSERT_SPECS`. */
+const EXTRA_INSERTS: Array<{ key: string; group: string; keywords: string[] }> = [
+  { key: 'toggle', group: 'Lists', keywords: ['toggle', 'collapse', 'details'] },
+  { key: 'columns', group: 'Advanced', keywords: ['columns', 'layout', 'grid'] },
+  { key: 'toc', group: 'Advanced', keywords: ['toc', 'contents', 'outline'] },
+  { key: 'equation', group: 'Advanced', keywords: ['equation', 'math', 'latex', 'formula'] },
+  { key: 'date', group: 'Inline', keywords: ['date', 'today', 'time', 'calendar'] },
+  { key: 'footnote', group: 'Inline', keywords: ['footnote', 'note', 'reference'] },
+];
 
 export interface SlashItem {
   key: string;
@@ -34,7 +52,7 @@ function blockItem(type: ElementType, label: string, group: string, icon: React.
   };
 }
 
-const GROUPS = ['Recent', 'AI', 'Basic blocks', 'Lists', 'Advanced', 'Media'] as const;
+const GROUPS = ['Recent', 'AI', 'Basic blocks', 'Lists', 'Advanced', 'Inline', 'Media'] as const;
 
 /** Item keys picked this session, most recent first. Not persisted. */
 const recentKeys: string[] = [];
@@ -73,6 +91,19 @@ function buildItems(
       run: (editor) => insertTable(editor),
     },
   ];
+
+  for (const extra of EXTRA_INSERTS) {
+    const spec = INSERT_SPECS.find((entry) => entry.key === extra.key);
+    if (!spec) continue;
+    items.push({
+      key: extra.key,
+      label: spec.label,
+      group: extra.group,
+      icon: spec.icon,
+      keywords: extra.keywords,
+      run: (editor) => spec.run(editor, { onMedia, onAskAi }),
+    });
+  }
 
   if (onMedia) {
     items.push(
@@ -131,16 +162,15 @@ export interface SlashMenuProps {
 }
 
 /**
- * Combobox triggered by `/` at the start of an empty-ish block. The trigger text
- * lives in the document, so it is deleted before an item runs.
+ * Combobox triggered by `/` at a word boundary. The trigger text lives in the
+ * document, so it is deleted before an item runs.
  */
 export function SlashMenu({ onAskAi, onMedia }: SlashMenuProps) {
   const editor = useSlate() as DaEditor;
   const ref = useRef<HTMLDivElement>(null);
-  const [target, setTarget] = useState<Range | null>(null);
-  const [query, setQuery] = useState('');
-  const [index, setIndex] = useState(0);
-  const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
+  const focused = useEditorFocused(editor);
+  const { match, dismiss } = useTriggerQuery(editor, TRIGGER);
+  const query = match?.query ?? '';
 
   const allItems = useMemo(() => buildItems(onAskAi, onMedia), [onAskAi, onMedia]);
 
@@ -161,101 +191,39 @@ export function SlashMenu({ onAskAi, onMedia }: SlashMenuProps) {
     );
   }, [allItems, query]);
 
-  // Track the `/query` run immediately before the caret.
-  const { selection } = editor;
-  useEffect(() => {
-    if (!selection || !Range.isCollapsed(selection)) {
-      setTarget(null);
-      return;
-    }
+  // Grouped once so the rendered order and the keyboard order always agree.
+  const ordered = useMemo(
+    () => GROUPS.flatMap((group) => items.filter((item) => item.group === group)),
+    [items],
+  );
 
-    const [start] = Range.edges(selection);
-    const blockEntry = Editor.above(editor, {
-      match: (n) => Editor.isBlock(editor, n as never),
-    });
-    if (!blockEntry) {
-      setTarget(null);
-      return;
-    }
-
-    const blockStart = Editor.start(editor, blockEntry[1]);
-    const beforeText = Editor.string(editor, { anchor: blockStart, focus: start });
-    const match = beforeText.match(/(?:^|\s)\/(\w*)$/);
-
-    if (!match) {
-      setTarget(null);
-      return;
-    }
-
-    const triggerOffset = beforeText.length - match[0].trimStart().length;
-    const triggerPoint = { path: blockStart.path, offset: blockStart.offset + triggerOffset };
-
-    setTarget({ anchor: triggerPoint, focus: start });
-    setQuery(match[1]);
-    setIndex(0);
-  }, [editor, selection]);
-
-  // Position under the trigger.
-  useEffect(() => {
-    const el = ref.current;
-    if (!el || !target || items.length === 0) {
-      setPosition(null);
-      return;
-    }
-    try {
-      const domRange = ReactEditor.toDOMRange(editor, target);
-      const rect = domRange.getBoundingClientRect();
-      const container = el.offsetParent as HTMLElement | null;
-      const base = container?.getBoundingClientRect();
-      setPosition({
-        top: rect.bottom - (base?.top ?? 0) + 6,
-        left: rect.left - (base?.left ?? 0),
-      });
-    } catch {
-      setPosition(null);
-    }
-  }, [editor, target, items.length, query]);
+  const open = focused && !!match && ordered.length > 0;
 
   const run = (item: SlashItem) => {
-    if (target) Transforms.select(editor, target);
+    if (match) Transforms.select(editor, match.target);
     Transforms.delete(editor);
     item.run(editor);
     rememberRecent(item.key.replace(/^recent-/, ''));
-    setTarget(null);
     ReactEditor.focus(editor);
   };
 
-  // Keyboard nav is registered on the document so it beats the Editable handler.
-  useEffect(() => {
-    if (!target || items.length === 0) return;
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      switch (event.key) {
-        case 'ArrowDown':
-          event.preventDefault();
-          setIndex((i) => (i + 1) % items.length);
-          break;
-        case 'ArrowUp':
-          event.preventDefault();
-          setIndex((i) => (i - 1 + items.length) % items.length);
-          break;
-        case 'Enter':
-        case 'Tab':
-          event.preventDefault();
-          run(items[index]);
-          break;
-        case 'Escape':
-          event.preventDefault();
-          setTarget(null);
-          break;
-      }
-    };
-
-    document.addEventListener('keydown', onKeyDown, true);
-    return () => document.removeEventListener('keydown', onKeyDown, true);
+  const { index, setIndex } = useMenuNavigation(editor, {
+    open,
+    count: ordered.length,
+    resetKey: query,
+    menuRef: ref,
+    onChoose: (i) => run(ordered[i]),
+    onDismiss: dismiss,
   });
 
-  if (!target || items.length === 0 || !position) return null;
+  const position = useAnchoredPosition(
+    editor,
+    open ? match.target : null,
+    ref,
+    `${query}:${ordered.length}`,
+  );
+
+  if (!open) return null;
 
   let lastGroup = '';
 
@@ -265,41 +233,36 @@ export function SlashMenu({ onAskAi, onMedia }: SlashMenuProps) {
       className="da-slash da-slash--in"
       role="listbox"
       aria-label="Insert block"
-      style={{ top: position.top, left: position.left }}
+      style={{
+        top: position?.top ?? 0,
+        left: position?.left ?? 0,
+        visibility: position ? 'visible' : 'hidden',
+      }}
     >
-      {GROUPS.flatMap((group) => {
-        const groupItems = items.filter((item) => item.group === group);
-        if (groupItems.length === 0) return [];
-        const header = group !== lastGroup ? group : null;
-        lastGroup = group;
+      {ordered.map((item, itemIndex) => {
+        const header = item.group !== lastGroup ? item.group : null;
+        lastGroup = item.group;
 
         return [
           header && (
-            <div key={`h-${group}`} className="da-slash__group">
+            <div key={`h-${header}`} className="da-slash__group">
               {header}
             </div>
           ),
-          ...groupItems.map((item) => {
-            const itemIndex = items.indexOf(item);
-            return (
-              <button
-                key={item.key}
-                type="button"
-                role="option"
-                aria-selected={itemIndex === index}
-                className={`da-slash__item${itemIndex === index ? ' da-slash__item--active' : ''}`}
-                onMouseDown={(event) => event.preventDefault()}
-                onMouseEnter={() => setIndex(itemIndex)}
-                onClick={() => run(item)}
-              >
-                <span className="da-slash__icon">{item.icon}</span>
-                <span className="da-slash__label">{item.label}</span>
-                {itemIndex === index && (
-                  <kbd className="da-slash__hint">↵</kbd>
-                )}
-              </button>
-            );
-          }),
+          <button
+            key={item.key}
+            type="button"
+            role="option"
+            aria-selected={itemIndex === index}
+            className={`da-slash__item${itemIndex === index ? ' da-slash__item--active' : ''}`}
+            onMouseDown={(event) => event.preventDefault()}
+            onMouseMove={() => itemIndex !== index && setIndex(itemIndex)}
+            onClick={() => run(item)}
+          >
+            <span className="da-slash__icon">{item.icon}</span>
+            <span className="da-slash__label">{item.label}</span>
+            {itemIndex === index && <kbd className="da-slash__hint">↵</kbd>}
+          </button>,
         ];
       })}
     </div>
