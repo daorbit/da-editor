@@ -1,6 +1,13 @@
 import { Editor, Element as SlateElement, Node, Path, Range, Transforms } from 'slate';
-import { ELEMENT, type CustomElement, type DaEditor, type FetchLinkMeta } from './types';
-import { parseMarkdown } from './io';
+import {
+  ELEMENT,
+  type CustomElement,
+  type DaEditor,
+  type EditorValue,
+  type FetchLinkMeta,
+} from './types';
+import { parseMarkdown, parseWordHtml } from './io';
+import { FONT_FAMILIES, loadFontsForValue, normalizeFonts } from './fonts';
 import { isEmbeddable, toEmbedUrl } from './media';
 import { detectLanguage } from './highlight';
 import { wrapLink } from './transforms';
@@ -11,7 +18,13 @@ const IMAGE_URL = /\.(png|jpe?g|gif|webp|avif|svg)(\?[^\s]*)?$/i;
 const MARKDOWN_HINT =
   /^\s{0,3}(#{1,6}\s|[-*+]\s|\d+[.)]\s|>\s|```|\|.*\|)|(\[[^\]]+\]\([^)]+\))|(\*\*[^*]+\*\*)/m;
 
+const MARKDOWN_TABLE = /^\s*\|.*\|\s*\n\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?\s*$/m;
+const MARKDOWN_FENCE = /^\s*(`{3,}|~{3,})[\w+#.-]*\s*\n[\s\S]*?\n\s*\1\s*$/m;
+const MARKDOWN_HEADINGS = /^#{1,6}\s+\S/gm;
+
 function looksLikeMarkdown(text: string): boolean {
+  if (MARKDOWN_TABLE.test(text) || MARKDOWN_FENCE.test(text)) return true;
+  if ((text.match(MARKDOWN_HEADINGS) ?? []).length >= 2) return true;
   if (!MARKDOWN_HINT.test(text)) return false;
   const lines = text.split('\n').filter((line) => line.trim() !== '');
   const marked = lines.filter((line) => MARKDOWN_HINT.test(line)).length;
@@ -30,6 +43,43 @@ function looksLikeCode(text: string): boolean {
 
 const PRE_WHITESPACE = /white-space:\s*pre/i;
 const MONO_FONT = /font-family:[^;"]*(consolas|monaco|menlo|courier|mono)/i;
+
+const HTML_TAG = /<\/?([a-z][a-z0-9-]*)\b[^>]*>/gi;
+const CONTENT_TAGS = new Set([
+  'html', 'head', 'body', 'meta', 'title', 'link', 'style', 'main', 'article', 'section',
+  'header', 'footer', 'nav', 'aside', 'div', 'span', 'p', 'br', 'hr', 'h1', 'h2', 'h3',
+  'h4', 'h5', 'h6', 'strong', 'b', 'em', 'i', 'u', 's', 'del', 'mark', 'sub', 'sup',
+  'small', 'code', 'kbd', 'pre', 'blockquote', 'q', 'ul', 'ol', 'li', 'dl', 'dt', 'dd',
+  'table', 'thead', 'tbody', 'tfoot', 'tr', 'td', 'th', 'caption', 'colgroup', 'col',
+  'a', 'img', 'figure', 'figcaption', 'picture', 'source', 'video', 'audio', 'iframe',
+  'details', 'summary', 'time', 'abbr', 'cite',
+]);
+const JSX_SIGNALS = /\bclassName=|=\{|<\/?[A-Z][\w.]*[\s/>]|^\s*(import|export|const|function)\b/m;
+
+export function looksLikeHtml(text: string): boolean {
+  const trimmed = text.trim();
+  if (!trimmed.startsWith('<') || JSX_SIGNALS.test(trimmed)) return false;
+  const tags = Array.from(trimmed.matchAll(HTML_TAG), (match) => match[1].toLowerCase());
+  if (tags.length < 2) return false;
+  const known = tags.filter((tag) => CONTENT_TAGS.has(tag)).length;
+  const closes = /<\/[a-z][a-z0-9-]*\s*>/i.test(trimmed);
+  return closes && known / tags.length >= 0.6;
+}
+
+export function isRenderedSource(html: string, plain: string): boolean {
+  if (!plain) return false;
+  if (looksLikeHtml(plain) && /&lt;\/?[a-z]/i.test(html)) return true;
+  return /<(pre|code)[\s>]/i.test(html) && (looksLikeHtml(plain) || looksLikeMarkdown(plain));
+}
+
+function insertParsed(editor: DaEditor, blocks: EditorValue): boolean {
+  const fonts = editor.fontOptions ?? FONT_FAMILIES;
+  const normalized = normalizeFonts(blocks, fonts);
+  if (!normalized.length) return false;
+  if (editor.loadWebFonts !== false) loadFontsForValue(normalized, fonts);
+  Transforms.insertFragment(editor, normalized);
+  return true;
+}
 
 /**
  * IDEs such as VS Code put coloured `white-space: pre` markup on the clipboard.
@@ -91,12 +141,12 @@ export function smartPasteText(
     return { handled: true };
   }
 
-  if (looksLikeMarkdown(text)) {
-    const blocks = parseMarkdown(text);
-    if (blocks.length) {
-      Transforms.insertFragment(editor, blocks);
-      return { handled: true };
-    }
+  if (looksLikeHtml(text) && insertParsed(editor, parseWordHtml(text))) {
+    return { handled: true };
+  }
+
+  if (looksLikeMarkdown(text) && insertParsed(editor, parseMarkdown(text))) {
+    return { handled: true };
   }
 
   if (looksLikeCode(text)) {

@@ -102,7 +102,8 @@ function serializeBlock(node: Node): string {
       return quote(inlineOf(node));
     case ELEMENT.codeBlock: {
       const lang = 'lang' in node && node.lang ? node.lang : '';
-      return `\`\`\`${lang}\n${Node.string(node)}\n\`\`\``;
+      const title = 'title' in node && node.title ? ` title="${String(node.title).replace(/"/g, '')}"` : '';
+      return `\`\`\`${lang}${title}\n${Node.string(node)}\n\`\`\``;
     }
     case ELEMENT.bulletedList:
       return listItems(node, false);

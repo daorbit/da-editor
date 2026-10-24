@@ -78,7 +78,8 @@ export function Editor() {
           ['Tables', <><Inline>insertTable</Inline> <Inline>insertRow</Inline> <Inline>insertColumn</Inline> <Inline>deleteRow</Inline> <Inline>deleteColumn</Inline> <Inline>toggleHeaderRow</Inline></>],
           ['Media', <><Inline>insertMedia</Inline> <Inline>insertFiles</Inline> <Inline>insertImage</Inline></>],
           ['Inline', <><Inline>insertMention</Inline> <Inline>insertEmoji</Inline> <Inline>insertDivider</Inline></>],
-          ['Content', <><Inline>serializeHtml</Inline> <Inline>serializeMarkdown</Inline> <Inline>deserializeHtml</Inline> <Inline>parseMarkdown</Inline></>],
+          ['Content', <><Inline>serializeHtml</Inline> <Inline>serializeMarkdown</Inline> <Inline>deserializeHtml</Inline> <Inline>parseMarkdown</Inline> <Inline>smartPasteText</Inline></>],
+          ['Fonts', <><Inline>setFontFamily</Inline> <Inline>getFontFamily</Inline> <Inline>matchFont</Inline> <Inline>normalizeFonts</Inline> <Inline>fontsInValue</Inline> <Inline>googleFontsHref</Inline> <Inline>loadFonts</Inline></>],
         ]}
       />
       <DocCode title="SaveShortcut.tsx">{`import { replaceBlock, toggleMark } from 'da-text-editor';
@@ -134,6 +135,12 @@ MARK.highlight      // 'highlight'`}</DocCode>
         <Inline>highlight</Inline>, <Inline>fontSize</Inline>, <Inline>fontFamily</Inline>{' '}
         and <Inline>comment</Inline> (which hold a value).
       </p>
+      <DocCode title="types.ts">{`interface FontOption {
+  label: string;
+  value: string;
+  category?: 'sans' | 'serif' | 'mono' | 'display';
+  google?: string;
+}`}</DocCode>
 
       <DocH2>Handlers</DocH2>
       <DocCode title="types.ts">{`type MediaKind = 'image' | 'video' | 'audio' | 'file' | 'embed';

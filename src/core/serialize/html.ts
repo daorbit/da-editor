@@ -209,7 +209,10 @@ function serializeNode(node: Node): string {
       const lang = /^[\w+-]{1,30}$/.test(rawLang) ? rawLang : '';
       const cls = lang ? ` class="da-code language-${lang}"` : c('da-code');
       const highlighted = highlightPre(Node.string(node), lang);
-      return `<pre${c('da-code-block')}${attrs}><code${cls}${s('code')}>${highlighted}</code></pre>`;
+      const title = 'title' in node && node.title ? escapeHtml(String(node.title)) : '';
+      const caption = title ? `<p class="da-code-title">${title}</p>` : '';
+      const titleAttr = title ? ` data-title="${title}"` : '';
+      return `${caption}<pre${c('da-code-block')}${titleAttr}${attrs}><code${cls}${s('code')}>${highlighted}</code></pre>`;
     }
     case ELEMENT.bulletedList:
       return `<ul${c('da-ul')}${listStyleAttr(node, attrs)}>${children}</ul>`;

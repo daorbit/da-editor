@@ -61,6 +61,9 @@ import {
 } from './ToolbarPrimitives';
 import { EmojiPicker } from './EmojiPicker';
 import { ColorPicker } from './ColorPicker';
+import { FontMenu } from './FontMenu';
+import { fontLabel, getFontFamily, normalizeFonts } from '../core/fonts';
+import { smartPasteText } from '../core/smartPaste';
 import {
   BULLET_STYLES,
   clearMarks,
@@ -101,6 +104,7 @@ import {
   MARK,
   type DaEditor,
   type EditorValue,
+  type FontOption,
   type MediaKind,
 } from '../core/types';
 
@@ -125,15 +129,17 @@ export interface FixedToolbarProps {
   onToggleLint?: () => void;
   /** Renders a "clear document" button after Redo; the host confirms and empties. */
   onClearAll?: () => void;
+  fonts?: FontOption[];
 }
 
- 
+
 const GROUP_ORDER = [
   'ai',
   'colors',
   'history',
   'clipboard',
   'blocktype',
+  'fontfamily',
   'fontsize',
   'insert',
   'table',
@@ -170,6 +176,7 @@ export function FixedToolbar({
   lintOpen,
   onToggleLint,
   onClearAll,
+  fonts = FONT_FAMILIES,
 }: FixedToolbarProps) {
   const editor = useSlate() as DaEditor;
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -225,7 +232,7 @@ export function FixedToolbar({
         for (const item of items) {
           if (item.types.includes('text/html')) {
             const html = await (await item.getType('text/html')).text();
-            Transforms.insertFragment(editor, deserializeHtml(html));
+            Transforms.insertFragment(editor, normalizeFonts(deserializeHtml(html), fonts));
             toast('Pasted', { tone: 'success' });
             return;
           }
@@ -233,7 +240,7 @@ export function FixedToolbar({
       }
       if (navigator.clipboard?.readText) {
         const text = await navigator.clipboard.readText();
-        if (text) Editor.insertText(editor, text);
+        if (text && !smartPasteText(editor, text).handled) Editor.insertText(editor, text);
         toast('Pasted', { tone: 'success' });
         return;
       }
@@ -466,6 +473,22 @@ export function FixedToolbar({
     menu: (
       <SubMenu icon={activeBlock?.icon} label={activeBlock?.label ?? 'Text'}>
         {blockMenuItems()}
+      </SubMenu>
+    ),
+  });
+
+  const currentFont = getFontFamily(editor);
+
+  groups.push({
+    key: 'fontfamily',
+    inline: (
+      <ToolbarDropdown label="Font" value={fontLabel(currentFont, fonts)}>
+        {(close) => <FontMenu fonts={fonts} onPicked={close} />}
+      </ToolbarDropdown>
+    ),
+    menu: (
+      <SubMenu label={`Font: ${fontLabel(currentFont, fonts)}`}>
+        <FontMenu fonts={fonts} />
       </SubMenu>
     ),
   });
@@ -900,17 +923,6 @@ export function FixedToolbar({
           active={isMarkActive(editor, spec.mark)}
           onClick={() => {
             toggleMark(editor, spec.mark);
-            close?.();
-          }}
-        />
-      ))}
-      <MenuLabel>Font</MenuLabel>
-      {FONT_FAMILIES.map((font) => (
-        <MenuItem
-          key={font.label}
-          label={font.label}
-          onClick={() => {
-            setMark(editor, MARK.fontFamily, font.value || null);
             close?.();
           }}
         />

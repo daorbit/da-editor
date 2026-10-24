@@ -104,6 +104,31 @@ const TABLE_ROW = /^\s*\|.*\|\s*$/;
 const TABLE_DIVIDER = /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?\s*$/;
 const IMAGE_LINE = /^!\[([^\]]*)\]\(([^)\s]+)\)$/;
 const DEFAULT_COLUMN_WIDTH = 160;
+const MAX_COLUMN_WIDTH = 420;
+const FENCE_OPEN = /^\s*(`{3,}|~{3,})\s*([\w+#.-]*)(.*)$/;
+const FENCE_TITLE = /(?:title|file(?:name)?)=["']([^"']+)["']/i;
+const FILE_NAME = /^[\w./-]*\.\w+$/;
+
+function fenceTitle(info: string): string | undefined {
+  const named = info.match(FENCE_TITLE)?.[1]?.trim();
+  if (named) return named;
+  const bare = info.trim();
+  return FILE_NAME.test(bare) ? bare : undefined;
+}
+const ALERT_START = /^>\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*$/i;
+const ALERT_VARIANTS: Record<string, 'info' | 'success' | 'warning' | 'danger'> = {
+  NOTE: 'info',
+  IMPORTANT: 'info',
+  TIP: 'success',
+  WARNING: 'warning',
+  CAUTION: 'danger',
+};
+
+function listIndent(leading: string): number | undefined {
+  const width = leading.replace(/\t/g, '  ').length;
+  const level = Math.floor(width / 2);
+  return level > 0 ? level : undefined;
+}
 
 function splitRow(line: string): string[] {
   return line
@@ -123,9 +148,14 @@ function markdownTable(rows: string[]): Descendant {
       children: [{ type: ELEMENT.paragraph, children: parseInline(row[index] ?? '') }],
     }));
 
+  const widths = Array.from({ length: columns }, (_, index) => {
+    const longest = Math.max(...[head, ...body].map((row) => (row[index] ?? '').replace(/[`*_]/g, '').length));
+    return Math.min(MAX_COLUMN_WIDTH, Math.max(DEFAULT_COLUMN_WIDTH, longest * 7 + 32));
+  });
+
   return {
     type: ELEMENT.table,
-    columnWidths: Array.from({ length: columns }, () => DEFAULT_COLUMN_WIDTH),
+    columnWidths: widths,
     children: [
       { type: ELEMENT.tableRow, children: cells(head, true) },
       ...body.map((row) => ({ type: ELEMENT.tableRow, children: cells(row, false) })),
@@ -137,8 +167,8 @@ export function parseMarkdown(markdown: string): EditorValue {
   const lines = markdown.replace(/\r\n/g, '\n').split('\n');
   const blocks: EditorValue = [];
 
-  let listBuffer: { ordered: boolean; items: string[] } | null = null;
-  let codeBuffer: { lang: string; lines: string[] } | null = null;
+  let listBuffer: { ordered: boolean; items: { text: string; indent?: number }[] } | null = null;
+  let codeBuffer: { lang: string; title?: string; fence: string; lines: string[] } | null = null;
 
   const flushList = () => {
     if (!listBuffer) return;
@@ -146,7 +176,8 @@ export function parseMarkdown(markdown: string): EditorValue {
       type: listBuffer.ordered ? ELEMENT.numberedList : ELEMENT.bulletedList,
       children: listBuffer.items.map((item) => ({
         type: ELEMENT.listItem,
-        children: parseInline(item),
+        ...(item.indent ? { indent: item.indent } : null),
+        children: parseInline(item.text),
       })),
     });
     listBuffer = null;
@@ -157,25 +188,33 @@ export function parseMarkdown(markdown: string): EditorValue {
     blocks.push({
       type: ELEMENT.codeBlock,
       lang: codeBuffer.lang || undefined,
+      ...(codeBuffer.title ? { title: codeBuffer.title } : null),
       children: [{ text: codeBuffer.lines.join('\n') }],
-    });
+    } as Descendant);
     codeBuffer = null;
   };
 
   for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
     const line = lines[lineIndex];
-    const fence = line.match(/^```(\w*)\s*$/);
-    if (fence) {
-      if (codeBuffer) flushCode();
-      else {
-        flushList();
-        codeBuffer = { lang: fence[1], lines: [] };
-      }
+
+    if (codeBuffer) {
+      const trimmed = line.trim();
+      const closes =
+        trimmed.startsWith(codeBuffer.fence) && trimmed.replace(/[`~]/g, '') === '';
+      if (closes) flushCode();
+      else codeBuffer.lines.push(line);
       continue;
     }
 
-    if (codeBuffer) {
-      codeBuffer.lines.push(line);
+    const fence = line.match(FENCE_OPEN);
+    if (fence) {
+      flushList();
+      codeBuffer = {
+        lang: fence[2].toLowerCase(),
+        title: fenceTitle(fence[3] ?? ''),
+        fence: fence[1],
+        lines: [],
+      };
       continue;
     }
 
@@ -226,6 +265,23 @@ export function parseMarkdown(markdown: string): EditorValue {
       continue;
     }
 
+    const alert = line.match(ALERT_START);
+    if (alert) {
+      flushList();
+      const body: string[] = [];
+      while (lineIndex + 1 < lines.length && /^>/.test(lines[lineIndex + 1])) {
+        lineIndex += 1;
+        const text = lines[lineIndex].replace(/^>\s?/, '').trim();
+        if (text) body.push(text);
+      }
+      blocks.push({
+        type: ELEMENT.callout,
+        variant: ALERT_VARIANTS[alert[1].toUpperCase()],
+        children: parseInline(body.join(' ')),
+      } as Descendant);
+      continue;
+    }
+
     const quote = line.match(/^>\s?(.*)$/);
     if (quote) {
       flushList();
@@ -244,23 +300,23 @@ export function parseMarkdown(markdown: string): EditorValue {
       continue;
     }
 
-    const bullet = line.match(/^\s*[-*+]\s+(.*)$/);
+    const bullet = line.match(/^(\s*)[-*+]\s+(.*)$/);
     if (bullet) {
       if (!listBuffer || listBuffer.ordered) {
         flushList();
         listBuffer = { ordered: false, items: [] };
       }
-      listBuffer.items.push(bullet[1]);
+      listBuffer.items.push({ text: bullet[2], indent: listIndent(bullet[1]) });
       continue;
     }
 
-    const ordered = line.match(/^\s*\d+[.)]\s+(.*)$/);
+    const ordered = line.match(/^(\s*)\d+[.)]\s+(.*)$/);
     if (ordered) {
       if (!listBuffer || !listBuffer.ordered) {
         flushList();
         listBuffer = { ordered: true, items: [] };
       }
-      listBuffer.items.push(ordered[1]);
+      listBuffer.items.push({ text: ordered[2], indent: listIndent(ordered[1]) });
       continue;
     }
 
@@ -277,7 +333,7 @@ export function parseMarkdown(markdown: string): EditorValue {
 /** Splits a line into marked text runs. */
 function parseInline(text: string): Descendant[] {
   const pattern =
-    /(\*\*\*(.+?)\*\*\*|\*\*(.+?)\*\*|__(.+?)__|~~(.+?)~~|`(.+?)`|\*(.+?)\*|_(.+?)_|\[(.+?)\]\((.+?)\))/g;
+    /(\*\*\*(.+?)\*\*\*|\*\*(.+?)\*\*|(?<![\w])__(.+?)__(?![\w])|~~(.+?)~~|`(.+?)`|\*(.+?)\*|(?<![\w])_(.+?)_(?![\w])|\[(.+?)\]\((.+?)\))/g;
 
   const runs: Descendant[] = [];
   let lastIndex = 0;

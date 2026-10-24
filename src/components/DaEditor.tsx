@@ -48,6 +48,7 @@ import {
   type DaEditor as DaEditorType,
   type EditorMode,
   type EditorValue,
+  type FontOption,
   type Mentionable,
   type MediaKind,
   type Theme,
@@ -78,11 +79,12 @@ import {
   type SpellEngineLoader,
 } from '../core/spellcheck';
 import { toast } from '../core/toast';
-import { isCodeEditorHtml, smartPasteText } from '../core/smartPaste';
+import { isCodeEditorHtml, isRenderedSource, smartPasteText } from '../core/smartPaste';
 import { TableToolbar } from './TableToolbar';
 import { MediaToolbar } from './MediaToolbar';
 import { LinkToolbar } from './LinkToolbar';
 import { decorateCode } from '../core/highlight';
+import { FONT_FAMILIES, loadFonts, loadFontsForValue, resolveFont } from '../core/fonts';
 import { decorateSearch, findMatches } from '../core/search';
 import {
   exportHtml,
@@ -199,6 +201,9 @@ export interface DaEditorProps {
   defaultFocusMode?: boolean;
   defaultTypewriter?: boolean;
   lintPanel?: boolean;
+  fonts?: FontOption[];
+  loadWebFonts?: boolean;
+  contentFont?: FontOption | string;
 }
 
 export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEditor(
@@ -240,6 +245,9 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
     defaultFocusMode = false,
     defaultTypewriter = false,
     lintPanel = false,
+    fonts = FONT_FAMILIES,
+    loadWebFonts = true,
+    contentFont,
   },
   ref,
 ) {
@@ -260,6 +268,18 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
     // Only read on mount; later updates go through the ref handle.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  editor.fontOptions = fonts;
+  editor.loadWebFonts = loadWebFonts;
+
+  const baseFont = useMemo(() => resolveFont(contentFont, fonts), [contentFont, fonts]);
+  const contentFontStack = baseFont?.value || undefined;
+
+  useEffect(() => {
+    if (!loadWebFonts) return;
+    loadFontsForValue(editor.children, fonts);
+    if (baseFont) loadFonts([baseFont]);
+  }, [editor, fonts, loadWebFonts, baseFont]);
 
   const [value, setValue] = useState<EditorValue>(initialValue);
   const [isEmpty, setIsEmpty] = useState(() => isValueEmpty(initialValue));
@@ -359,6 +379,7 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
     });
     // History from the previous document no longer applies.
     editor.history = { undos: [], redos: [] };
+    if (loadWebFonts) loadFontsForValue(editor.children, fonts);
     setValue(editor.children as EditorValue);
     setIsEmpty(isEditorEmpty(editor));
     setSlateKey((key) => key + 1);
@@ -572,7 +593,7 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
       plain &&
       !fromEditor &&
       !isPlainTextTarget(editor) &&
-      (!html || isCodeEditorHtml(html))
+      (!html || isCodeEditorHtml(html) || isRenderedSource(html, plain))
     ) {
       const { handled } = smartPasteText(editor, plain, {
         fetchLinkMeta: onFetchLinkMeta,
@@ -844,7 +865,7 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
       className={`da-editor${locked ? ' da-editor--readonly' : ''}${accent === 'gradient' ? ' da-editor--gradient' : ''}${className ? ` ${className}` : ''}`}
       data-theme={resolvedTheme}
       data-mode={mode}
-      style={style}
+      style={contentFontStack ? { ...style, ['--da-content-font' as string]: contentFontStack } : style}
     >
       {accent === 'gradient' && (
         // Referenced by `fill: url(#da-accent-grad)` on active toolbar icons.
@@ -877,6 +898,7 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
             onToggleTypewriter={() => setTypewriter((on) => !on)}
             lintOpen={lintPanel ? lintOpen : undefined}
             onToggleLint={lintPanel ? () => setLintOpen((on) => !on) : undefined}
+            fonts={fonts}
             onClearAll={
               onClearAll === false
                 ? undefined
@@ -967,6 +989,7 @@ export const DaEditor = forwardRef<DaEditorHandle, DaEditorProps>(function DaEdi
               <FloatingToolbar
                 onAskAi={onAskAi}
                 onLink={() => setLinkOpen(true)}
+                fonts={fonts}
               />
             )}
             {slashMenu && !locked && (

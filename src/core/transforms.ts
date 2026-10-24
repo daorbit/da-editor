@@ -335,13 +335,7 @@ export function insertFootnote(editor: DaEditor, note = ''): void {
 
 export const FONT_SIZES = [12, 14, 16, 18, 20, 24, 30, 36, 48, 60, 72];
 
-export const FONT_FAMILIES = [
-  { label: 'Default', value: '' },
-  { label: 'Sans serif', value: 'system-ui, sans-serif' },
-  { label: 'Serif', value: 'Georgia, "Times New Roman", serif' },
-  { label: 'Monospace', value: 'ui-monospace, Menlo, monospace' },
-  { label: 'Inter', value: 'Inter, system-ui, sans-serif' },
-];
+export { FONT_FAMILIES } from './fonts';
 
 export const LINE_HEIGHTS = [1, 1.15, 1.5, 1.75, 2];
 

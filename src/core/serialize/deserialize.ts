@@ -91,7 +91,7 @@ const BLOCK_TAGS: Record<string, CustomElement['type']> = {
 };
 
  
-const DROPPED_CLASSES = ['da-callout__icon', 'da-file__icon', 'da-toggle__caret'];
+const DROPPED_CLASSES = ['da-callout__icon', 'da-file__icon', 'da-toggle__caret', 'da-code-title'];
 
 const PASSTHROUGH_CLASSES = [
   'da-table-wrap',
@@ -489,6 +489,8 @@ function deserializeNode(el: globalThis.Node, marks: Partial<Text> = {}): Descen
         .querySelector('code')
         ?.className.match(/language-([\w-]+)/)?.[1];
       if (lang) extra.lang = lang;
+      const title = (element.getAttribute('data-title') ?? element.getAttribute('title') ?? '').trim();
+      if (title) extra.title = title;
       // The serializer bakes highlighting in as one text node per token; a
       // code block holds a single unmarked string, so fold them back together.
       const text = children.map((child) => ('text' in child ? child.text : '')).join('');

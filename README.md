@@ -85,6 +85,9 @@ export function Example() {
 | `maxWidth` | `string` | – | Constrains the text column. |
 | `autoFocus` | `boolean` | `false` | Focus on mount. |
 | `spellCheck` | `boolean` | `true` | Browser spellcheck. |
+| `fonts` | `FontOption[]` | built-in list | Fonts in the font picker. Pasted fonts not in this list are dropped. See [Fonts](#fonts). |
+| `contentFont` | `FontOption \| string` | – | The document's base typeface, such as `'Onest'`. A name from `fonts` loads from Google Fonts; any other string is used as a CSS font stack. |
+| `loadWebFonts` | `boolean` | `true` | Add Google Fonts stylesheets for fonts that have a `google` spec, only when used. |
 | `className` / `style` | – | – | Applied to the wrapper. |
 
 ## Ref handle
@@ -119,6 +122,74 @@ Full token list: `--da-bg`, `--da-fg`, `--da-muted`, `--da-faint`, `--da-border`
 `--da-border-strong`, `--da-surface`, `--da-surface-hover`, `--da-accent`,
 `--da-accent-fg`, `--da-accent-soft`, `--da-selection`, `--da-shadow`,
 `--da-radius`, `--da-radius-sm`, `--da-font`, `--da-mono`.
+
+Document content has its own tokens, so you can restyle the writing without touching the toolbar:
+
+| Token | Styles |
+| --- | --- |
+| `--da-content-font`, `--da-heading-font` | Body and heading typefaces (`contentFont` sets the first) |
+| `--da-text`, `--da-heading` | Paragraph text, and headings and bold text |
+| `--da-radius-block` | Code blocks, callouts and tables |
+| `--da-code-bg`, `--da-code-head`, `--da-code-fg` | Code blocks and inline code |
+| `--da-info-soft`, `--da-success-soft`, `--da-warning-soft`, `--da-danger-soft` | Callout backgrounds |
+| `--da-success`, `--da-warning`, `--da-danger` | Callout label colours |
+| `--da-tok-comment`, `--da-tok-keyword`, `--da-tok-string`, `--da-tok-func`, `--da-tok-number`, `--da-tok-punct`, `--da-tok-var` | Syntax highlighting |
+
+All of them have light and dark values.
+
+## Pasting
+
+Paste converts content into real editor blocks instead of dropping it in as text:
+
+| You paste | You get |
+| --- | --- |
+| Rich text from Word, Google Docs or a web page | Headings, lists, tables, links and marks |
+| Markdown text | Headings, lists (nested ones keep their indent), tables, quotes, code blocks (a fence like ` ```python title="mailer.py" ` fills the block's file name), and callouts from GitHub alerts such as `> [!NOTE]` |
+| Raw HTML source | The rendered content, not the tags |
+| Markdown or HTML copied from a code block on a web page or in a chat app | The same as raw Markdown or HTML |
+| Code from an IDE | A code block with the language detected |
+| A bare URL | An image, a video embed, a link, or a preview card |
+
+Text counts as Markdown when it has a table, a fenced code block or two or more headings, or when enough of its lines use Markdown syntax. It counts as HTML when it starts with a tag and is mostly standard content tags; JSX stays code. Turn the conversions off with `smartPaste={false}`. Anything pasted into a code block goes in as plain text.
+
+## Fonts
+
+The toolbar has a font picker, with each font previewed in its own face. The default list covers common Google Fonts (Inter, Onest, Manrope, Plus Jakarta Sans, Roboto, Open Sans, Lato, Montserrat, Poppins, DM Sans, Merriweather, Lora, Playfair Display, JetBrains Mono) plus system stacks.
+
+Set the whole document's typeface with `contentFont`:
+
+```tsx
+<DaEditor contentFont="Onest" />
+```
+
+Google Fonts load only when needed: when the font menu opens, when a font is picked, and for fonts already used in a loaded document. Nothing loads on startup for a document with no custom fonts.
+
+Pass your own list to match your site:
+
+```tsx
+import { DaEditor, type FontOption } from 'da-text-editor';
+
+const fonts: FontOption[] = [
+  { label: 'Default', value: '' },
+  { label: 'Inter', value: 'Inter, sans-serif', category: 'sans', google: 'Inter:wght@400;600;700' },
+  { label: 'Lora', value: 'Lora, serif', category: 'serif', google: 'Lora:wght@400;700' },
+  { label: 'Brand', value: '"Acme Sans", sans-serif', category: 'sans' },
+];
+
+<DaEditor fonts={fonts} />;
+```
+
+Keep the array stable (a module constant or `useMemo`). A font without `google` is used as-is, so self-hosted fonts work as long as your page loads them. Set `loadWebFonts={false}` to stop the editor from adding Google Fonts stylesheets.
+
+Pasted content keeps a font only when it matches one in the list, by its first family name. Anything else is dropped, so a page copied from the web doesn't bring its own fonts along.
+
+To render saved HTML with the right fonts, load the ones it uses:
+
+```ts
+import { fontsInValue, googleFontsHref } from 'da-text-editor';
+
+const href = googleFontsHref(fontsInValue(value));
+```
 
 ## Composing your own editor
 

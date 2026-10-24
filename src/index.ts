@@ -208,7 +208,25 @@ export type {
   LinkMeta,
   FetchLinkMeta,
   LinkCardElement,
+  FontOption,
+  FontCategory,
 } from './core/types';
+export {
+  FONT_CATEGORY_LABELS,
+  collectFontFamilies,
+  fontLabel,
+  fontsInValue,
+  getFontFamily,
+  googleFontsHref,
+  loadFonts,
+  loadFontsForValue,
+  matchFont,
+  normalizeFonts,
+  resolveFont,
+  setFontFamily,
+} from './core/fonts';
+export { FontMenu } from './components/FontMenu';
+export type { FontMenuProps } from './components/FontMenu';
 
 /* Icons */
 export * from './icons';

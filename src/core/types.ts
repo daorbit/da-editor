@@ -117,6 +117,7 @@ export interface TodoElement extends BaseElement {
 export interface CodeBlockElement extends BaseElement {
   type: typeof ELEMENT.codeBlock;
   lang?: string;
+  title?: string;
 }
 
 export interface CalloutElement extends BaseElement {
@@ -212,7 +213,21 @@ export interface CustomText {
   spellError?: boolean;
 }
 
-export type DaEditor = BaseEditor & ReactEditor & HistoryEditor;
+export type FontCategory = 'sans' | 'serif' | 'mono' | 'display';
+
+export interface FontOption {
+  label: string;
+  value: string;
+  category?: FontCategory;
+  google?: string;
+}
+
+export type DaEditor = BaseEditor &
+  ReactEditor &
+  HistoryEditor & {
+    fontOptions?: FontOption[];
+    loadWebFonts?: boolean;
+  };
 
 declare module 'slate' {
   interface CustomTypes {

@@ -285,7 +285,7 @@ const html = serializeHtml(doc, { inlineStyles: true });`}</DocCode>
       <DocH2>Floating toolbar</DocH2>
       <p>
         Select text and a compact toolbar appears above it once you release the mouse.
-        It offers Turn into, font size, the main marks, highlight, link, and a More
+        It offers Turn into, font, font size, the main marks, highlight, link, and a More
         menu with keyboard input, superscript, subscript and Clear formatting. It also
         shows Ask AI when <Inline>onAskAi</Inline> is set.
       </p>

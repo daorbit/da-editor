@@ -4,6 +4,8 @@ import { LIST_TYPES, wrapLink } from './transforms';
 import { normalizeTable } from './tables';
 import { parseMarkdown, parseWordHtml } from './io';
 import { isPlainTextTarget } from './clipboard';
+import { FONT_FAMILIES, loadFontsForValue, normalizeFonts } from './fonts';
+import { looksLikeHtml } from './smartPaste';
 
 const VOID_TYPES: ElementType[] = [
   ELEMENT.divider,
@@ -188,8 +190,11 @@ export function withDaEditor(editor: DaEditor): DaEditor {
     const html = data.getData('text/html');
     if (html && html.length <= MAX_PASTE_HTML) {
       try {
-        const fragment = parseWordHtml(html);
+        const fragment = normalizeFonts(parseWordHtml(html), editor.fontOptions ?? FONT_FAMILIES);
         if (fragment.length) {
+          if (editor.loadWebFonts !== false) {
+            loadFontsForValue(fragment, editor.fontOptions ?? FONT_FAMILIES);
+          }
           Transforms.insertFragment(editor, fragment);
           return;
         }
@@ -198,6 +203,14 @@ export function withDaEditor(editor: DaEditor): DaEditor {
       }
     }
 
+
+    if (text && !html && looksLikeHtml(text)) {
+      const fragment = normalizeFonts(parseWordHtml(text), editor.fontOptions ?? FONT_FAMILIES);
+      if (fragment.length) {
+        Transforms.insertFragment(editor, fragment);
+        return;
+      }
+    }
 
     if (text && looksLikeMarkdown(text)) {
       try {

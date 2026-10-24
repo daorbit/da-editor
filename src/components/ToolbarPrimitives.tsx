@@ -455,10 +455,11 @@ export interface MenuItemProps {
   hint?: string;
   active?: boolean;
   disabled?: boolean;
+  fontFamily?: string;
   onClick: () => void;
 }
 
-export function MenuItem({ icon, label, hint, active, disabled, onClick }: MenuItemProps) {
+export function MenuItem({ icon, label, hint, active, disabled, fontFamily, onClick }: MenuItemProps) {
   return (
     <button
       type="button"
@@ -469,7 +470,9 @@ export function MenuItem({ icon, label, hint, active, disabled, onClick }: MenuI
       onClick={onClick}
     >
       {icon && <span className="da-tb__item-icon">{icon}</span>}
-      <span className="da-tb__item-label">{label}</span>
+      <span className="da-tb__item-label" style={fontFamily ? { fontFamily } : undefined}>
+        {label}
+      </span>
       {active && !hint && <CheckIcon size={13} className="da-tb__item-check" />}
       {hint && <span className="da-tb__item-hint">{hint}</span>}
     </button>

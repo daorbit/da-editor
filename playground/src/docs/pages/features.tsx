@@ -102,10 +102,58 @@ export const FEATURE_PAGES: Record<string, () => ReactNode> = {
           and 144px. The document default is 15px.
         </li>
         <li>
-          <strong>Family</strong>: Default, Sans serif, Serif, Monospace and Inter.
-          Load Inter on your page yourself if you want it to render as Inter.
+          <strong>Family</strong>: the <strong>Font</strong> picker sits next to the size
+          stepper in both toolbars and shows each font in its own face. The default list
+          has Inter, Onest, Manrope, Plus Jakarta Sans, Roboto, Open Sans, Lato,
+          Montserrat, Poppins, DM Sans, Merriweather, Lora, Playfair Display and
+          JetBrains Mono, plus system sans, Georgia and system mono.
+        </li>
+        <li>
+          <strong>Document font</strong>: <Inline>contentFont="Onest"</Inline> sets the
+          typeface for the whole document. Headings follow it unless you set{' '}
+          <Inline>--da-heading-font</Inline>.
         </li>
       </List>
+
+      <DocH3>Loading fonts</DocH3>
+      <p>
+        Google Fonts load only when they are needed: when the font menu opens, when a
+        font is picked, and for fonts already used in a loaded document. A document
+        without custom fonts makes no font requests. Turn this off with{' '}
+        <Inline>loadWebFonts={'{false}'}</Inline> if your page loads fonts itself.
+      </p>
+
+      <DocH3>Your own font list</DocH3>
+      <p>
+        Pass <Inline>fonts</Inline> to match your site. A font with a{' '}
+        <Inline>google</Inline> spec is loaded from Google Fonts; one without is used
+        as-is, so self-hosted fonts work when your page loads them.
+      </p>
+      <DocCode title="Editor.tsx">{`import { DaEditor, type FontOption } from 'da-text-editor';
+
+const FONTS: FontOption[] = [
+  { label: 'Default', value: '' },
+  { label: 'Inter', value: 'Inter, sans-serif', category: 'sans', google: 'Inter:wght@400;600;700' },
+  { label: 'Lora', value: 'Lora, serif', category: 'serif', google: 'Lora:wght@400;700' },
+  { label: 'Brand', value: '"Acme Sans", sans-serif', category: 'sans' },
+];
+
+<DaEditor fonts={FONTS} />`}</DocCode>
+      <Callout type="tip" title="Pasted fonts">
+        Pasted content keeps a font only when its first family matches one in the list.
+        Other fonts are dropped, so text copied from a web page doesn't bring that
+        page's fonts with it.
+      </Callout>
+
+      <DocH3>Rendering saved HTML</DocH3>
+      <p>
+        Wherever you display saved content, load the fonts it uses:
+      </p>
+      <DocCode title="Post.tsx">{`import { fontsInValue, googleFontsHref } from 'da-text-editor';
+
+const href = googleFontsHref(fontsInValue(value));
+
+{href && <link rel="stylesheet" href={href} />}`}</DocCode>
 
       <DocH2>Alignment, spacing and indent</DocH2>
       <List>
@@ -189,6 +237,13 @@ setAlign(editor, 'center');`}</DocCode>
           and YAML. <strong>Auto</strong> detects the language.
         </li>
         <li>The language button on the block opens a searchable list.</li>
+        <li>
+          The <strong>File name</strong> field in the block's header bar labels the code,
+          such as <Inline>mailer.py</Inline>. It is saved as <Inline>title</Inline>,
+          written to HTML as a caption line above the code, and to Markdown as{' '}
+          <Inline>```python title="mailer.py"</Inline>. Pasted fences with a{' '}
+          <Inline>title=</Inline> or a bare file name after the language fill it in.
+        </li>
         <li>The copy button copies the code to the clipboard.</li>
         <li>Enter adds a new line inside the block. Mod+Enter leaves it.</li>
         <li>Pasting into a code block always inserts plain text.</li>
@@ -593,7 +648,9 @@ function mentionedIds(nodes: EditorValue, ids = new Set<string>()): string[] {
         rows={[
           ['Content copied from this editor', 'An exact copy, including media, tables and settings.'],
           ['Rich text from Word, Google Docs or a web page', 'Headings, lists, tables, links and marks mapped to editor blocks.'],
-          ['Markdown text', 'Real headings, lists, tables, quotes and code blocks.'],
+          ['Markdown text', 'Real headings, lists, tables, quotes and code blocks. Nested lists keep their indent, and GitHub alerts such as > [!NOTE] become callouts.'],
+          ['Raw HTML source, such as a page or snippet copied from a code editor or a file', 'The rendered content: headings, tables, lists, code blocks and links, not the tags.'],
+          ['Markdown or HTML copied from a code block on a web page or in a chat app', 'Converted the same way as raw Markdown or HTML.'],
           ['Multi-line code copied from an IDE such as VS Code', 'A code block with the language detected.'],
           ['A bare image URL', 'An image.'],
           ['A YouTube or Vimeo link', 'A video embed.'],
@@ -604,9 +661,15 @@ function mentionedIds(nodes: EditorValue, ids = new Set<string>()): string[] {
         ]}
       />
       <p>
-        Turn off the Markdown, code and URL conversions with{' '}
+        Turn off the Markdown, HTML source, code and URL conversions with{' '}
         <Inline>smartPaste={'{false}'}</Inline>. Very large HTML (over about 500 KB) is
         pasted as plain text so the page stays responsive.
+      </p>
+      <p>
+        Pasted text counts as Markdown when it has a table, a fenced code block or two or
+        more headings, or when enough of its lines use Markdown syntax. It counts as HTML
+        when it starts with a tag and is mostly standard content tags. JSX and component
+        code stay code.
       </p>
       <p>
         Copying from the editor puts clean HTML and plain text on the clipboard, so

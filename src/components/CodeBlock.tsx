@@ -1,6 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Node, Transforms } from 'slate';
-import { ReactEditor, useSelected, useSlateStatic, type RenderElementProps } from 'slate-react';
+import {
+  ReactEditor,
+  useReadOnly,
+  useSelected,
+  useSlateStatic,
+  type RenderElementProps,
+} from 'slate-react';
 import { CheckIcon, CopyIcon, SearchIcon } from '../icons';
 import { LANGUAGES } from '../core/highlight';
 import { BlockDragHandle } from './BlockDragHandle';
@@ -13,8 +19,15 @@ export function CodeBlock({ attributes, children, element }: RenderElementProps)
   const [copied, setCopied] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
+  const readOnly = useReadOnly();
   const lang = 'lang' in element && element.lang ? element.lang : '';
+  const title = 'title' in element && element.title ? element.title : '';
   const current = LANGUAGES.find((entry) => entry.value === lang) ?? LANGUAGES[0];
+
+  const setTitle = (value: string) => {
+    const path = ReactEditor.findPath(editor, element);
+    Transforms.setNodes(editor, { title: value || undefined }, { at: path });
+  };
 
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -62,6 +75,24 @@ export function CodeBlock({ attributes, children, element }: RenderElementProps)
     >
       <BlockDragHandle element={element} />
       <div className="da-code__bar" contentEditable={false}>
+        {readOnly ? (
+          title && <span className="da-code__title">{title}</span>
+        ) : (
+          <input
+            className="da-code__title"
+            value={title}
+            placeholder="File name"
+            aria-label="File name"
+            spellCheck={false}
+            onChange={(event) => setTitle(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                ReactEditor.focus(editor);
+              }
+            }}
+          />
+        )}
         <div className="da-code__lang" ref={menuRef}>
           <button
             type="button"

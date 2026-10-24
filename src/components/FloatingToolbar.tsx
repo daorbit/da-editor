@@ -21,12 +21,15 @@ import {
   setMark,
   toggleMark,
 } from '../core/transforms';
-import { ELEMENT, MARK, type DaEditor } from '../core/types';
+import { ELEMENT, MARK, type DaEditor, type FontOption } from '../core/types';
+import { FONT_FAMILIES, fontLabel, getFontFamily } from '../core/fonts';
+import { FontMenu } from './FontMenu';
 import { usePointerSelecting } from '../core/useDismiss';
 
 export interface FloatingToolbarProps {
   onAskAi?: () => void;
   onLink?: () => void;
+  fonts?: FontOption[];
 }
 
 interface Position {
@@ -34,7 +37,7 @@ interface Position {
   left: number;
 }
 
-export function FloatingToolbar({ onAskAi, onLink }: FloatingToolbarProps) {
+export function FloatingToolbar({ onAskAi, onLink, fonts = FONT_FAMILIES }: FloatingToolbarProps) {
   const editor = useSlate() as DaEditor;
   const ref = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<Position | null>(null);
@@ -139,6 +142,10 @@ export function FloatingToolbar({ onAskAi, onLink }: FloatingToolbarProps) {
       </ToolbarDropdown>
 
       <ToolbarSeparator />
+
+      <ToolbarDropdown label="Font" value={fontLabel(getFontFamily(editor), fonts)}>
+        {(close) => <FontMenu fonts={fonts} onPicked={close} />}
+      </ToolbarDropdown>
 
       <div className="da-tb__stepper">
         <button
