@@ -435,9 +435,9 @@ describe('serializeHtml element coverage', () => {
   it("'static' inline styles bake in the light theme, for email and PDF", () => {
     const html = serializeHtml(inlineFixture, { inlineStyles: 'static' });
 
-    expect(html).toMatch(/<h1 class="da-h1" style="[^"]*font-size:27\.75px/);
-    expect(html).toMatch(/<h1 class="da-h1" style="[^"]*color:#1f2328/);
-    expect(html).toMatch(/data-callout="warning"[^>]*style="[^"]*background:#fef6e7/);
+    expect(html).toMatch(/<h1 class="da-h1" style="[^"]*font-size:32\.25px/);
+    expect(html).toMatch(/<h1 class="da-h1" style="[^"]*color:#111622/);
+    expect(html).toMatch(/data-callout="warning"[^>]*style="[^"]*background:#fff5e8/);
     expect(html).toMatch(/<td class="da-td" style="[^"]*border:1px solid/);
     // No custom properties or color-mix, so it survives in email clients.
     expect(html).not.toMatch(/var\(--|color-mix/);
@@ -447,12 +447,12 @@ describe('serializeHtml element coverage', () => {
     const html = serializeHtml(inlineFixture, { inlineStyles: true });
 
     // Structure is still inlined.
-    expect(html).toMatch(/<h1 class="da-h1" style="[^"]*font-size:27\.75px/);
+    expect(html).toMatch(/<h1 class="da-h1" style="[^"]*font-size:32\.25px/);
     // But nothing pins the text colour or an opaque page background, so the
     // document stays legible pasted into a dark site.
     expect(html).not.toMatch(/style="[^"]*color:#(1f2328|6b7280)/);
     expect(html).not.toMatch(/style="[^"]*font-family:/);
-    expect(html).not.toMatch(/background:#fef6e7/);
+    expect(html).not.toMatch(/background:#fff5e8/);
     // Fills are translucent neutrals that read on any background.
     expect(html).toMatch(/data-callout="warning"[^>]*style="[^"]*rgba\(/);
   });
@@ -494,6 +494,54 @@ describe('serializeHtml element coverage', () => {
     expect(body.querySelectorAll('li')).toHaveLength(2);
     // Anything beyond these means the attribute was terminated early.
     expect([...list!.attributes].map((a) => a.name).sort()).toEqual(['class', 'style']);
+  });
+
+  it('inlined tables match the editor: framed wrapper, flush cell paragraphs', () => {
+    const html = serializeHtml(
+      [
+        {
+          type: ELEMENT.table,
+          children: [
+            {
+              type: ELEMENT.tableRow,
+              children: [
+                {
+                  type: ELEMENT.tableHeaderCell,
+                  children: [{ type: ELEMENT.paragraph, children: [{ text: 'H' }] }],
+                },
+              ],
+            },
+          ],
+        },
+      ] as EditorValue,
+      { inlineStyles: true },
+    );
+
+    expect(html).toMatch(/<div class="da-table-wrap" style="[^"]*border-radius:6px/);
+    expect(html).toMatch(/<table class="da-table" style="[^"]*border-style:hidden/);
+    expect(html).toMatch(/<th class="da-th" style="[^"]*text-transform:uppercase/);
+    expect(html).toContain('<p class="da-p" style="margin:0;padding:0">H</p>');
+  });
+
+  it('gives a titled code block the header bar and keeps the title on round-trip', () => {
+    const value = [
+      {
+        type: ELEMENT.codeBlock,
+        lang: 'bash',
+        title: '.env.example',
+        children: [{ text: 'A=1' }],
+      },
+    ] as EditorValue;
+    const html = serializeHtml(value, { inlineStyles: true });
+
+    expect(html).toMatch(/^<p class="da-code-title" style="[^"]*display:flex/);
+    expect(html).toContain('>.env.example</span>');
+    expect(html).toContain('>bash</span>');
+    expect(html).toMatch(/<pre class="da-code-block" data-title="\.env\.example" style="[^"]*border-top:0/);
+
+    const back = deserializeHtml(html);
+    expect(back).toHaveLength(1);
+    expect(back[0]).toMatchObject({ type: ELEMENT.codeBlock, lang: 'bash', title: '.env.example' });
   });
 
   it('inlined output still round-trips', () => {

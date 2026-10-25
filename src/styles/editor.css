@@ -2775,8 +2775,12 @@ input.da-code__title:focus {
 }
 
 .da-code-title {
-  margin: 14px 0 0;
-  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 10px 0 0;
+  padding: 8px 12px 8px 16px;
   border: 1px solid var(--da-border);
   border-bottom: 0;
   border-radius: var(--da-radius-block) var(--da-radius-block) 0 0;
@@ -2790,6 +2794,24 @@ input.da-code__title:focus {
   margin-top: 0;
   border-top-left-radius: 0;
   border-top-right-radius: 0;
+}
+
+.da-code-title__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.da-code-title__lang {
+  flex: none;
+  margin-left: auto;
+  color: var(--da-muted);
+  font-family: var(--da-font);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .da-code__lang-btn {

@@ -152,6 +152,10 @@ export interface SerializeHtmlOptions {
 
 let staticSkin = false;
 
+// Set while a table cell's children are serialized: the stylesheet zeroes a
+// paragraph's spacing inside a cell, and the inlined output has to as well.
+let inCell = false;
+
 export function serializeHtml(value: EditorValue, options: SerializeHtmlOptions = {}): string {
   inlineStyles = options.inlineStyles === 'static' || options.inlineStyles === true;
   staticSkin = options.inlineStyles === 'static';
@@ -160,7 +164,21 @@ export function serializeHtml(value: EditorValue, options: SerializeHtmlOptions 
   } finally {
     inlineStyles = false;
     staticSkin = false;
+    inCell = false;
   }
+}
+
+function codeHeader(title: string, lang: string): string {
+  if (!title && !lang) return '';
+  const name = title ? `<span class="da-code-title__name"${s('codeTitleName')}>${title}</span>` : '';
+  const label = lang ? `<span class="da-code-title__lang"${s('codeTitleLang')}>${lang}</span>` : '';
+  return `<p class="da-code-title"${s('codeTitle')}>${name}${label}</p>`;
+}
+
+function withExtraStyle(attrs: string, key: string): string {
+  if (!inlineStyles || !INLINE_STYLES[key]) return attrs;
+  const extra = attrSafeCss(INLINE_STYLES[key]);
+  return attrs ? attrs.replace(/"$/, `;${extra}"`) : ` style="${extra}"`;
 }
 
  
@@ -186,8 +204,12 @@ function serializeNode(node: Node): string {
   if (Text.isText(node)) return serializeLeaf(node);
   if (!SlateElement.isElement(node)) return '';
 
+  const parentInCell = inCell;
+  inCell = node.type === ELEMENT.tableCell || node.type === ELEMENT.tableHeaderCell;
   const children = node.children.map(serializeNode).join('') || '<br>';
-  const attrs = styleAttr(node, ELEMENT_STYLE_KEY[node.type]);
+  inCell = parentInCell;
+  const styleKey = parentInCell && node.type === ELEMENT.paragraph ? 'cellP' : ELEMENT_STYLE_KEY[node.type];
+  const attrs = styleAttr(node, styleKey);
 
   switch (node.type) {
     case ELEMENT.h1:
@@ -210,9 +232,12 @@ function serializeNode(node: Node): string {
       const cls = lang ? ` class="da-code language-${lang}"` : c('da-code');
       const highlighted = highlightPre(Node.string(node), lang);
       const title = 'title' in node && node.title ? escapeHtml(String(node.title)) : '';
-      const caption = title ? `<p class="da-code-title">${title}</p>` : '';
+      // The editor's bar, minus its controls: the parser drops this element and
+      // reads the title back from `data-title`, so it is display-only.
+      const header = codeHeader(title, lang);
       const titleAttr = title ? ` data-title="${title}"` : '';
-      return `${caption}<pre${c('da-code-block')}${titleAttr}${attrs}><code${cls}${s('code')}>${highlighted}</code></pre>`;
+      const preAttrs = header ? withExtraStyle(attrs, 'preTitled') : attrs;
+      return `${header}<pre${c('da-code-block')}${titleAttr}${preAttrs}><code${cls}${s('code')}>${highlighted}</code></pre>`;
     }
     case ELEMENT.bulletedList:
       return `<ul${c('da-ul')}${listStyleAttr(node, attrs)}>${children}</ul>`;
@@ -257,10 +282,7 @@ function serializeNode(node: Node): string {
         : '';
       // The wrapper scrolls a wide table on a narrow screen instead of letting
  
-      const wrapStyle = inlineStyles
-        ? ' style="margin:10px 0;overflow-x:auto;-webkit-overflow-scrolling:touch"'
-        : '';
-      return `<div class="da-table-wrap"${wrapStyle}><table${c('da-table')}${attrs}>${colgroup}<tbody>${children}</tbody></table></div>`;
+      return `<div class="da-table-wrap"${s('tableWrap')}><table${c('da-table')}${attrs}>${colgroup}<tbody>${children}</tbody></table></div>`;
     }
     case ELEMENT.tableRow:
       return `<tr${c('da-tr')}${attrs}>${children}</tr>`;
